@@ -5,7 +5,7 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - ./syntheditor:/app
+      - ./syntheditor:/syntheditor
     environment:
       - WATCHPACK_POLLING=true
     command: npm run dev
