@@ -1,0 +1,11 @@
+services:
+  syntheditor:
+    build:
+      context: syntheditor
+    ports:
+      - 3000:3000
+    volumes:
+      - ./syntheditor:/app
+    environment:
+      - WATCHPACK_POLLING=true
+    command: npm run dev
