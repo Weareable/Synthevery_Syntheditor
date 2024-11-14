@@ -1,10 +1,9 @@
-FROM node:20-alpine
+FROM node:20-bullseye
 
-WORKDIR /syntheditor
+RUN apt-get update && apt-get install -y build-essential cmake
 
-COPY . .
+WORKDIR /app
+
+COPY package.json ./
 
 RUN npm install
-RUN npm run build
-
-CMD ["npm", "start"]
