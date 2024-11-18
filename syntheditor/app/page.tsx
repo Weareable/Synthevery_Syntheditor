@@ -1,12 +1,15 @@
+/// <reference types="web-bluetooth" />
+
 "use client";
 
 import Button from "@mui/material/Button";
 import { useState } from "react";
+import { Bluetooth } from "webbluetooth";
 
 export default function Home() {
-  const bluetooth = require("webbluetooth").bluetooth;
+  const bluetooth = require("webbluetooth").bluetooth as Bluetooth;
 
-  const [device, setDevice] = useState<any>(null);
+  const [device, setDevice] = useState<BluetoothDevice | null>(null);
 
   function connectBluetooth() {
     if (!bluetooth) {
@@ -15,7 +18,7 @@ export default function Home() {
     }
     bluetooth.requestDevice({
       acceptAllDevices: true,
-    }).then((device: any) => {
+    }).then((device: BluetoothDevice) => {
       setDevice(device);
     });
   }
