@@ -2,33 +2,41 @@
 
 "use client";
 
-import Button from "@mui/material/Button";
 import { useState } from "react";
-import { Bluetooth } from "webbluetooth";
 
 export default function Home() {
-  const bluetooth = require("webbluetooth").bluetooth as Bluetooth;
+  const [device, setDevice] = useState(null);
+  const [characteristic, setCharacteristic] = useState(null);
+  const [receivedValue, setReceivedValue] = useState("");
 
-  const [device, setDevice] = useState<BluetoothDevice | null>(null);
-
-  function connectBluetooth() {
-    if (!bluetooth) {
-      console.log("Bluetooth not available, please use a browser that supports it.");
-      return;
-    }
-    bluetooth.requestDevice({
-      acceptAllDevices: true,
-    }).then((device: BluetoothDevice) => {
+  const requestBluetoothDevice = async () => {
+    try {
+      const device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: ["0f287fc3-97db-a249-e3ce-9461eb65dc52"], // サービスUUIDを指定
+      });
       setDevice(device);
-    });
-  }
+
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService("0f287fc3-97db-a249-e3ce-9461eb65dc52");
+      const characteristic = await service.getCharacteristic("eba308dc-e069-d268-a43f-2e341418fae9");
+      setCharacteristic(characteristic);
+
+      const value = await characteristic.readValue();
+      setReceivedValue(value.getUint8(0)); // 例：バッテリーレベル
+    } catch (error) {
+      console.error("Bluetooth Error:", error);
+    }
+  };
 
   return (
-    <div>
-      <h1>Syntheditor</h1>
-      <Button variant="contained" onClick={connectBluetooth}>Hello World</Button>
-      {device && <p>{device.name}</p>}
-      {device && <p>{device.id}</p>}
+    <div style={{ padding: "20px" }}>
+      <h1>Web Bluetooth Demo</h1>
+      <button onClick={requestBluetoothDevice}>
+        {device ? "Reconnect" : "Connect Bluetooth Device"}
+      </button>
+      {device && <p>Connected to: {device.name || "Unnamed Device"}</p>}
+      {receivedValue !== "" && <p>Received Value: {receivedValue}</p>}
     </div>
   );
 }
