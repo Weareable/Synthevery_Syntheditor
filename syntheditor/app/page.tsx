@@ -13,15 +13,15 @@ export default function Home() {
     try {
       const device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
-        optionalServices: ["battery_service"], // 必要に応じて変更
+        optionalServices: ["0f287fc3-97db-a249-e3ce-9461eb65dc52"], // 必要に応じて変更
       });
       setDevice(device);
 
       const server = await device.gatt?.connect();
       if (!server) throw new Error("Failed to connect to GATT server");
 
-      const service = await server.getPrimaryService("battery_service");
-      const characteristic = await service.getCharacteristic("battery_level");
+      const service = await server.getPrimaryService("0f287fc3-97db-a249-e3ce-9461eb65dc52");
+      const characteristic = await service.getCharacteristic("eba308dc-e069-d268-a43f-2e341418fae9");
       setCharacteristic(characteristic);
 
       await characteristic.startNotifications();
