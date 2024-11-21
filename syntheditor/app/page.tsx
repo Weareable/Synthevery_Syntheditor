@@ -1,95 +1,42 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+/// <reference types="web-bluetooth" />
+
+"use client";
+
+import { useState } from "react";
 
 export default function Home() {
+  const [device, setDevice] = useState(null);
+  const [characteristic, setCharacteristic] = useState(null);
+  const [receivedValue, setReceivedValue] = useState("");
+
+  const requestBluetoothDevice = async () => {
+    try {
+      const device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: ["0f287fc3-97db-a249-e3ce-9461eb65dc52"], // サービスUUIDを指定
+      });
+      setDevice(device);
+
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService("0f287fc3-97db-a249-e3ce-9461eb65dc52");
+      const characteristic = await service.getCharacteristic("eba308dc-e069-d268-a43f-2e341418fae9");
+      setCharacteristic(characteristic);
+
+      const value = await characteristic.readValue();
+      setReceivedValue(value.getUint8(0)); // 例：バッテリーレベル
+    } catch (error) {
+      console.error("Bluetooth Error:", error);
+    }
+  };
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    <div style={{ padding: "20px" }}>
+      <h1>Web Bluetooth Demo</h1>
+      <button onClick={requestBluetoothDevice}>
+        {device ? "Reconnect" : "Connect Bluetooth Device"}
+      </button>
+      {device && <p>Connected to: {device.name || "Unnamed Device"}</p>}
+      {receivedValue !== "" && <p>Received Value: {receivedValue}</p>}
+    </div>
   );
 }
