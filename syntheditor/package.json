@@ -11,6 +11,7 @@
   "dependencies": {
     "@emotion/react": "^11.13.0",
     "@emotion/styled": "^11.13.0",
+    "@msgpack/msgpack": "^3.0.0-beta2",
     "@mui/material": "^5.16.4",
     "@types/web-bluetooth": "^0.0.20",
     "next": "^14.2.18",

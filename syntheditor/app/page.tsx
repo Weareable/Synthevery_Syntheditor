@@ -3,11 +3,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { decode } from "@msgpack/msgpack";
 
 export default function Home() {
   const [device, setDevice] = useState<BluetoothDevice | null>(null);
   const [characteristic, setCharacteristic] = useState<BluetoothRemoteGATTCharacteristic | null>(null);
   const [receivedData, setReceivedData] = useState<number[]>([]);
+  const [receivedObject, setReceivedObject] = useState<any>({});
 
   const requestBluetoothDevice = async () => {
     try {
@@ -42,7 +44,16 @@ export default function Home() {
     if (!value) return;
 
     const valuesArray = Array.from(new Uint8Array(value.buffer));
-    setReceivedData((prevData) => [...valuesArray]);
+
+    // データをデコードしてオブジェクトとしてセット
+    const decodedObject = decode(value.buffer);
+
+    if (decodedObject instanceof Array &&
+      decodedObject[0] === 0xFF) {
+      const srcAddress = Array.from(new Uint8Array(decodedObject[1][0]));
+      setReceivedData((prevData) => [...srcAddress]);
+      setReceivedObject(decodedObject);
+    }
   };
 
   useEffect(() => {
@@ -68,6 +79,7 @@ export default function Home() {
       <div>
         <h2>Received Data:</h2>
         <pre>{JSON.stringify(receivedData, null, 2)}</pre>
+        <pre>{JSON.stringify(receivedObject[1], null, 2)}</pre>
       </div>
     </div>
   );
