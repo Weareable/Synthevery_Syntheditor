@@ -2,7 +2,14 @@
 
 'use client';
 
-import React, { createContext, useContext, useRef, useState, useEffect, PropsWithChildren } from 'react';
+import React, {
+    createContext,
+    useContext,
+    useRef,
+    useState,
+    PropsWithChildren,
+    useCallback,
+} from 'react';
 
 interface BLEContextValue {
     isConnected: boolean;
@@ -34,9 +41,14 @@ interface BLEContextValue {
         characteristicUuid: string
     ) => Promise<void>;
 
-    // ヘルパー関数を追加
-    getPrimaryService: (serviceUuid: string) => Promise<BluetoothRemoteGATTService | null>;
-    getCharacteristic: (serviceUuid: string, characteristicUuid: string) => Promise<BluetoothRemoteGATTCharacteristic | null>;
+    getPrimaryService: (
+        serviceUuid: string
+    ) => Promise<BluetoothRemoteGATTService | null>;
+
+    getCharacteristic: (
+        serviceUuid: string,
+        characteristicUuid: string
+    ) => Promise<BluetoothRemoteGATTCharacteristic | null>;
 }
 
 const BLEContext = createContext<BLEContextValue | null>(null);
@@ -49,7 +61,19 @@ export function BLEProvider({ children }: PropsWithChildren) {
     const deviceRef = useRef<BluetoothDevice | null>(null);
     const serverRef = useRef<BluetoothRemoteGATTServer | null>(null);
 
-    async function connect(options?: RequestDeviceOptions) {
+    /**
+     * デバイス切断時のイベントハンドラ
+     */
+    const handleDisconnected = useCallback(() => {
+        deviceRef.current = null;
+        serverRef.current = null;
+        setIsConnected(false);
+    }, []);
+
+    /**
+     * BLEデバイスへ接続する
+     */
+    const connect = useCallback(async (options?: RequestDeviceOptions) => {
         try {
             setIsConnecting(true);
             setError(null);
@@ -75,9 +99,12 @@ export function BLEProvider({ children }: PropsWithChildren) {
         } finally {
             setIsConnecting(false);
         }
-    }
+    }, [handleDisconnected]);
 
-    async function disconnect() {
+    /**
+     * BLEデバイスから切断する
+     */
+    const disconnect = useCallback(async () => {
         try {
             if (serverRef.current?.connected) {
                 serverRef.current.disconnect();
@@ -89,18 +116,15 @@ export function BLEProvider({ children }: PropsWithChildren) {
             console.error(err);
             setError(err?.message || String(err));
         }
-    }
+    }, []);
 
-    function handleDisconnected() {
-        deviceRef.current = null;
-        serverRef.current = null;
-        setIsConnected(false);
-    }
-
-    async function readCharacteristic(
+    /**
+     * キャラクタリスティックを読み取る
+     */
+    const readCharacteristic = useCallback(async (
         serviceUuid: string,
         characteristicUuid: string
-    ): Promise<DataView> {
+    ): Promise<DataView> => {
         if (!serverRef.current?.connected) {
             throw new Error('Device is not connected');
         }
@@ -108,13 +132,16 @@ export function BLEProvider({ children }: PropsWithChildren) {
         const characteristic = await service.getCharacteristic(characteristicUuid);
         const value = await characteristic.readValue();
         return value;
-    }
+    }, []);
 
-    async function writeCharacteristic(
+    /**
+     * キャラクタリスティックに書き込む
+     */
+    const writeCharacteristic = useCallback(async (
         serviceUuid: string,
         characteristicUuid: string,
         data: ArrayBuffer
-    ): Promise<void> {
+    ): Promise<void> => {
         if (!serverRef.current?.connected) {
             throw new Error('Device is not connected');
         }
@@ -125,24 +152,20 @@ export function BLEProvider({ children }: PropsWithChildren) {
         console.log('writeCharacteristic: data', data);
 
         if (data.byteLength < 230) {
-            const data_dummy = new Uint8Array(5);
-            data_dummy[0] = 0x00;
-            data_dummy[1] = 0x01;
-            data_dummy[2] = 0x02;
-            data_dummy[3] = 0x03;
-            data_dummy[4] = 0x04;
-            await characteristic.writeValue(data_dummy);
+            await characteristic.writeValue(data);
         } else {
-            console.error('writeCharacteristic: data too long!');
+            console.log('writeCharacteristic: data too long');
         }
+    }, []);
 
-    }
-
-    async function startNotify(
+    /**
+     * 通知を開始し、値の変更をリスナーで受け取る
+     */
+    const startNotify = useCallback(async (
         serviceUuid: string,
         characteristicUuid: string,
         onChange: (value: DataView) => void
-    ): Promise<void> {
+    ): Promise<void> => {
         if (!serverRef.current?.connected) {
             throw new Error('Device is not connected');
         }
@@ -156,9 +179,15 @@ export function BLEProvider({ children }: PropsWithChildren) {
                 onChange(target.value);
             }
         });
-    }
+    }, []);
 
-    async function stopNotify(serviceUuid: string, characteristicUuid: string) {
+    /**
+     * 通知を停止する
+     */
+    const stopNotify = useCallback(async (
+        serviceUuid: string,
+        characteristicUuid: string
+    ) => {
         if (!serverRef.current?.connected) {
             throw new Error('Device is not connected');
         }
@@ -166,11 +195,15 @@ export function BLEProvider({ children }: PropsWithChildren) {
         const characteristic = await service.getCharacteristic(characteristicUuid);
 
         await characteristic.stopNotifications();
-        // イベントリスナーの削除には、具体的な関数参照が必要です。
-    }
+        // イベントリスナーを削除したい場合は、addEventListener時の参照を保持し、ここでremoveEventListenerを呼ぶ必要がある
+    }, []);
 
-    // ヘルパー関数の実装
-    async function getPrimaryService(serviceUuid: string): Promise<BluetoothRemoteGATTService | null> {
+    /**
+     * ヘルパー関数: サービスを取得
+     */
+    const getPrimaryService = useCallback(async (
+        serviceUuid: string
+    ): Promise<BluetoothRemoteGATTService | null> => {
         try {
             const service = await serverRef.current?.getPrimaryService(serviceUuid);
             return service || null;
@@ -178,9 +211,15 @@ export function BLEProvider({ children }: PropsWithChildren) {
             console.error(`Service ${serviceUuid} not found`, err);
             return null;
         }
-    }
+    }, []);
 
-    async function getCharacteristic(serviceUuid: string, characteristicUuid: string): Promise<BluetoothRemoteGATTCharacteristic | null> {
+    /**
+     * ヘルパー関数: キャラクタリスティックを取得
+     */
+    const getCharacteristic = useCallback(async (
+        serviceUuid: string,
+        characteristicUuid: string
+    ): Promise<BluetoothRemoteGATTCharacteristic | null> => {
         try {
             const service = await getPrimaryService(serviceUuid);
             if (!service) return null;
@@ -190,8 +229,11 @@ export function BLEProvider({ children }: PropsWithChildren) {
             console.error(`Characteristic ${characteristicUuid} not found in service ${serviceUuid}`, err);
             return null;
         }
-    }
+    }, [getPrimaryService]);
 
+    /**
+     * Contextに提供する値
+     */
     const value: BLEContextValue = {
         isConnected,
         isConnecting,
@@ -204,7 +246,6 @@ export function BLEProvider({ children }: PropsWithChildren) {
         startNotify,
         stopNotify,
 
-        // ヘルパー関数を提供
         getPrimaryService,
         getCharacteristic,
     };
