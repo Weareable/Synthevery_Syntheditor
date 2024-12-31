@@ -12,6 +12,7 @@ import {
     MESH_PACKET_RX_CHAR_UUID,
     MAC_ADDRESS_CHAR_UUID,
     APP_MAC_ADDRESS,
+    MESH_PACKET_TYPE_NEIGHBOR_LIST,
 } from '@/lib/synthevery/connection/constants';
 import { useBLEContext } from '@/providers/ble-provider';
 
@@ -41,14 +42,14 @@ export function MeshProvider({ children }: PropsWithChildren) {
         callbacks.current.delete(type);
     }, []);
 
-    const sendPacket = async (type: number, destination: P2PMacAddress, data: Uint8Array): Promise<void> => {
+    const sendPacket = useCallback(async (type: number, destination: P2PMacAddress, data: Uint8Array): Promise<void> => {
         sendQueue.current.push({ type, destination, data });
         if (!isSending.current) {
             processQueue();
         }
-    };
+    }, []);
 
-    const processQueue = async () => {
+    const processQueue = useCallback(async () => {
         if (isSending.current || sendQueue.current.length === 0 || !txCharacteristic.current) return;
 
         isSending.current = true;
@@ -82,7 +83,7 @@ export function MeshProvider({ children }: PropsWithChildren) {
         if (sendQueue.current.length > 0) {
             processQueue();
         }
-    };
+    }, []);
 
     const initializeMesh = useCallback(async (): Promise<void> => {
         try {
@@ -97,27 +98,27 @@ export function MeshProvider({ children }: PropsWithChildren) {
             if (!txCharacteristic.current) throw new Error('Tx characteristic not found');
 
             // Read MAC address using BLE provider
-            const macChar = await getCharacteristic(CONNECTION_INFO_SERVICE_UUID, MAC_ADDRESS_CHAR_UUID);
-            if (!macChar) throw new Error('MAC address characteristic not found');
-            const macValue = await macChar.readValue();
-            const macAddress = new Uint8Array(macValue.buffer);
-            console.log('Connected device MAC address:', macAddress);
+            const peerMacChar = await getCharacteristic(CONNECTION_INFO_SERVICE_UUID, MAC_ADDRESS_CHAR_UUID);
+            if (!peerMacChar) throw new Error('MAC address characteristic not found');
+            const peerMacValue = await peerMacChar.readValue();
+            const peerMacAddress = new Uint8Array(peerMacValue.buffer);
+            console.log('Connected device MAC address:', peerMacAddress);
 
             // Start periodic NeighborListData sending
             setInterval(() => {
                 const neighborList: NeighborListData = {
                     sender: { address: APP_MAC_ADDRESS },
-                    neighbor_addresses: [],
-                    sent_addresses: [],
+                    neighbor_addresses: [{ address: peerMacAddress }],
+                    sent_addresses: [{ address: APP_MAC_ADDRESS }],
                 };
-                sendPacket(1, { address: macAddress }, encodeNeighborListData(neighborList)).catch((err) =>
+                sendPacket(MESH_PACKET_TYPE_NEIGHBOR_LIST, { address: peerMacAddress }, encodeNeighborListData(neighborList)).catch((err) =>
                     console.error('Error sending NeighborListData:', err)
                 );
             }, 1000);
         } catch (err) {
             console.error('Error initializing Mesh:', err);
         }
-    }, [getCharacteristic, sendPacket]);
+    }, []);
 
     const handleNotify = (event: Event) => {
         const target = event.target as BluetoothRemoteGATTCharacteristic;
