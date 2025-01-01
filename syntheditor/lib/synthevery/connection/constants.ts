@@ -6,8 +6,10 @@ export const MESH_PACKET_RX_CHAR_UUID = "eba308dc-e069-d268-a43f-2e341418fae9";
 export const APP_MAC_ADDRESS = new Uint8Array([0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
 
 export const MESH_PACKET_TYPE_NEIGHBOR_LIST = 0xFF;
-export const MESH_PACKET_TYPE_HEARTBEAT = 0xFE;
+export const MESH_PACKET_TYPE_DEVICE_TYPE = 0xFE;
 
+export const DEVICE_TYPE_SYNTHEVERY = 0x00;
+export const DEVICE_TYPE_APP = 0x01;
 
 export const SyntheveryDeviceFilter = {
     filters: [{ services: [MESH_SERVICE_UUID] }],
