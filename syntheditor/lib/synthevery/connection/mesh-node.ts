@@ -37,3 +37,17 @@ export function encodeNeighborListData(data: NeighborListData): Uint8Array {
         data.sent_addresses.map(sent => [sent.address]),
     ]));
 }
+
+export function getAddressFromString(addressString: string): P2PMacAddress {
+    return { address: new Uint8Array(addressString.split(':').toReversed().map(byte => parseInt(byte, 16))) };
+}
+
+export function getAddressString(address: P2PMacAddress | string | Uint8Array): string {
+    if (typeof address === 'string') {
+        return getAddressString(getAddressFromString(address));
+    }
+    if (address instanceof Uint8Array) {
+        return getAddressString({ address: address });
+    }
+    return Array.from(address.address.toReversed()).map((byte) => byte.toString(16).padStart(2, '0')).join(':');
+}
