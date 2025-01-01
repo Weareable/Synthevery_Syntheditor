@@ -11,7 +11,7 @@ const MeshPage = () => {
                 <MeshStarter />
             </div>
             <div>
-                <MessageViewer />
+                <MessageViewer messageType={255} />
             </div>
         </div>
     );
