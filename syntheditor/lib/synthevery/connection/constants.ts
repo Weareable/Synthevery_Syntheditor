@@ -8,6 +8,14 @@ export const APP_MAC_ADDRESS = new Uint8Array([0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xF
 
 export const MESH_PACKET_TYPE_NEIGHBOR_LIST = 0xFF;
 export const MESH_PACKET_TYPE_DEVICE_TYPE = 0xFE;
+export const MESH_PACKET_TYPE_RELATIVE_LEADER = 0xFD;
+export const MESH_PACKET_TYPE_APP_STATE = 0xFC;
+export const MESH_PACKET_TYPE_TIME_SYNC = 0xFB;
+export const MESH_PACKET_TYPE_TICK_CLOCK_SYNC = 0xFA;
+export const MESH_PACKET_TYPE_COMMAND = 0xF9;
+export const MESH_PACKET_TYPE_SENSOR_DATA = 0xF8;
+export const MESH_PACKET_TYPE_MOTION_DATA = 0xF7;
+export const MESH_PACKET_TYPE_PEER_DISTANCE = 0xF6;
 
 export const DEVICE_TYPE_SYNTHEVERY = 0x00;
 export const DEVICE_TYPE_APP = 0x01;
@@ -16,4 +24,3 @@ export const SyntheveryDeviceFilter = {
     filters: [{ services: [MESH_SERVICE_UUID] }],
     optionalServices: [MESH_SERVICE_UUID, CONNECTION_INFO_SERVICE_UUID],
 };
-
