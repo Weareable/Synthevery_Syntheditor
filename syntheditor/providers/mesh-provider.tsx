@@ -29,6 +29,7 @@ import {
     MAC_ADDRESS_CHAR_UUID,
     APP_MAC_ADDRESS,
     MESH_PACKET_TYPE_NEIGHBOR_LIST,
+    CONNECTED_DEVICES_CHAR_UUID,
 } from '@/lib/synthevery/connection/constants';
 import { useBLEContext } from '@/providers/ble-provider';
 
@@ -43,6 +44,7 @@ interface MeshContextValue {
     ) => Promise<void>;
     initializeMesh: () => Promise<void>;
     getAddress: () => P2PMacAddress;
+    connectedDevices: P2PMacAddress[];
 }
 
 const MeshContext = createContext<MeshContextValue | null>(null);
@@ -56,6 +58,7 @@ export function MeshProvider({ children }: PropsWithChildren) {
     } = useBLEContext();
 
     const [isMeshReady, setIsMeshReady] = useState(false);
+    const [connectedDevices, setConnectedDevices] = useState<P2PMacAddress[]>([{ address: APP_MAC_ADDRESS }]);
 
     // --- Refs ---
     const callbacks = useRef<Map<number, (packet: MeshPacket) => void>>(new Map());
@@ -142,30 +145,37 @@ export function MeshProvider({ children }: PropsWithChildren) {
      */
     const initializeMesh = useCallback(async (): Promise<void> => {
         try {
-            console.log("initializeMesh");
-            console.log("isConnected", isConnected);
             // Rxキャラクタリスティック設定
             rxCharacteristic.current = await getCharacteristic(MESH_SERVICE_UUID, MESH_PACKET_RX_CHAR_UUID);
             if (!rxCharacteristic.current) throw new Error('Rx characteristic not found');
             await rxCharacteristic.current.startNotifications();
-            rxCharacteristic.current.removeEventListener('characteristicvaluechanged', handleNotify);
-            rxCharacteristic.current.addEventListener('characteristicvaluechanged', handleNotify);
+            rxCharacteristic.current.removeEventListener('characteristicvaluechanged', handleNotifyRx);
+            rxCharacteristic.current.addEventListener('characteristicvaluechanged', handleNotifyRx);
 
-            console.log("isConnected", isConnected);
             // Txキャラクタリスティック設定
             txCharacteristic.current = await getCharacteristic(MESH_SERVICE_UUID, MESH_PACKET_TX_CHAR_UUID);
             if (!txCharacteristic.current) throw new Error('Tx characteristic not found');
 
-            console.log("isConnected", isConnected);
             // MACアドレス読み取り
             const peerMacChar = await getCharacteristic(CONNECTION_INFO_SERVICE_UUID, MAC_ADDRESS_CHAR_UUID);
             if (!peerMacChar) throw new Error('MAC address characteristic not found');
 
-            console.log("isConnected", isConnected);
-
             const peerMacValue = await peerMacChar.readValue();
             const peerMacAddress = new Uint8Array(peerMacValue.buffer);
             console.log('Connected device MAC address:', peerMacAddress);
+
+            // ConnectedDevicesの読み取り
+            const connectedDevicesChar = await getCharacteristic(CONNECTION_INFO_SERVICE_UUID, CONNECTED_DEVICES_CHAR_UUID);
+            if (!connectedDevicesChar) throw new Error('Connected devices characteristic not found');
+
+            const connectedDevicesValue = await connectedDevicesChar.readValue();
+            const connectedDevices = decodeConnectedDevices(new Uint8Array(connectedDevicesValue.buffer));
+            console.log('Connected devices:', connectedDevices);
+            setConnectedDevices(connectedDevices);
+
+            // 定期的にConnectedDevicesを読み取る
+            connectedDevicesChar.removeEventListener('characteristicvaluechanged', handleNotifyConnectedDevices);
+            connectedDevicesChar.addEventListener('characteristicvaluechanged', handleNotifyConnectedDevices);
 
             // 定期的にNeighborListDataを送信するintervalを開始
             neighborListIntervalId.current = setInterval(() => {
@@ -200,7 +210,7 @@ export function MeshProvider({ children }: PropsWithChildren) {
 
         // characteristicvaluechangedイベント解除
         if (rxCharacteristic.current) {
-            rxCharacteristic.current.removeEventListener('characteristicvaluechanged', handleNotify);
+            rxCharacteristic.current.removeEventListener('characteristicvaluechanged', handleNotifyRx);
         }
 
         // キャラクタリスティックの参照をクリア
@@ -241,7 +251,7 @@ export function MeshProvider({ children }: PropsWithChildren) {
     /**
      * Notifyイベントを受信したときの処理
      */
-    const handleNotify = (event: Event) => {
+    const handleNotifyRx = (event: Event) => {
         const target = event.target as BluetoothRemoteGATTCharacteristic;
         if (!target?.value) return;
 
@@ -258,6 +268,27 @@ export function MeshProvider({ children }: PropsWithChildren) {
         }
     };
 
+    const decodeConnectedDevices = (data: Uint8Array) => {
+        // 6バイトずつ分割
+        const macAddresses = [];
+        for (let i = 0; i < data.length; i += 6) {
+            const macAddress = data.slice(i, i + 6);
+            macAddresses.push({ address: macAddress });
+        }
+        return macAddresses;
+    };
+
+    const handleNotifyConnectedDevices = (event: Event) => {
+        const target = event.target as BluetoothRemoteGATTCharacteristic;
+        if (!target?.value) return;
+
+        const macAddresses = decodeConnectedDevices(new Uint8Array(target.value.buffer));
+        console.log('handleNotifyConnectedDevices');
+        console.log(macAddresses);
+        setConnectedDevices(macAddresses);
+    };
+
+
     const getAddress = useCallback(() => {
         return { address: APP_MAC_ADDRESS };
     }, []);
@@ -270,6 +301,7 @@ export function MeshProvider({ children }: PropsWithChildren) {
         sendPacket,
         initializeMesh,
         getAddress,
+        connectedDevices,
     };
 
     return (
