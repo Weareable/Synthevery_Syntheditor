@@ -29,11 +29,11 @@ const DeviceTypeContext = createContext<DeviceTypeContextValue | null>(null);
 
 export function DeviceTypeProvider({ children }: PropsWithChildren) {
 
-    const { sendPacket, getAddress, isMeshReady, setCallback, removeCallback } = useMeshContext();
+    const { sendPacket, getAddress, isMeshReady, setCallback, removeCallback, connectedDevices } = useMeshContext();
 
     // --- Refs ---
-    const [registry, setRegistry] = useState<RoleRegistry | null>(null);
-    const registryRef = useRef<RoleRegistry | null>(null);
+    const registryRef = useRef<RoleRegistry>(createRoleRegistry(MESH_PACKET_TYPE_DEVICE_TYPE).registerRole(getAddress(), DEVICE_TYPE_APP));
+    const [registry, setRegistry] = useState<RoleRegistry>(registryRef.current);
 
     /*
     // --- Effects ---
@@ -93,17 +93,16 @@ export function DeviceTypeProvider({ children }: PropsWithChildren) {
     */
     useEffect(() => {
         if (isMeshReady) {
-            const roleRegistry = createRoleRegistry(MESH_PACKET_TYPE_DEVICE_TYPE).registerRole(getAddress(), DEVICE_TYPE_APP);
-            setRegistry(roleRegistry);
+            registryRef.current = registryRef.current.updateNodeRoles(connectedDevices);
+            setRegistry(registryRef.current);
             console.log('create registry');
-            console.log(roleRegistry);
+            console.log(registryRef.current);
 
             // --- send role request ---
             const sendRoleRequest = async () => {
-                if (roleRegistry) {
+                if (registryRef.current) {
                     console.log('send role request');
-                    console.log(roleRegistry);
-                    await refreshRegistry(sendPacket, roleRegistry, getAddress, true);
+                    await refreshRegistry(sendPacket, registryRef.current, getAddress, true);
                 }
             };
 
@@ -115,9 +114,10 @@ export function DeviceTypeProvider({ children }: PropsWithChildren) {
                 console.log('received role packet');
                 console.log(packet);
 
-                handleRolePacket(sendPacket, getAddress, roleRegistry, packet, (updatedRegistry: RoleRegistry) => {
+                handleRolePacket(sendPacket, getAddress, registryRef.current, packet, (updatedRegistry: RoleRegistry) => {
                     console.log('update role packet to:');
                     console.log(updatedRegistry);
+                    registryRef.current = updatedRegistry;
                     setRegistry({ ...updatedRegistry }); // Trigger re-render here
                 });
             };
@@ -129,7 +129,7 @@ export function DeviceTypeProvider({ children }: PropsWithChildren) {
                 removeCallback(MESH_PACKET_TYPE_DEVICE_TYPE);
             };
         }
-    }, [isMeshReady, sendPacket, getAddress, setCallback, removeCallback]);
+    }, [isMeshReady, sendPacket, getAddress, setCallback, removeCallback, connectedDevices]);
 
     useEffect(() => {
         if (registryRef.current) {
