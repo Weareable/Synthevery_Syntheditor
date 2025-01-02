@@ -1,4 +1,4 @@
-import { useTimer as useTimerPackage } from 'use-timer';
+// ARQPacketHandlerImpl.ts
 import EventEmitter from 'eventemitter3';
 
 interface ARQPacketHandlerEvents {
@@ -9,7 +9,6 @@ interface ARQPacketHandlerEvents {
 export interface ARQPacketHandler {
     handlePacket(data: Uint8Array): void;
     isWaitingForAck(): boolean;
-    waitForAck(callback: (waiting: boolean) => void): void;
     reset(): void;
     sendPacket(data: Uint8Array, resend?: boolean, checkWaiting?: boolean): [boolean, number];
     setDataHandler(handler: (index: number, data: Uint8Array) => [boolean, Uint8Array]): void;
@@ -30,8 +29,8 @@ export class ARQPacketHandlerImpl implements ARQPacketHandler {
     private sentData: Uint8Array = new Uint8Array();
     private lastAckPacket: Uint8Array = new Uint8Array();
     eventEmitter = new EventEmitter<ARQPacketHandlerEvents>();
-    private timer: ReturnType<typeof useTimerPackage> | null = null;
-
+    private timerId: NodeJS.Timeout | null = null;
+    private resendCount: number = 0;
 
     constructor(
         packetSender: (data: Uint8Array) => void,
@@ -43,26 +42,35 @@ export class ARQPacketHandlerImpl implements ARQPacketHandler {
         this.resendAttempts = resendAttempts;
     }
     private createResendTimer(): void {
-        this.timer = useTimerPackage({
-            endTime: this.resendAttempts ? this.resendAttempts * this.resendInterval : undefined,
-            initialTime: 0,
-            timerType: this.resendAttempts ? 'DECREMENTAL' : 'INCREMENTAL',
-            onTimeOver: () => {
-                const oldIndex = this.index;
-                this.waitingForAck = false;
-                this.incrementIndex();
-                if (this.ackHandler) {
-                    this.ackHandler(oldIndex, new Uint8Array());
-                }
-                console.warn("resend_timer_ : timeout");
-                this.eventEmitter.emit('ackTimeout', { index: oldIndex });
-            },
-        });
+        this.resendCount = 0;
+        this.timerId = setTimeout(() => {
+            this.resendTimerCallback();
+        }, this.resendInterval);
+    }
+    private resendTimerCallback(): void {
+        this.resendCount++;
+        if (this.resendCount >= this.resendAttempts) {
+            const oldIndex = this.index;
+            this.waitingForAck = false;
+            this.incrementIndex();
+            if (this.ackHandler) {
+                this.ackHandler(oldIndex, new Uint8Array());
+            }
+            console.error("resend_timer_ : timeout");
+            this.eventEmitter.emit('ackTimeout', { index: oldIndex });
+            this.timerId = null;
+            return;
+        }
+        console.debug("resend_timer_ : resending...");
+        this.sendPacket(this.sentData, true);
+        this.timerId = setTimeout(() => {
+            this.resendTimerCallback()
+        }, this.resendInterval)
     }
     reset(): void {
-        if (this.timer) {
-            this.timer.reset();
-            this.timer = null;
+        if (this.timerId) {
+            clearTimeout(this.timerId);
+            this.timerId = null;
         }
         this.waitingForAck = false;
         this.lastReceivedIndex = 0xFF;
@@ -76,7 +84,7 @@ export class ARQPacketHandlerImpl implements ARQPacketHandler {
         }
         if (!resend) {
             this.waitingForAck = true;
-            this.sentData = data;
+            this.sentData = data.slice(); // コピーを作成
         }
         const packet = new Uint8Array(1 + data.length)
         packet[0] = this.index;
@@ -85,7 +93,6 @@ export class ARQPacketHandlerImpl implements ARQPacketHandler {
 
         if (resend) return [true, this.index];
         this.createResendTimer();
-        this.timer?.start();
         console.debug("timer started");
         return [true, this.index];
     }
@@ -138,9 +145,9 @@ export class ARQPacketHandlerImpl implements ARQPacketHandler {
         }
         if (ackCompleted) {
             this.waitingForAck = false;
-            if (this.timer) {
-                this.timer.reset();
-                this.timer = null;
+            if (this.timerId) {
+                clearTimeout(this.timerId);
+                this.timerId = null;
                 console.debug("handleAck() : stop resend timer");
             }
             this.incrementIndex();
@@ -171,8 +178,5 @@ export class ARQPacketHandlerImpl implements ARQPacketHandler {
     }
     isWaitingForAck(): boolean {
         return this.waitingForAck;
-    }
-    waitForAck(callback: (waiting: boolean) => void): void {
-        callback(this.waitingForAck);
     }
 }
