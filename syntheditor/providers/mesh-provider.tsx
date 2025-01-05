@@ -15,6 +15,7 @@ import {
     encodeMeshPacket,
     decodeMeshPacket,
     encodeNeighborListData,
+    getAddressString,
 } from '@/lib/synthevery/connection/mesh-node';
 import {
     MeshPacket,
@@ -33,7 +34,7 @@ import {
 } from '@/lib/synthevery/connection/constants';
 import { useBLEContext } from '@/providers/ble-provider';
 
-interface MeshContextValue {
+export interface MeshContextValue {
     isMeshReady: boolean;
     setCallback: (type: number, func: (packet: MeshPacket) => void) => void;
     removeCallback: (type: number) => void;
@@ -44,6 +45,7 @@ interface MeshContextValue {
     ) => Promise<void>;
     initializeMesh: () => Promise<void>;
     getAddress: () => P2PMacAddress;
+    getPeerAddress: () => P2PMacAddress;
     connectedDevices: P2PMacAddress[];
 }
 
@@ -64,10 +66,12 @@ export function MeshProvider({ children }: PropsWithChildren) {
     const callbacks = useRef<Map<number, (packet: MeshPacket) => void>>(new Map());
     const sendQueue = useRef<{ type: number; destination: P2PMacAddress; data: Uint8Array }[]>([]);
     const isSending = useRef(false);
-    const packetIndex = useRef(0);
+    const packetIndex = useRef(new Map<string, number>());
 
     const rxCharacteristic = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
     const txCharacteristic = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
+
+    const peerAddress = useRef<P2PMacAddress | null>(null);
 
     // setIntervalのIDを管理するRef
     const neighborListIntervalId = useRef<NodeJS.Timeout | null>(null);
@@ -101,23 +105,33 @@ export function MeshProvider({ children }: PropsWithChildren) {
         console.log(sendQueue.current);
         console.log(isConnected ? 'connected' : 'disconnected');
 
-        if (isSending.current || sendQueue.current.length === 0 || !txCharacteristic.current) return;
+        if (isSending.current || sendQueue.current.length === 0 || !txCharacteristic.current) {
+            console.warn("processQueue() : cannot send packet!");
+            return;
+        }
 
         isSending.current = true;
         const packetData = sendQueue.current.shift();
         let retryCount = 0;
 
-        while (packetData && retryCount < 3 && isConnected) {
+        while (packetData && retryCount < 3) {
             try {
                 const { type, destination, data } = packetData;
+
+                let currentIndex = packetIndex.current.get(getAddressString(destination));
+                if (!currentIndex) {
+                    currentIndex = 0;
+                }
+
                 const packet: MeshPacket = {
                     type,
                     source: { address: APP_MAC_ADDRESS },
                     destination,
                     data,
-                    index: packetIndex.current,
+                    index: currentIndex,
                 };
-                packetIndex.current = (packetIndex.current + 1) % 256; // 0~255を循環
+
+                packetIndex.current.set(getAddressString(destination), (currentIndex + 1) % 256); // 0~255を循環
                 const encodedPacket = encodeMeshPacket(packet);
 
                 console.log("write characteristic");
@@ -164,6 +178,8 @@ export function MeshProvider({ children }: PropsWithChildren) {
             const peerMacAddress = new Uint8Array(peerMacValue.buffer);
             console.log('Connected device MAC address:', peerMacAddress);
 
+            peerAddress.current = { address: peerMacAddress };
+
             // ConnectedDevicesの読み取り
             const connectedDevicesChar = await getCharacteristic(CONNECTION_INFO_SERVICE_UUID, CONNECTED_DEVICES_CHAR_UUID);
             if (!connectedDevicesChar) throw new Error('Connected devices characteristic not found');
@@ -193,6 +209,8 @@ export function MeshProvider({ children }: PropsWithChildren) {
                     encodeNeighborListData(neighborList)
                 ).catch((err) => console.error('Error sending NeighborListData:', err));
             }, 1000);
+
+            setIsMeshReady(true);
         } catch (err) {
             console.error('Error initializing Mesh:', err);
         }
@@ -233,7 +251,6 @@ export function MeshProvider({ children }: PropsWithChildren) {
             // 接続成功 → Mesh開始
             console.log('BLE connected, initialize Mesh', isConnected, isConnecting);
             initializeMesh();
-            setIsMeshReady(true);
         } else {
             // 切断 → Meshクリーンアップ
             console.log('BLE disconnected, cleanup Mesh');
@@ -259,6 +276,7 @@ export function MeshProvider({ children }: PropsWithChildren) {
             const packet = decodeMeshPacket(new Uint8Array(target.value.buffer));
             const callback = callbacks.current.get(packet.type);
             if (callback) {
+                console.log("handleNotifyRx(): type=", packet.type, "from=", getAddressString(packet.source), "to=", getAddressString(packet.destination), "data=", packet.data);
                 callback(packet);
             } else {
                 console.warn(`No callback registered for type: ${packet.type}`);
@@ -293,6 +311,13 @@ export function MeshProvider({ children }: PropsWithChildren) {
         return { address: APP_MAC_ADDRESS };
     }, []);
 
+    const getPeerAddress = useCallback(() => {
+        if (!peerAddress.current) {
+            throw new Error('Peer not initialized');
+        }
+        return peerAddress.current;
+    }, [peerAddress]);
+
     // コンテキストに渡す値
     const value: MeshContextValue = {
         isMeshReady,
@@ -301,6 +326,7 @@ export function MeshProvider({ children }: PropsWithChildren) {
         sendPacket,
         initializeMesh,
         getAddress,
+        getPeerAddress,
         connectedDevices,
     };
 
