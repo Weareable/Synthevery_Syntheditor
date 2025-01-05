@@ -89,6 +89,7 @@ export class ARQPacketHandlerImpl implements ARQPacketHandler {
         const packet = new Uint8Array(1 + data.length)
         packet[0] = this.index;
         packet.set(data, 1);
+        console.log("ARQPacketHandlerImpl: sendPacket() : sending packet=", packet);
         this.packetSender(packet);
 
         if (resend) return [true, this.index];
@@ -123,6 +124,7 @@ export class ARQPacketHandlerImpl implements ARQPacketHandler {
         }
     }
     private handleAck(index: number, data: Uint8Array): void {
+        console.log("ARQPacketHandlerImpl: handleAck() : index=", index, "data=", data);
         let ackCompleted = true;
         console.debug(">> handleAck()");
         if (index !== this.index) {
@@ -142,6 +144,8 @@ export class ARQPacketHandlerImpl implements ARQPacketHandler {
             console.debug(
                 `handleAck() : ack completed? ${ackCompleted}`
             );
+        } else {
+            console.warn("handleAck() : ack handler is not set.");
         }
         if (ackCompleted) {
             this.waitingForAck = false;
