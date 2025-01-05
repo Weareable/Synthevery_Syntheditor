@@ -1,6 +1,7 @@
 import { CommandID, CommandResult } from '@/types/command';
 import { ARQPacketHandler, ARQPacketHandlerImpl } from '@/lib/synthevery/connection/arq-packet-handler';
 import EventEmitter from 'eventemitter3';
+import { SetQueue } from '@/lib/synthevery/core/set-queue';
 
 interface CommandHandlerEvents {
     commandCompleted: { command: CommandID };
@@ -31,7 +32,7 @@ export interface CommandHandler {
 export class CommandHandlerImpl implements CommandHandler {
     private arqPacketHandler: ARQPacketHandler;
     private clientInterfaces: Map<number, CommandClientInterface> = new Map();
-    private commandQueue: CommandID[] = [];
+    private commandQueue: SetQueue<CommandID> = new SetQueue<CommandID>();
     private currentCommand: CommandID | null = null;
     eventEmitter = new EventEmitter<CommandHandlerEvents>();
     private packetSender: (data: Uint8Array) => void;
@@ -40,11 +41,12 @@ export class CommandHandlerImpl implements CommandHandler {
 
     constructor(
         packetSender: (data: Uint8Array) => void,
+        arqPacketHandler?: ARQPacketHandler,
         resendInterval?: number,
         resendAttempts?: number,
     ) {
         this.packetSender = packetSender;
-        this.arqPacketHandler = new ARQPacketHandlerImpl(
+        this.arqPacketHandler = arqPacketHandler ?? new ARQPacketHandlerImpl(
             (data) => this.packetSender(data),
             resendInterval,
             resendAttempts,
@@ -63,35 +65,35 @@ export class CommandHandlerImpl implements CommandHandler {
             console.error("Client not found");
             return false;
         }
-        this.commandQueue.push(command);
+        const result = this.commandQueue.push(command);
         this.popCommand(); // コマンドを送信
-        return true;
+        return result;
     }
     clearQueue(): void {
-        this.commandQueue = [];
+        this.commandQueue.clear();
     }
     reset(): void {
         this.arqPacketHandler.reset();
-        this.commandQueue = [];
+        this.commandQueue.clear();
         this.currentCommand = null;
     }
     handlePacket(data: Uint8Array): void {
         this.arqPacketHandler.handlePacket(data);
     }
     private popCommand(): void {
-        if (this.commandQueue.length === 0) {
-            console.debug("popCommand() : No command to pop!");
+        if (this.commandQueue.empty()) {
+            console.warn("popCommand() : No command to pop!");
             return;
         }
         if (this.arqPacketHandler.isWaitingForAck()) {
-            console.debug("popCommand() : Waiting for ack!");
+            console.warn("popCommand() : Waiting for ack!");
             return;
         }
-        const command = this.commandQueue.shift()!;
+        const command = this.commandQueue.pop()!;
         this.currentCommand = command;
         const client = this.clientInterfaces.get(command.client_id);
         if (!client) {
-            console.error("Client not found");
+            console.error("popCommand() : Client not found");
             return;
         }
         const data = client.generateData(command);
@@ -100,6 +102,7 @@ export class CommandHandlerImpl implements CommandHandler {
         );
         packetData.set(new Uint8Array(new Uint8Array(new Uint8Array(Object.values(command)).buffer)), 0);
         packetData.set(data, this.commandIDByteSize);
+        console.log("popCommand() : sending packetData=", packetData);
         this.arqPacketHandler.sendPacket(packetData);
     }
     private handleData(index: number, data: Uint8Array): [boolean, Uint8Array] {
@@ -141,10 +144,16 @@ export class CommandHandlerImpl implements CommandHandler {
     }
     private handleAck(index: number, data: Uint8Array): boolean {
         if (data.length < this.commandResultByteSize) {
+            console.error(
+                `handleAck() : invalid data length! ${data.length}`
+            );
             return false;
         }
         const result = new Uint8Array(data.buffer, 0, this.commandResultByteSize)
         const commandResult = { command: { client_id: result[0], type: result[1] }, result: result[2] } as CommandResult;
+        console.debug(
+            `handleAck() : commandResult=${commandResult.result}`
+        );
 
         if (commandResult.result === 1) { //CommandResult.kInvalidClientID
             console.error(
