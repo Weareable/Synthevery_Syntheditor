@@ -1,3 +1,5 @@
+"use client";
+
 import React, {
     createContext,
     useContext,
@@ -17,85 +19,77 @@ import { useMeshContext } from './mesh-provider';
 import { P2PMacAddress, MeshPacket } from '@/types/mesh';
 import EventEmitter from 'eventemitter3';
 import { MESH_PACKET_TYPE_COMMAND } from '@/lib/synthevery/connection/constants';
+import { ARQPacketHandlerImpl } from '@/lib/synthevery/connection/arq-packet-handler';
+import { equalsAddress, getAddressString } from '@/lib/synthevery/connection/mesh-node';
 
 
 interface CommandProviderProps {
     children: React.ReactNode;
 }
 
-interface CommandContextValue {
-    registerClient: (client: CommandClientInterface) => void;
-    pushCommand: (nodeAddress: P2PMacAddress, command: CommandID) => void;
+export interface CommandContextValue {
+    getCommandHandler: (nodeAddress: P2PMacAddress, create: boolean) => CommandHandler | undefined;
     getEventEmitter: (nodeAddress: P2PMacAddress) => EventEmitter<any> | undefined;
+    isAvailable: (nodeAddress: P2PMacAddress) => boolean;
 }
 
 const CommandContext = createContext<CommandContextValue | null>(null);
 
 export function CommandProvider({ children }: CommandProviderProps) {
-    const { sendPacket, setCallback, connectedDevices } = useMeshContext();
+    const { sendPacket, setCallback, connectedDevices, removeCallback } = useMeshContext();
     const commandHandlersRef = useRef<Map<string, CommandHandler>>(new Map());
-    const clientInterfacesRef = useRef<Map<number, CommandClientInterface>>(new Map());
 
-    // connectedDevices の変更を監視し、CommandHandler のインスタンスを作成/削除
-    useEffect(() => {
-        if (!commandHandlersRef.current) return;
-        // 既存のCommandHandlerの削除
-        commandHandlersRef.current.forEach((handler, address) => {
-            if (!connectedDevices.some(device => JSON.stringify(device.address) === address)) {
-                commandHandlersRef.current?.delete(address);
-            }
-        });
-        // 新しいCommandHandlerの作成
-        connectedDevices.forEach(device => {
-            const address = JSON.stringify(device.address);
-            if (!commandHandlersRef.current?.has(address)) {
-                const handler = new CommandHandlerImpl(
-                    (data) => {
-                        sendPacket(MESH_PACKET_TYPE_COMMAND, device, data);
-                    },
-                    undefined, // TimerListを渡さない
-                );
-                commandHandlersRef.current?.set(address, handler);
-            }
-        });
-        return () => {
-            commandHandlersRef.current?.clear();
-        };
-    }, [connectedDevices, sendPacket]);
-    const registerClient = useCallback((client: CommandClientInterface) => {
-        clientInterfacesRef.current.set(client.getClientID(), client);
-        commandHandlersRef.current?.forEach(handler => {
-            handler.setClientInterface(client);
-        });
-    }, []);
-
-    const pushCommand = useCallback((nodeAddress: P2PMacAddress, command: CommandID) => {
-        const address = JSON.stringify(nodeAddress.address);
+    const getCommandHandler = useCallback((nodeAddress: P2PMacAddress, create: boolean) => {
+        const address = getAddressString(nodeAddress.address);
         const handler = commandHandlersRef.current?.get(address);
-        handler?.pushCommand(command);
-    }, []);
+        console.log("getCommandHandler(): handler=", handler);
+        if (!handler && create) {
+            console.log("getCommandHandler(): creating handler for address=", address);
+            commandHandlersRef.current?.set(address, new CommandHandlerImpl(
+                (data) => {
+                    sendPacket(MESH_PACKET_TYPE_COMMAND, nodeAddress, data);
+                },
+                new ARQPacketHandlerImpl(
+                    (data) => {
+                        sendPacket(MESH_PACKET_TYPE_COMMAND, nodeAddress, data);
+                    },
+                    1000,
+                    3
+                )
+            ));
+            return commandHandlersRef.current?.get(address);
+        }
+        return handler;
+    }, [commandHandlersRef]);
+
     const getEventEmitter = useCallback((nodeAddress: P2PMacAddress) => {
-        const address = JSON.stringify(nodeAddress.address);
+        const address = getAddressString(nodeAddress.address);
         return commandHandlersRef.current?.get(address)?.eventEmitter;
     }, []);
 
+    const isAvailable = useCallback((nodeAddress: P2PMacAddress) => {
+        const hasNode = connectedDevices.some(device => equalsAddress(device, nodeAddress));
+        const hasHandler = commandHandlersRef.current?.has(getAddressString(nodeAddress.address));
+        return hasNode && hasHandler;
+    }, [connectedDevices]);
+
     const value: CommandContextValue = {
-        registerClient,
-        pushCommand,
+        getCommandHandler,
         getEventEmitter,
+        isAvailable,
     };
 
     useEffect(() => {
         const handlePacket = (packet: MeshPacket) => {
             if (packet.type !== MESH_PACKET_TYPE_COMMAND) return;
-            const address = JSON.stringify(packet.source.address);
+            const address = getAddressString(packet.source.address);
             commandHandlersRef.current?.get(address)?.handlePacket(packet.data);
         };
         setCallback(MESH_PACKET_TYPE_COMMAND, handlePacket)
         return () => {
-            setCallback(MESH_PACKET_TYPE_COMMAND, () => { }); // クリーンアップ
+            removeCallback(MESH_PACKET_TYPE_COMMAND);
         }
-    }, [setCallback]);
+    }, [setCallback, removeCallback]);
     return (
         <CommandContext.Provider value={value}>
             {children}
