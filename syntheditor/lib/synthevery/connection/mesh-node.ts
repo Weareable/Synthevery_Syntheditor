@@ -51,3 +51,8 @@ export function getAddressString(address: P2PMacAddress | string | Uint8Array): 
     }
     return Array.from(address.address.toReversed()).map((byte) => byte.toString(16).padStart(2, '0')).join(':');
 }
+
+export function equalsAddress(a: P2PMacAddress, b: P2PMacAddress): boolean {
+    return a.address.length === b.address.length && a.address.every((value, index) => value === b.address[index]);
+}
+
