@@ -24,3 +24,10 @@ export const SyntheveryDeviceFilter = {
     filters: [{ services: [MESH_SERVICE_UUID] }],
     optionalServices: [MESH_SERVICE_UUID, CONNECTION_INFO_SERVICE_UUID],
 };
+
+export const COMMAND_CLIENT_ID_APPSTATE_RETRIEVE = 0x06;
+export const COMMAND_CLIENT_ID_APPSTATE_NOTIFY = 0x07;
+
+export const APPSTATE_ID_PLAYER = 0x10;
+export const APPSTATE_ID_PLAYER_QUANTIZER = APPSTATE_ID_PLAYER + 0x01;
+export const APPSTATE_ID_PLAYER_METRONOME = APPSTATE_ID_PLAYER + 0x02;
