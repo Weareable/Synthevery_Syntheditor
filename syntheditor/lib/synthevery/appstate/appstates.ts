@@ -33,6 +33,21 @@ export function deserializeBoolean(data: Uint8Array): boolean | null {
     return data[0] !== 0;
 }
 
+export function serializeFloat32(value: number): Uint8Array {
+    const buffer = new ArrayBuffer(4);
+    const view = new DataView(buffer);
+    view.setFloat32(0, value, true);
+    return new Uint8Array(buffer);
+}
+
+export function deserializeFloat32(data: Uint8Array): number | null {
+    if (data.byteLength < 4) {
+        console.error('Failed to deserialize: Data length is too short, needed=4 bytes, got=', data.byteLength, 'bytes');
+        return null;
+    }
+    return new DataView(data.buffer).getFloat32(0, true);
+}
+
 export function serializeFixedUint8Array(value: Uint8Array): Uint8Array {
     return new Uint8Array(value);
 }
