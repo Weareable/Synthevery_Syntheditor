@@ -126,19 +126,28 @@ export class CommandHandlerImpl implements CommandHandler {
                 "handleData() : client not found, received command ignored."
             );
             result.result = 1; // CommandResult.kInvalidClientID
-            return [true, new Uint8Array(new Uint8Array(Object.values(result)).buffer)];
+            const response = new Uint8Array(3);
+            response[0] = result.command.client_id;
+            response[1] = result.command.type;
+            response[2] = result.result;
+            return [true, response];
         }
         result.result = 0; // CommandResult.kSuccess
         const [isSuccess, responseData] = client.handleData(
             command,
             data.slice(this.commandIDByteSize),
         );
-        const response = new Uint8Array(new Uint8Array(Object.values(result)).buffer);
+        const response = new Uint8Array(3);
+        response[0] = result.command.client_id;
+        response[1] = result.command.type;
+        response[2] = result.result;
+        console.log("handleData() : response=", response);
+
         const combinedResponse = new Uint8Array(response.length + responseData.length)
         combinedResponse.set(response);
         combinedResponse.set(responseData, response.length);
         console.debug(
-            `handleData() : command handled, result=${isSuccess}`
+            `handleData() : command handled, result=${isSuccess}, combinedResponse=${combinedResponse}`
         );
         return [isSuccess, combinedResponse];
     }
