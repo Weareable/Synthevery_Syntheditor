@@ -77,7 +77,7 @@ export function AppStateProvider({
         }
     });
 
-    let peerAddresses: P2PMacAddress[] = [];
+    const peerAddressesRef = useRef<P2PMacAddress[]>([]);
 
     useEffect(() => {
         if (!meshContext.isMeshReady) {
@@ -86,19 +86,19 @@ export function AppStateProvider({
 
         try {
             console.log("AppStateProvider: meshContext.isMeshReady=", meshContext.isMeshReady);
-            peerAddresses = [meshContext.getPeerAddress()];
-            console.log("AppStateProvider: peerAddresses=", peerAddresses);
+            peerAddressesRef.current = [meshContext.getPeerAddress()];
+            console.log("AppStateProvider: peerAddresses=", peerAddressesRef.current);
 
-            console.log("AppStateProvider: creating connector with peerAddresses=", peerAddresses);
+            console.log("AppStateProvider: creating connector with peerAddresses=", peerAddressesRef.current);
             connectorRef.current = new AppStateSyncConnector(
                 COMMAND_CLIENT_ID_APPSTATE_NOTIFY,
                 COMMAND_CLIENT_ID_APPSTATE_RETRIEVE,
                 meshContext,
                 commandContext,
-                peerAddresses
+                peerAddressesRef.current
             );
 
-            for (const peerAddress of peerAddresses) {
+            for (const peerAddress of peerAddressesRef.current) {
                 const handler = commandContext.getCommandHandler(peerAddress, false);
 
                 const playerControlClient = new PlayerCommandClient(COMMAND_CLIENT_ID_PLAYER_CONTROL, playingStateRef, bpmStateRef);
@@ -106,6 +106,7 @@ export function AppStateProvider({
             }
 
             console.log("AppStateProvider: adding metronomeSyncState to connector");
+            metronomeSyncState.eventEmitter.removeAllListeners('synced');
             metronomeSyncState.eventEmitter.on('synced', (sender: P2PMacAddress) => {
                 console.log("AppStateProvider: synced from sender=", sender);
                 const value = metronomeStateRef.current;
@@ -116,6 +117,7 @@ export function AppStateProvider({
             });
             connectorRef.current.addState(metronomeSyncState);
 
+            tickClockSyncState.eventEmitter.removeAllListeners('synced');
             tickClockSyncState.eventEmitter.on('synced', (sender: P2PMacAddress) => {
                 setPlayingState(playingStateRef.current);
                 setBpmState(bpmStateRef.current);
@@ -128,7 +130,7 @@ export function AppStateProvider({
         } catch (error) {
             console.warn("AppStateProvider: peer not connected");
         }
-    }, [meshContext.isMeshReady]);
+    }, [meshContext, commandContext, metronomeSyncState, tickClockSyncState]);
 
     const value: AppStateContextValue = {
         metronomeState,
@@ -145,7 +147,7 @@ export function AppStateProvider({
             console.log("AppStateProvider: updatePlayingState()");
             playingStateRef.current = value;
 
-            for (const peerAddress of peerAddresses) {
+            for (const peerAddress of peerAddressesRef.current) {
                 const handler = commandContext.getCommandHandler(peerAddress, false);
                 if (handler) {
                     handler.pushCommand({ client_id: COMMAND_CLIENT_ID_PLAYER_CONTROL, type: PlayerCommandClient.COMMAND_TYPE_PLAYING_STATE });
@@ -157,7 +159,7 @@ export function AppStateProvider({
             console.log("AppStateProvider: updateBpmState()");
             bpmStateRef.current = value;
 
-            for (const peerAddress of peerAddresses) {
+            for (const peerAddress of peerAddressesRef.current) {
                 const handler = commandContext.getCommandHandler(peerAddress, false);
                 if (handler) {
                     handler.pushCommand({ client_id: COMMAND_CLIENT_ID_PLAYER_CONTROL, type: PlayerCommandClient.COMMAND_TYPE_BPM });
