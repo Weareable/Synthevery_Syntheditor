@@ -62,6 +62,11 @@ export function MeshProvider({ children }: PropsWithChildren) {
     const [isMeshReady, setIsMeshReady] = useState(false);
     const [connectedDevices, setConnectedDevices] = useState<P2PMacAddress[]>([{ address: APP_MAC_ADDRESS }]);
 
+    const isConnectedRef = useRef(isConnected);
+    useEffect(() => {
+        isConnectedRef.current = isConnected;
+    }, [isConnected]);
+
     // --- Refs ---
     const callbacks = useRef<Map<number, (packet: MeshPacket) => void>>(new Map());
     const sendQueue = useRef<{ type: number; destination: P2PMacAddress; data: Uint8Array }[]>([]);
@@ -93,7 +98,7 @@ export function MeshProvider({ children }: PropsWithChildren) {
         console.log('processQueue');
         const sendQueueCopy = sendQueue.current.slice();
         console.log(sendQueueCopy);
-        console.log(isConnected ? 'connected' : 'disconnected');
+        console.log(isConnectedRef.current ? 'connected' : 'disconnected');
 
         if (isSending.current || sendQueue.current.length === 0 || !txCharacteristic.current) {
             console.warn("processQueue() : cannot send packet!");
@@ -104,7 +109,7 @@ export function MeshProvider({ children }: PropsWithChildren) {
         const packetData = sendQueue.current.shift();
         let retryCount = 0;
 
-        while (packetData && retryCount < 3) {
+        while (packetData && retryCount < 3 && isConnectedRef.current) {
             try {
                 const { type, destination, data } = packetData;
 
@@ -142,13 +147,17 @@ export function MeshProvider({ children }: PropsWithChildren) {
         if (sendQueue.current.length > 0) {
             processQueue();
         }
-    }, [writeCharacteristic, isConnected, txCharacteristic]);
+    }, [writeCharacteristic, isConnectedRef, txCharacteristic]);
 
     /**
  * パケット送信キューに追加し、まだ送信中でなければ順番に送信を開始
  */
     const sendPacket = useCallback(
         async (type: number, destination: P2PMacAddress, data: Uint8Array): Promise<void> => {
+            if (!isConnectedRef.current) {
+                console.warn("sendPacket() : not connected, packet ignored.");
+                return;
+            }
             sendQueue.current.push({ type, destination, data });
             if (!isSending.current) {
                 processQueue();
