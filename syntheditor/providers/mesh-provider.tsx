@@ -87,22 +87,12 @@ export function MeshProvider({ children }: PropsWithChildren) {
     }, []);
 
     /**
-     * パケット送信キューに追加し、まだ送信中でなければ順番に送信を開始
-     */
-    const sendPacket =
-        async (type: number, destination: P2PMacAddress, data: Uint8Array): Promise<void> => {
-            sendQueue.current.push({ type, destination, data });
-            if (!isSending.current) {
-                processQueue();
-            }
-        };
-
-    /**
      * キューにあるパケットを順次送信
      */
-    const processQueue = async () => {
+    const processQueue = useCallback(async () => {
         console.log('processQueue');
-        console.log(sendQueue.current);
+        const sendQueueCopy = sendQueue.current.slice();
+        console.log(sendQueueCopy);
         console.log(isConnected ? 'connected' : 'disconnected');
 
         if (isSending.current || sendQueue.current.length === 0 || !txCharacteristic.current) {
@@ -152,7 +142,31 @@ export function MeshProvider({ children }: PropsWithChildren) {
         if (sendQueue.current.length > 0) {
             processQueue();
         }
-    };
+    }, [writeCharacteristic, isConnected, txCharacteristic]);
+
+    /**
+ * パケット送信キューに追加し、まだ送信中でなければ順番に送信を開始
+ */
+    const sendPacket = useCallback(
+        async (type: number, destination: P2PMacAddress, data: Uint8Array): Promise<void> => {
+            sendQueue.current.push({ type, destination, data });
+            if (!isSending.current) {
+                processQueue();
+            }
+        },
+        [processQueue]
+    );
+
+
+    const handleNotifyConnectedDevices = useCallback((event: Event) => {
+        const target = event.target as BluetoothRemoteGATTCharacteristic;
+        if (!target?.value) return;
+
+        const macAddresses = decodeConnectedDevices(new Uint8Array(target.value.buffer));
+        console.log('handleNotifyConnectedDevices');
+        console.log(macAddresses);
+        setConnectedDevices(macAddresses);
+    }, []);
 
     /**
      * Meshネットワークを初期化
@@ -214,7 +228,7 @@ export function MeshProvider({ children }: PropsWithChildren) {
         } catch (err) {
             console.error('Error initializing Mesh:', err);
         }
-    }, [getCharacteristic, isConnected]);
+    }, [getCharacteristic, handleNotifyConnectedDevices, sendPacket]);
 
     /**
      * Meshネットワークのクリーンアップ
@@ -295,17 +309,6 @@ export function MeshProvider({ children }: PropsWithChildren) {
         }
         return macAddresses;
     };
-
-    const handleNotifyConnectedDevices = (event: Event) => {
-        const target = event.target as BluetoothRemoteGATTCharacteristic;
-        if (!target?.value) return;
-
-        const macAddresses = decodeConnectedDevices(new Uint8Array(target.value.buffer));
-        console.log('handleNotifyConnectedDevices');
-        console.log(macAddresses);
-        setConnectedDevices(macAddresses);
-    };
-
 
     const getAddress = useCallback(() => {
         return { address: APP_MAC_ADDRESS };
