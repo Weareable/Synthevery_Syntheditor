@@ -47,11 +47,11 @@ export function AppStateProvider({
     const metronomeStateRef = useRef<boolean>(false);
     const [metronomeState, setMetronomeState] = useState<boolean>(false);
 
-    const metronomeSyncState = createReactSyncState(APPSTATE_ID_PLAYER_METRONOME, createReactStateStore(
+    const metronomeSyncState = useRef<AppStateSyncInterface>(createReactSyncState(APPSTATE_ID_PLAYER_METRONOME, createReactStateStore(
         (value) => serializeBoolean(value),
         (data) => deserializeBoolean(data),
         metronomeStateRef
-    ));
+    )));
 
     const playingStateRef = useRef<boolean>(false);
     const [playingState, setPlayingState] = useState<boolean>(false);
@@ -59,7 +59,7 @@ export function AppStateProvider({
     const bpmStateRef = useRef<number>(120);
     const [bpmState, setBpmState] = useState<number>(120);
 
-    const tickClockSyncState = createReactSyncState(APPSTATE_ID_PLAYER_TICK_CLOCK, {
+    const tickClockSyncState = useRef<AppStateSyncInterface>(createReactSyncState(APPSTATE_ID_PLAYER_TICK_CLOCK, {
         serialize: () => {
             return new Uint8Array();
         },
@@ -75,7 +75,8 @@ export function AppStateProvider({
             bpmStateRef.current = bpm;
             return true;
         }
-    });
+    }));
+
 
     const peerAddressesRef = useRef<P2PMacAddress[]>([]);
 
@@ -106,8 +107,8 @@ export function AppStateProvider({
             }
 
             console.log("AppStateProvider: adding metronomeSyncState to connector");
-            metronomeSyncState.eventEmitter.removeAllListeners('synced');
-            metronomeSyncState.eventEmitter.on('synced', (sender: P2PMacAddress) => {
+            metronomeSyncState.current.eventEmitter.removeAllListeners('synced');
+            metronomeSyncState.current.eventEmitter.on('synced', (sender: P2PMacAddress) => {
                 console.log("AppStateProvider: synced from sender=", sender);
                 const value = metronomeStateRef.current;
 
@@ -115,14 +116,15 @@ export function AppStateProvider({
                 setMetronomeState(value);
 
             });
-            connectorRef.current.addState(metronomeSyncState);
+            connectorRef.current.addState(metronomeSyncState.current);
 
-            tickClockSyncState.eventEmitter.removeAllListeners('synced');
-            tickClockSyncState.eventEmitter.on('synced', (sender: P2PMacAddress) => {
+            tickClockSyncState.current.eventEmitter.removeAllListeners('synced');
+            tickClockSyncState.current.eventEmitter.on('synced', (sender: P2PMacAddress) => {
                 setPlayingState(playingStateRef.current);
                 setBpmState(bpmStateRef.current);
             });
-            connectorRef.current.addState(tickClockSyncState);
+            connectorRef.current.addState(tickClockSyncState.current);
+
 
             console.log("AppStateProvider: retrieving all states");
             connectorRef.current.retrieveAllStates(meshContext.getPeerAddress());
