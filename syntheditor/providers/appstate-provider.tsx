@@ -16,7 +16,7 @@ import { useMeshContext } from '@/providers/mesh-provider';
 import { APPSTATE_ID_PLAYER_TICK_CLOCK, COMMAND_CLIENT_ID_APPSTATE_NOTIFY, COMMAND_CLIENT_ID_APPSTATE_RETRIEVE, COMMAND_CLIENT_ID_PLAYER_CONTROL } from '@/lib/synthevery/connection/constants';
 import { AppStateID, AppStateStore, AppStateSyncInterface } from '@/types/appstate';
 import { createReactStateStore, createReactSyncState, deserializeBoolean, deserializeFloat32, serializeBoolean } from '@/lib/synthevery/appstate/appstates';
-import { APPSTATE_ID_PLAYER_METRONOME } from '@/lib/synthevery/connection/constants';
+import { APPSTATE_ID_PLAYER_METRONOME, APPSTATE_ID_PLAYER_RECORDER, APPSTATE_ID_PLAYER_QUANTIZER } from '@/lib/synthevery/connection/constants';
 import { P2PMacAddress } from '@/types/mesh';
 import { PlayerCommandClient } from '@/lib/synthevery/appstate/player-command-clients';
 
@@ -31,6 +31,10 @@ interface AppStateContextValue {
     updatePlayingState: (value: boolean, notify: boolean) => void;
     bpmState: number;
     updateBpmState: (value: number, notify: boolean) => void;
+    recorderState: boolean;
+    updateRecorderState: (value: boolean, notify: boolean) => void;
+    quantizerState: boolean;
+    updateQuantizerState: (value: boolean, notify: boolean) => void;
     retrieveAllStates: () => void;
 }
 
@@ -77,6 +81,23 @@ export function AppStateProvider({
         }
     }));
 
+    const recorderStateRef = useRef<boolean>(false);
+    const [recorderState, setRecorderState] = useState<boolean>(false);
+
+    const recorderSyncState = useRef<AppStateSyncInterface>(createReactSyncState(APPSTATE_ID_PLAYER_RECORDER, createReactStateStore(
+        (value) => serializeBoolean(value),
+        (data) => deserializeBoolean(data),
+        recorderStateRef
+    )));
+
+    const quantizerStateRef = useRef<boolean>(false);
+    const [quantizerState, setQuantizerState] = useState<boolean>(false);
+
+    const quantizerSyncState = useRef<AppStateSyncInterface>(createReactSyncState(APPSTATE_ID_PLAYER_QUANTIZER, createReactStateStore(
+        (value) => serializeBoolean(value),
+        (data) => deserializeBoolean(data),
+        quantizerStateRef
+    )));
 
     const peerAddressesRef = useRef<P2PMacAddress[]>([]);
 
@@ -125,6 +146,17 @@ export function AppStateProvider({
             });
             connectorRef.current.addState(tickClockSyncState.current);
 
+            recorderSyncState.current.eventEmitter.removeAllListeners('synced');
+            recorderSyncState.current.eventEmitter.on('synced', (sender: P2PMacAddress) => {
+                setRecorderState(recorderStateRef.current);
+            });
+            connectorRef.current.addState(recorderSyncState.current);
+
+            quantizerSyncState.current.eventEmitter.removeAllListeners('synced');
+            quantizerSyncState.current.eventEmitter.on('synced', (sender: P2PMacAddress) => {
+                setQuantizerState(quantizerStateRef.current);
+            });
+            connectorRef.current.addState(quantizerSyncState.current);
 
             console.log("AppStateProvider: retrieving all states");
             connectorRef.current.retrieveAllStates(meshContext.getPeerAddress());
@@ -132,7 +164,7 @@ export function AppStateProvider({
         } catch (error) {
             console.warn("AppStateProvider: peer not connected");
         }
-    }, [meshContext, commandContext, metronomeSyncState, tickClockSyncState]);
+    }, [meshContext, commandContext]);
 
     const value: AppStateContextValue = {
         metronomeState,
@@ -166,6 +198,24 @@ export function AppStateProvider({
                 if (handler) {
                     handler.pushCommand({ client_id: COMMAND_CLIENT_ID_PLAYER_CONTROL, type: PlayerCommandClient.COMMAND_TYPE_BPM });
                 }
+            }
+        },
+        recorderState,
+        updateRecorderState: (value: boolean, notify: boolean = true) => {
+            console.log("AppStateProvider: updateRecorderState()");
+            recorderStateRef.current = value;
+            setRecorderState(value);
+            if (notify) {
+                connectorRef.current?.getState(APPSTATE_ID_PLAYER_RECORDER)?.notifyChange();
+            }
+        },
+        quantizerState,
+        updateQuantizerState: (value: boolean, notify: boolean = true) => {
+            console.log("AppStateProvider: updateQuantizerState()");
+            quantizerStateRef.current = value;
+            setQuantizerState(value);
+            if (notify) {
+                connectorRef.current?.getState(APPSTATE_ID_PLAYER_QUANTIZER)?.notifyChange();
             }
         },
         retrieveAllStates: () => {

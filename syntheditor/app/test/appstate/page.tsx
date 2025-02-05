@@ -50,7 +50,7 @@ function BpmInput({ bpmState, updateBpmState }: { bpmState: number, updateBpmSta
 
 
 const AppStateExample: React.FC = () => {
-    const { metronomeState, updateMetronomeState, playingState, updatePlayingState, bpmState, updateBpmState } = useAppStateContext();
+    const { metronomeState, updateMetronomeState, playingState, updatePlayingState, bpmState, updateBpmState, recorderState, updateRecorderState, quantizerState, updateQuantizerState } = useAppStateContext();
 
     return (
         <div>
@@ -66,6 +66,18 @@ const AppStateExample: React.FC = () => {
             <h3>
                 playing=
                 {playingState ? '▶️' : '⏸️'}
+            </h3>
+
+            <button onClick={() => updateRecorderState(!recorderState, true)}>Set Recorder State</button>
+            <h3>
+                recorder=
+                {recorderState ? '⏺️' : '⏹️'}
+            </h3>
+
+            <button onClick={() => updateQuantizerState(!quantizerState, true)}>Set Quantizer State</button>
+            <h3>
+                quantizer=
+                {quantizerState ? '✅' : '❌'}
             </h3>
 
             <BpmInput bpmState={bpmState} updateBpmState={(value: number) => updateBpmState(value, true)} />
