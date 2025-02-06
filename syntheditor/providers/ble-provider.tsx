@@ -27,7 +27,7 @@ interface BLEContextValue {
     writeCharacteristic: (
         serviceUuid: string,
         characteristicUuid: string,
-        data: ArrayBuffer
+        data: BufferSource
     ) => Promise<void>;
 
     startNotify: (
@@ -144,7 +144,7 @@ export function BLEProvider({ children }: PropsWithChildren) {
     const writeCharacteristic = async (
         serviceUuid: string,
         characteristicUuid: string,
-        data: ArrayBuffer
+        data: BufferSource
     ): Promise<void> => {
         if (!serverRef.current?.connected) {
             throw new Error('Device is not connected');
