@@ -3,6 +3,7 @@ import { encode, decode } from '@msgpack/msgpack';
 import { P2PMacAddress } from '@/types/mesh';
 import EventEmitter from 'eventemitter3';
 import { useRef } from 'react';
+import { getAddressFromString, getAddressString } from '../connection/mesh-node';
 
 // MsgPack シリアライズ関数
 export function serializeMsgPack<T>(value: T): Uint8Array {
@@ -48,6 +49,29 @@ export function deserializeFloat32(data: Uint8Array): number | null {
     return new DataView(data.buffer).getFloat32(0, true);
 }
 
+export function serializeUint32(value: number): Uint8Array {
+    const buffer = new ArrayBuffer(4);
+    const view = new DataView(buffer);
+    view.setUint32(0, value, true);
+    return new Uint8Array(buffer);
+}
+
+export function deserializeUint32(data: Uint8Array): number | null {
+    if (data.byteLength < 4) {
+        console.error('Failed to deserialize: Data length is too short, needed=4 bytes, got=', data.byteLength, 'bytes');
+        return null;
+    }
+    return new DataView(data.buffer).getUint32(0, true);
+}
+
+export function serializeUint8(value: number): Uint8Array {
+    return new Uint8Array([value]);
+}
+
+export function deserializeUint8(data: Uint8Array): number | null {
+    return data[0];
+}
+
 export function serializeFixedUint8Array(value: Uint8Array): Uint8Array {
     return new Uint8Array(value);
 }
@@ -67,6 +91,16 @@ export function deserializeP2PMacAddress(data: Uint8Array): P2PMacAddress | null
     }
     const address = new Uint8Array(data);
     return { address };
+}
+
+export function serializeStringP2PMacAddress(value: string): Uint8Array {
+    const address = getAddressFromString(value);
+    return serializeP2PMacAddress(address);
+}
+
+export function deserializeStringP2PMacAddress(data: Uint8Array): string | null {
+    const address = deserializeP2PMacAddress(data);
+    return address ? getAddressString(address) : null;
 }
 
 // DataViewから値を読み込むヘルパー関数
