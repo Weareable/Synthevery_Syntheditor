@@ -3,6 +3,7 @@ import { encode, decode } from '@msgpack/msgpack';
 import { P2PMacAddress } from '@/types/mesh';
 import EventEmitter from 'eventemitter3';
 import { useRef } from 'react';
+import { getAddressFromString, getAddressString } from '../connection/mesh-node';
 
 // MsgPack シリアライズ関数
 export function serializeMsgPack<T>(value: T): Uint8Array {
@@ -48,6 +49,29 @@ export function deserializeFloat32(data: Uint8Array): number | null {
     return new DataView(data.buffer).getFloat32(0, true);
 }
 
+export function serializeUint32(value: number): Uint8Array {
+    const buffer = new ArrayBuffer(4);
+    const view = new DataView(buffer);
+    view.setUint32(0, value, true);
+    return new Uint8Array(buffer);
+}
+
+export function deserializeUint32(data: Uint8Array): number | null {
+    if (data.byteLength < 4) {
+        console.error('Failed to deserialize: Data length is too short, needed=4 bytes, got=', data.byteLength, 'bytes');
+        return null;
+    }
+    return new DataView(data.buffer).getUint32(0, true);
+}
+
+export function serializeUint8(value: number): Uint8Array {
+    return new Uint8Array([value]);
+}
+
+export function deserializeUint8(data: Uint8Array): number | null {
+    return data[0];
+}
+
 export function serializeFixedUint8Array(value: Uint8Array): Uint8Array {
     return new Uint8Array(value);
 }
@@ -67,6 +91,20 @@ export function deserializeP2PMacAddress(data: Uint8Array): P2PMacAddress | null
     }
     const address = new Uint8Array(data);
     return { address };
+}
+
+export function serializeStringP2PMacAddress(value: string): Uint8Array {
+    const address = getAddressFromString(value);
+    return serializeP2PMacAddress(address);
+}
+
+export function deserializeStringP2PMacAddress(data: Uint8Array): string | null {
+    const address = deserializeP2PMacAddress(data);
+    if (address === null) {
+        console.error('Failed to deserialize: Data is not a valid P2PMacAddress');
+        return null;
+    }
+    return getAddressString(address);
 }
 
 // DataViewから値を読み込むヘルパー関数
@@ -125,7 +163,7 @@ export function deserializeArrayFixedLength<T>(
     while (offset < data.byteLength) {
         const itemData = data.slice(offset, offset + elementLength);
         const deserializationResult = deserializer(itemData);
-        if (!deserializationResult) {
+        if (deserializationResult === null) {
             console.error(
                 'Failed to deserialize item:',
                 itemData
@@ -189,7 +227,7 @@ export function deserializeMap<K, V>(
     while (offset < data.byteLength) {
         const keyData = data.slice(offset, offset + keyLength);
         const keyDeserializationResult = keyDeserializer(keyData);
-        if (!keyDeserializationResult) {
+        if (keyDeserializationResult === null) {
             console.error(
                 'Failed to deserialize key:',
                 keyData
@@ -199,7 +237,7 @@ export function deserializeMap<K, V>(
         offset += keyLength;
         const valueData = data.slice(offset, offset + valueLength);
         const valueDeserializationResult = valueDeserializer(valueData);
-        if (!valueDeserializationResult) {
+        if (valueDeserializationResult === null) {
             console.error(
                 'Failed to deserialize value:',
                 valueData

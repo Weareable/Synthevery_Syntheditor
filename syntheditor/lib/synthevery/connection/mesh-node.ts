@@ -2,7 +2,7 @@ import { decode, encode } from "@msgpack/msgpack";
 import { MeshPacket, P2PMacAddress, NeighborListData } from "@/types/mesh";
 
 export function decodeMeshPacket(data: Uint8Array): MeshPacket {
-    const decodedObject = decode(data.buffer);
+    const decodedObject = decode(data);
     if (decodedObject instanceof Array) {
         return {
             type: decodedObject[0],
