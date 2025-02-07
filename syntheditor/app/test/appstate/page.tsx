@@ -50,7 +50,9 @@ function BpmInput({ bpmState, updateBpmState }: { bpmState: number, updateBpmSta
 
 
 const AppStateExample: React.FC = () => {
-    const { metronomeState, updateMetronomeState, playingState, updatePlayingState, bpmState, updateBpmState, recorderState, updateRecorderState, quantizerState, updateQuantizerState } = useAppStateContext();
+    const { metronomeState, updateMetronomeState, playingState, updatePlayingState, bpmState, updateBpmState, recorderState, updateRecorderState, quantizerState, updateQuantizerState, currentTracksState, updateCurrentTracksState, trackStates, updateTrackStates, devicePositions, updateDevicePositions } = useAppStateContext();
+
+    console.log = console.info = console.debug = console.warn = console.error = () => { };
 
     return (
         <div>
@@ -85,6 +87,39 @@ const AppStateExample: React.FC = () => {
                 bpm=
                 {bpmState}
             </h3>
+
+            <h2>
+                Current Tracks
+            </h2>
+            <ul>
+                {Array.from(currentTracksState.entries()).map(([key, value]) => (
+                    <li key={key}>{key}: {value}</li>
+                ))}
+            </ul>
+
+            <h2>
+                Track States
+            </h2>
+            <ul>
+                {Array.from(trackStates.entries()).map(([key, value]) => (
+                    <li key={key}>
+                        <ul key={key}>
+                            <li key="looplengthtick">{value.loopLengthTicks}</li>
+                            <li key="mute">{value.mute ? '🔇' : '🔊'}</li>
+                            <li key="volume">{value.volume}</li>
+                        </ul>
+                    </li>
+                ))}
+            </ul>
+
+            <h2>
+                Device Positions
+            </h2>
+            <ul>
+                {Array.from(devicePositions.entries()).map(([key, value]) => (
+                    <li key={key}>{key}: {value}</li>
+                ))}
+            </ul>
         </div>
     );
 };
