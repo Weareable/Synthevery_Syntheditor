@@ -100,7 +100,11 @@ export function serializeStringP2PMacAddress(value: string): Uint8Array {
 
 export function deserializeStringP2PMacAddress(data: Uint8Array): string | null {
     const address = deserializeP2PMacAddress(data);
-    return address ? getAddressString(address) : null;
+    if (address === null) {
+        console.error('Failed to deserialize: Data is not a valid P2PMacAddress');
+        return null;
+    }
+    return getAddressString(address);
 }
 
 // DataViewから値を読み込むヘルパー関数
@@ -159,7 +163,7 @@ export function deserializeArrayFixedLength<T>(
     while (offset < data.byteLength) {
         const itemData = data.slice(offset, offset + elementLength);
         const deserializationResult = deserializer(itemData);
-        if (!deserializationResult) {
+        if (deserializationResult === null) {
             console.error(
                 'Failed to deserialize item:',
                 itemData
@@ -223,7 +227,7 @@ export function deserializeMap<K, V>(
     while (offset < data.byteLength) {
         const keyData = data.slice(offset, offset + keyLength);
         const keyDeserializationResult = keyDeserializer(keyData);
-        if (!keyDeserializationResult) {
+        if (keyDeserializationResult === null) {
             console.error(
                 'Failed to deserialize key:',
                 keyData
@@ -233,7 +237,7 @@ export function deserializeMap<K, V>(
         offset += keyLength;
         const valueData = data.slice(offset, offset + valueLength);
         const valueDeserializationResult = valueDeserializer(valueData);
-        if (!valueDeserializationResult) {
+        if (valueDeserializationResult === null) {
             console.error(
                 'Failed to deserialize value:',
                 valueData
