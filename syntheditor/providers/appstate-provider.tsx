@@ -153,8 +153,8 @@ export function AppStateProvider({
         return null;
     }
 
-    const trackStatesRef = useRef<Array<TrackState>>([]);
-    const [trackStates, setTrackStates] = useState<Array<TrackState>>([]);
+    const trackStatesRef = useRef<Array<TrackState>>(Array.from({ length: 8 }, () => { return { loopLengthTicks: 1920, mute: false, volume: 100 } }));
+    const [trackStates, setTrackStates] = useState<Array<TrackState>>(trackStatesRef.current);
 
     const trackStatesSyncState = useRef<AppStateSyncInterface>(createReactSyncState(APPSTATE_ID_PLAYER_TRACK_STATES, createReactStateStore(
         (value) => serializeArrayFixedLength(value, serializeTrackState, 6),
@@ -313,7 +313,7 @@ export function AppStateProvider({
         updateCurrentTracksState: (value: Map<string, number>, notify: boolean = true) => {
             console.log("AppStateProvider: updateCurrentTracksState()");
             currentTracksStateRef.current = value;
-            setCurrentTracksState(value);
+            setCurrentTracksState(new Map(value));
             if (notify) {
                 connectorRef.current?.getState(APPSTATE_ID_PLAYER_CURRENT_TRACKS)?.notifyChange();
             }
@@ -322,7 +322,7 @@ export function AppStateProvider({
         updateTrackStates: (value: Array<TrackState>, notify: boolean = true) => {
             console.log("AppStateProvider: updateTrackStates()");
             trackStatesRef.current = value;
-            setTrackStates(value);
+            setTrackStates(new Array(...value));
             if (notify) {
                 connectorRef.current?.getState(APPSTATE_ID_PLAYER_TRACK_STATES)?.notifyChange();
             }
@@ -331,7 +331,7 @@ export function AppStateProvider({
         updateDevicePositions: (value: Map<string, number>, notify: boolean = true) => {
             console.log("AppStateProvider: updateDevicePositions()");
             devicePositionsRef.current = value;
-            setDevicePositions(value);
+            setDevicePositions(new Map(value));
             if (notify) {
                 connectorRef.current?.getState(APPSTATE_ID_PLAYER_DEVICE_POSITIONS)?.notifyChange();
             }
