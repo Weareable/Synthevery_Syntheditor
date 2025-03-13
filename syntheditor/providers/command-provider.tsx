@@ -60,7 +60,7 @@ export function CommandProvider({ children }: CommandProviderProps) {
             return commandHandlersRef.current?.get(address);
         }
         return handler;
-    }, [commandHandlersRef]);
+    }, [commandHandlersRef, sendPacket]);
 
     const getEventEmitter = useCallback((nodeAddress: P2PMacAddress) => {
         const address = getAddressString(nodeAddress.address);
