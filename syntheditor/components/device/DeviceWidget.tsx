@@ -19,15 +19,17 @@ interface DeviceWidgetProps {
 
 
 const DeviceWidget: React.FC<DeviceWidgetProps> = ({ device, index }) => { // index prop を受け取る
-    const macAddressString = getAddressString(device.address);
-    const [selectedTrack, setSelectedTrack] = useState<string>("0"); // デフォルト値を "0" に設定
-    const deviceColor = getDeviceColorByPosition(index); // deviceColor を index から生成
-
     const { currentTracksState, updateCurrentTracksState } = useAppStateContext();
 
+    const selectedTrack = currentTracksState.get(getAddressString(device.address)) || 0;
+    console.log(`DeviceWidget: selectedTrack: ${selectedTrack}`);
+    console.log(`DeviceWidget: currentTracksState: ${currentTracksState}`);
+
+    const macAddressString = getAddressString(device.address);
+
+    const deviceColor = getDeviceColorByPosition(index); // deviceColor を index から生成
+
     const handleTrackChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setSelectedTrack(event.target.value);
-        // TODO: デバイスのトラック割り当てを更新する処理を実装 (AppStateContext の更新など)
         console.log(`Device ${macAddressString} assigned to track: ${event.target.value}`);
 
         const trackNumber = parseInt(event.target.value);
@@ -40,8 +42,6 @@ const DeviceWidget: React.FC<DeviceWidgetProps> = ({ device, index }) => { // in
             console.error(`Device ${macAddressString} not found in currentTracksState`);
         }
     };
-
-
 
     return (
         <Grid item xs={3}>
@@ -63,7 +63,7 @@ const DeviceWidget: React.FC<DeviceWidgetProps> = ({ device, index }) => { // in
                                 <FormControlLabel
                                     key={trackNumber}
                                     value={String(trackNumber)}
-                                    control={<Radio />}
+                                    control={<Radio checked={selectedTrack == trackNumber} />}
                                     label={`Track ${trackNumber}`}
                                 />
                             ))}

@@ -68,8 +68,6 @@ const AppStateExample: React.FC = () => {
             <h1>Synthevery AppState Example</h1>
             <MeshStarter />
 
-            <DndContext>
-
             <Grid container spacing={1} alignItems="center"> {/* spacing を 1 に変更 */}
                 <Grid item xs={2}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -160,9 +158,8 @@ const AppStateExample: React.FC = () => {
             <ul>
                 {Array.from(devicePositions.entries()).map(([key, value]) => (
                     <li key={key}>{key}: {value}</li>
-                    ))}
-                </ul>
-            </DndContext>
+                ))}
+            </ul>
         </div>
     );
 };
