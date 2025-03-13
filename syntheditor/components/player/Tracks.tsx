@@ -9,11 +9,12 @@ import { getDeviceColorByPosition } from '@/lib/synthevery/utils/device-color'; 
 import { P2PMacAddress } from '@/types/mesh';
 import { useAppStateContext } from '@/providers/appstate-provider';
 import { getAddressString, getAddressFromString } from '@/lib/synthevery/connection/mesh-node';
+import { DndContext, DragEndEvent } from '@dnd-kit/core';
 
 const Tracks: React.FC = () => {
     const { connectedDevices } = useMeshContext();
 
-    const { currentTracksState } = useAppStateContext();
+    const { currentTracksState, updateCurrentTracksState } = useAppStateContext();
 
     // TODO: AppStateContext からトラックごとの割り当てデバイス情報を取得する (仮の割り当て情報)
 
@@ -41,22 +42,47 @@ const Tracks: React.FC = () => {
         return getDeviceColorByPosition(index);
     }
 
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
 
+        if (over == null || active.data.current == null) {
+            return;
+        }
+
+        if (active.data.current?.device && over.data.current?.trackNumber !== undefined) {
+            const device = active.data.current.device;
+            const trackNumber = over.data.current.trackNumber;
+            console.log(`Device ${getAddressString(device.address)} moved to track ${trackNumber}`);
+
+            if (currentTracksState.has(getAddressString(device.address))) {
+                currentTracksState.set(getAddressString(device.address), trackNumber);
+                updateCurrentTracksState(currentTracksState, true);
+            } else {
+                console.error(`Device ${getAddressString(device.address)} not found in currentTracksState`);
+            }
+        }
+
+
+    }
 
     return (
         <div>
             <h2>Tracks</h2>
 
-            <Grid container spacing={2}>
-                {Array.from({ length: 8 }, (_, index) => (
-                    <Track
-                        key={index}
-                        trackNumber={index}
-                        assignedDevices={assignedDevices.get(index) || []}
-                        deviceColor={getDeviceColorByAddress}
-                    />
-                ))}
-            </Grid>
+            <DndContext onDragEnd={handleDragEnd}>
+
+                <Grid container spacing={2}>
+                    {Array.from({ length: 8 }, (_, index) => (
+                        <Track
+                            key={index}
+                            trackNumber={index}
+                            assignedDevices={assignedDevices.get(index) || []}
+                            deviceColor={getDeviceColorByAddress}
+                        />
+                    ))}
+                </Grid>
+
+            </DndContext>
         </div>
 
     );
