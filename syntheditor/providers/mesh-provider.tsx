@@ -175,6 +175,8 @@ export function MeshProvider({ children }: PropsWithChildren) {
         console.log('handleNotifyConnectedDevices');
         console.log(macAddresses);
         setConnectedDevices(macAddresses);
+
+        console.log("handleNotifyConnectedDevices() : ", macAddresses);
     }, []);
 
     /**
@@ -213,8 +215,14 @@ export function MeshProvider({ children }: PropsWithChildren) {
             setConnectedDevices(connectedDevices);
 
             // 定期的にConnectedDevicesを読み取る
+            await connectedDevicesChar.startNotifications();
             connectedDevicesChar.removeEventListener('characteristicvaluechanged', handleNotifyConnectedDevices);
             connectedDevicesChar.addEventListener('characteristicvaluechanged', handleNotifyConnectedDevices);
+
+            if (neighborListIntervalId.current) {
+                clearInterval(neighborListIntervalId.current);
+                neighborListIntervalId.current = null;
+            }
 
             // 定期的にNeighborListDataを送信するintervalを開始
             neighborListIntervalId.current = setInterval(() => {
