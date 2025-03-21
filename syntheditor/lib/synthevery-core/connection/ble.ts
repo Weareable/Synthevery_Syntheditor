@@ -2,14 +2,20 @@
 
 // eventemitter3
 import EventEmitter from 'eventemitter3';
+import { BLE_SERVICE_UUID, MAC_ADDRESS_CHAR_UUID, MESH_SERVICE_UUID, CONNECTION_INFO_SERVICE_UUID } from './constants';
+import { getAddressString } from './util';
 
 const CONNECTION_STATUS_CHECK_INTERVAL = 100;
 
-interface BLEDeviceEvents {
-    onConnected: {};
-    onDisconnected: {};
-}
+export const SyntheveryDeviceFilter = {
+    filters: [{ services: [MESH_SERVICE_UUID] }],
+    optionalServices: [MESH_SERVICE_UUID, CONNECTION_INFO_SERVICE_UUID],
+};
 
+interface BLEDeviceEvents {
+    connected: {};
+    disconnected: {};
+}
 export class BLEDevice {
     device: BluetoothDevice | null = null;
     server: BluetoothRemoteGATTServer | null = null;
@@ -30,10 +36,11 @@ export class BLEDevice {
             this.server = server;
 
             this.device.addEventListener('gattserverdisconnected', () => {
-                this.eventEmitter.emit('onDisconnected');
+                console.log('gattserverdisconnected');
+                this.eventEmitter.emit('disconnected');
             });
 
-            this.eventEmitter.emit('onConnected');
+            this.eventEmitter.emit('connected');
 
         } catch (error) {
             console.error(error);
@@ -95,6 +102,13 @@ export class BLEDevice {
         await characteristic.writeValue(data);
     }
 
+    async writeCharacteristic(characteristic: BluetoothRemoteGATTCharacteristic, data: BufferSource): Promise<void> {
+        if (!this.server?.connected) {
+            throw new Error('Device is not connected');
+        }
+        await characteristic.writeValue(data);
+    }
+
     async startNotify(serviceUuid: string, characteristicUuid: string, onChange: (value: DataView) => void): Promise<void> {
         if (!this.server?.connected) {
             throw new Error('Device is not connected');
@@ -107,13 +121,14 @@ export class BLEDevice {
         if (!characteristic) {
             throw new Error(`Characteristic ${characteristicUuid} not found`);
         }
-        await characteristic.startNotifications();
         characteristic.addEventListener('characteristicvaluechanged', (event) => {
             const target = event.target as BluetoothRemoteGATTCharacteristic;
-            if (target?.value) {
-                onChange(target.value);
+            if (target?.value === undefined) {
+                return;
             }
+            onChange(target.value);
         });
+        await characteristic.startNotifications();
     }
 
     async stopNotify(serviceUuid: string, characteristicUuid: string): Promise<void> {

@@ -1,8 +1,5 @@
 // app/layout.tsx
 import type { Metadata } from 'next';
-import { BLEProvider } from '@/providers/ble-provider';
-import { MeshProvider } from '@/providers/mesh-provider';
-import { DeviceTypeProvider } from '@/providers/device-type-provider';
 
 export const metadata: Metadata = {
     title: 'My App',
@@ -17,13 +14,7 @@ export default function RootLayout({
     return (
         <html lang="ja">
             <body>
-                <BLEProvider>
-                    <MeshProvider>
-                        <DeviceTypeProvider>
-                            {children}
-                        </DeviceTypeProvider>
-                    </MeshProvider>
-                </BLEProvider>
+                {children}
             </body>
         </html>
     );

@@ -1,5 +1,5 @@
-import * as Ble from './ble';
-import * as Mesh from './mesh';
+import * as Ble from './connection/ble';
+import * as Mesh from './connection/mesh';
 import * as Command from './command';
 import { P2PMacAddress, MeshPacket } from './types/mesh';
 import EventEmitter from 'eventemitter3';
