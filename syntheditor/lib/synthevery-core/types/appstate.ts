@@ -1,5 +1,5 @@
 import EventEmitter from 'eventemitter3';
-import { P2PMacAddress } from './types/mesh';
+import { P2PMacAddress } from './mesh';
 
 export type AppStateID = number;
 
