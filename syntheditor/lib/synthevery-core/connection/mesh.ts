@@ -3,7 +3,7 @@ import { CONNECTION_INFO_SERVICE_UUID, MESH_SERVICE_UUID, MESH_PACKET_TX_CHAR_UU
 import { BLEDevice, SyntheveryDeviceFilter } from './ble';
 import { decodeMeshPacket, decodeConnectedDevices, encodeNeighborListData, encodeMeshPacket } from './util';
 import EventEmitter from 'eventemitter3';
-import { getAddressString, getAddressFromString } from './util';
+import { getAddressString, equalsAddress } from './util';
 
 
 
@@ -165,10 +165,13 @@ export interface MeshEvents {
     connectedDevicesChanged: (devices: P2PMacAddress[]) => void;
     connected: (address: P2PMacAddress) => void;
     disconnected: (address: P2PMacAddress) => void;
+    peerConnected: (address: P2PMacAddress) => void;
+    peerDisconnected: (address: P2PMacAddress) => void;
 }
 
 class Mesh {
     meshDevices: Map<string, BLEMeshDevice> = new Map();
+    private prevConnectedDevices: P2PMacAddress[] = [];
 
     private meshPacketCallbacks: Map<number, (packet: MeshPacket) => void> = new Map();
 
@@ -181,22 +184,59 @@ class Mesh {
                 this.sendNeighborList();
             } catch (error) { }
         }, 1000);
+        this.prevConnectedDevices = [];
+    }
+
+    private recalculateConnectedDevices(): void {
+        const currentDevices = this.getConnectedDevices();
+
+        const newDevices = currentDevices.filter(current =>
+            !this.prevConnectedDevices.some(prev =>
+                equalsAddress(prev, current)
+            )
+        );
+
+        const disconnectedDevices = this.prevConnectedDevices.filter(prev =>
+            !currentDevices.some(current =>
+                equalsAddress(current, prev)
+            )
+        );
+
+        this.prevConnectedDevices = currentDevices;
+
+        newDevices.forEach(device => {
+            this.eventEmitter.emit('connected', device);
+        });
+
+        disconnectedDevices.forEach(device => {
+            this.eventEmitter.emit('disconnected', device);
+        });
+
+        if (newDevices.length > 0 || disconnectedDevices.length > 0) {
+            this.eventEmitter.emit('connectedDevicesChanged', currentDevices);
+        }
     }
 
     async connectDevice(): Promise<void> {
         const device = new BLEDevice();
         const meshDevice = new BLEMeshDevice();
+
         meshDevice.eventEmitter.on('disconnected', () => {
             this.deleteDevice(meshDevice.getAddress());
-            this.eventEmitter.emit('disconnected', meshDevice.getAddress());
+            this.eventEmitter.emit('peerDisconnected', meshDevice.getAddress());
+            this.recalculateConnectedDevices();
         });
+
+        meshDevice.eventEmitter.on('connectedDevicesChanged', () => {
+            this.recalculateConnectedDevices();
+        });
+
         try {
             await device.connect(SyntheveryDeviceFilter);
             await meshDevice.initialize(device, this.receivePacket.bind(this));
             this.meshDevices.set(getAddressString(meshDevice.getAddress()), meshDevice);
-
-            this.eventEmitter.emit('connected', meshDevice.getAddress());
-
+            this.eventEmitter.emit('peerConnected', meshDevice.getAddress());
+            this.recalculateConnectedDevices();
         } catch (error) {
             console.error('Error connecting to device:', error);
         }
@@ -213,6 +253,7 @@ class Mesh {
     private deleteDevice(address: P2PMacAddress): void {
         console.log('deleteDevice', address);
         this.meshDevices.delete(getAddressString(address));
+        this.recalculateConnectedDevices();
     }
 
     private receivePacket(packet: MeshPacket): void {
@@ -276,6 +317,10 @@ class Mesh {
     getConnectedDevices(): P2PMacAddress[] {
         // 各meshDeviceのconnectedDevicesを結合し, 重複を削除した配列を返す
         return Array.from(new Set([...Array.from(this.meshDevices.values()).flatMap(bleMeshDevice => bleMeshDevice.getConnectedDevices())]));
+    }
+
+    isAvailable(nodeAddress: P2PMacAddress): boolean {
+        return this.getConnectedDevices().some(address => equalsAddress(address, nodeAddress));
     }
 
     setCallback(type: number, func: (packet: MeshPacket) => void): void {

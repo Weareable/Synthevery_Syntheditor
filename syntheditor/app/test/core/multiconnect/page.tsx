@@ -50,12 +50,12 @@ const MultiConnectExample: React.FC = () => {
     }
 
     useEffect(() => {
-        mesh.eventEmitter.on('connected', updatePeerDevices);
-        mesh.eventEmitter.on('disconnected', updatePeerDevices);
+        mesh.eventEmitter.on('peerConnected', updatePeerDevices);
+        mesh.eventEmitter.on('peerDisconnected', updatePeerDevices);
 
         return () => {
-            mesh.eventEmitter.removeListener('connected', updatePeerDevices);
-            mesh.eventEmitter.removeListener('disconnected', updatePeerDevices);
+            mesh.eventEmitter.removeListener('peerConnected', updatePeerDevices);
+            mesh.eventEmitter.removeListener('peerDisconnected', updatePeerDevices);
         }
 
     }, []);
