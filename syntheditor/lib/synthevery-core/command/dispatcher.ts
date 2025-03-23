@@ -1,12 +1,10 @@
 import { P2PMacAddress } from '../types/mesh';
-import EventEmitter from 'eventemitter3';
-import { CommandHandler, CommandHandlerImpl } from '../../synthevery/connection/command-handler';
-import { ARQPacketHandlerImpl } from '../../synthevery/connection/arq-packet-handler';
+import { CommandHandler, CommandHandlerImpl } from './handler';
+import { ARQPacketHandlerImpl } from '../connection/arq-packet-handler';
 import { mesh } from '../connection/mesh';
 import { getAddressString } from '../connection/util';
 import { MESH_PACKET_TYPE_COMMAND } from '../connection/constants';
 import { MeshPacket } from '../types/mesh';
-import { equalsAddress } from '../connection/util';
 const COMMAND_TIMEOUT = 1000;
 const COMMAND_RETRY_COUNT = 3;
 
