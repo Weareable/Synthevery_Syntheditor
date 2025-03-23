@@ -167,7 +167,7 @@ export interface MeshEvents {
     disconnected: (address: P2PMacAddress) => void;
 }
 
-export class Mesh {
+class Mesh {
     meshDevices: Map<string, BLEMeshDevice> = new Map();
 
     private meshPacketCallbacks: Map<number, (packet: MeshPacket) => void> = new Map();
@@ -241,7 +241,7 @@ export class Mesh {
 
     async sendPacket(type: number, destination: P2PMacAddress, data: Uint8Array): Promise<void> {
         try {
-            const peerAddress = this.getPeerAddressByDestination(destination);
+            const peerAddress = this.getNextHop(destination);
             const meshDevice = this.meshDevices.get(getAddressString(peerAddress));
             if (!meshDevice) {
                 throw new Error('Mesh device not found');
@@ -257,7 +257,7 @@ export class Mesh {
             console.error('Error sending packet:', error);
         }
     }
-    private getPeerAddressByDestination(destination: P2PMacAddress): P2PMacAddress {
+    private getNextHop(destination: P2PMacAddress): P2PMacAddress {
         for (const meshDevice of this.meshDevices.values()) {
             if (
                 getAddressString(meshDevice.getAddress()) === getAddressString(destination) ||
@@ -269,8 +269,13 @@ export class Mesh {
         throw new Error('Peer address not found');
     }
 
-    getConnectedDevices(): P2PMacAddress[] {
+    getConnectedPeers(): P2PMacAddress[] {
         return Array.from(this.meshDevices.values().map(bleMeshDevice => bleMeshDevice.getAddress()));
+    }
+
+    getConnectedDevices(): P2PMacAddress[] {
+        // 各meshDeviceのconnectedDevicesを結合し, 重複を削除した配列を返す
+        return Array.from(new Set([...Array.from(this.meshDevices.values()).flatMap(bleMeshDevice => bleMeshDevice.getConnectedDevices())]));
     }
 
     setCallback(type: number, func: (packet: MeshPacket) => void): void {
@@ -280,4 +285,10 @@ export class Mesh {
     removeCallback(type: number): void {
         this.meshPacketCallbacks.delete(type);
     }
+
+    getAddress(): P2PMacAddress {
+        return { address: APP_MAC_ADDRESS };
+    }
 }
+
+export const mesh = new Mesh();

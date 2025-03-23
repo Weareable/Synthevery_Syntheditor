@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Mesh } from '@/lib/synthevery-core/connection/mesh';
+import { mesh } from '@/lib/synthevery-core/connection/mesh';
 import { getAddressString } from '@/lib/synthevery-core/connection/util';
-const mesh = new Mesh();
 
 const DevicePanel: React.FC<{ address: string }> = ({ address }) => {
     const [connectedDevices, setConnectedDevices] = useState<string[]>([]);
@@ -47,7 +46,7 @@ const MultiConnectExample: React.FC = () => {
 
     const updatePeerDevices = () => {
         console.log('updatePeerDevices');
-        setPeerDevices(mesh.getConnectedDevices().map(device => getAddressString(device)));
+        setPeerDevices(mesh.getConnectedPeers().map(device => getAddressString(device)));
     }
 
     useEffect(() => {
