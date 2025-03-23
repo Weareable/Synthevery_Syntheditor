@@ -1,6 +1,6 @@
-import { AppStateID, AppStateStore, AppStateSyncInterface, AppStateSyncEvents } from '@/types/appstate';
+import { AppStateID, AppStateStoreInterface, AppStateSyncInterface, AppStateSyncEvents } from '../types/appstate';
 import { encode, decode } from '@msgpack/msgpack';
-import { P2PMacAddress } from '@/types/mesh';
+import { P2PMacAddress } from '../types/mesh';
 import EventEmitter from 'eventemitter3';
 import { useRef } from 'react';
 import { getAddressFromString, getAddressString } from '../connection/util';
@@ -250,49 +250,52 @@ export function deserializeMap<K, V>(
     return newMap;
 }
 
-export function createReactStateStore<T>(
-    serializer: Serializer<T>,
-    deserializer: Deserializer<T>,
-    stateRef: React.MutableRefObject<T>
-): AppStateStore {
-    return {
-        serialize: () => {
-            const value = stateRef.current;
-            // null か undefined の場合はエラーを返す
-            // ただし, booleanに注意
-            if (
-                value === null ||
-                typeof value === 'undefined'
-            ) {
-                throw new Error('State is not set');
-            }
-            return serializer(value);
-        },
-        deserialize: (data: Uint8Array) => {
-            const value = deserializer(data);
-            console.log("deserialize(): value=", value);
-            if (value === null) {
-                console.error("deserialize() failed");
-                return false;
-            }
+export class AppStateStore<T> implements AppStateStoreInterface {
+    value: T;
+    private serializer: Serializer<T>;
+    private deserializer: Deserializer<T>;
 
-            stateRef.current = value;
-            return true;
+    constructor(value: T, serializer: Serializer<T>, deserializer: Deserializer<T>) {
+        this.value = value;
+        this.serializer = serializer;
+        this.deserializer = deserializer;
+    }
+
+    serialize(): Uint8Array {
+        return this.serializer(this.value);
+    }
+
+    deserialize(data: Uint8Array): boolean {
+        const deserializedValue = this.deserializer(data);
+        if (deserializedValue === null) {
+            return false;
         }
-    };
+        this.value = deserializedValue;
+        return true;
+    }
 }
 
-export function createReactSyncState(
-    id: AppStateID,
-    store: AppStateStore
-): AppStateSyncInterface {
-    const appState: AppStateSyncInterface = {
-        getID: () => id,
-        getStore: () => store,
-        eventEmitter: new EventEmitter<AppStateSyncEvents>(),
-        notifyChange: () => {
-            appState.eventEmitter.emit('notify');
-        },
-    };
-    return appState;
+export class SyncState<T> implements AppStateSyncInterface {
+    private id: AppStateID;
+    private store: AppStateStore<T>;
+
+    eventEmitter: EventEmitter<AppStateSyncEvents>;
+
+    constructor(id: AppStateID, store: AppStateStore<T>) {
+        this.id = id;
+        this.store = store;
+        this.eventEmitter = new EventEmitter<AppStateSyncEvents>();
+    }
+
+    getID(): AppStateID {
+        return this.id;
+    }
+
+    getStore(): AppStateStore<T> {
+        return this.store;
+    }
+
+    notifyChange(): void {
+        this.eventEmitter.emit('notify');
+    }
 }
