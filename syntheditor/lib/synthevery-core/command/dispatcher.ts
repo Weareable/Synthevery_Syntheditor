@@ -6,11 +6,11 @@ import { mesh } from '../connection/mesh';
 import { getAddressString } from '../connection/util';
 import { MESH_PACKET_TYPE_COMMAND } from '../connection/constants';
 import { MeshPacket } from '../types/mesh';
-
+import { equalsAddress } from '../connection/util';
 const COMMAND_TIMEOUT = 1000;
 const COMMAND_RETRY_COUNT = 3;
 
-class Command {
+class CommandDispatcher {
     private commandHandlers: Map<string, CommandHandler> = new Map();
 
     constructor() {
@@ -37,6 +37,15 @@ class Command {
         return handler;
     }
 
+    hasHandler(nodeAddress: P2PMacAddress): boolean {
+        const address = getAddressString(nodeAddress.address);
+        return this.commandHandlers.has(address);
+    }
+
+    isAvailable(nodeAddress: P2PMacAddress): boolean {
+        return mesh.isAvailable(nodeAddress) && this.hasHandler(nodeAddress);
+    }
+
     private handlePacket(packet: MeshPacket) {
         const address = getAddressString(packet.source.address);
         const handler = this.commandHandlers.get(address);
@@ -46,4 +55,4 @@ class Command {
     }
 }
 
-export const command = new Command();
+export const commandDispatcher = new CommandDispatcher();
