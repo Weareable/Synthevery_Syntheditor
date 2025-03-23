@@ -4,26 +4,24 @@ import { EventEmitter } from 'eventemitter3';
 import { P2PMacAddress } from '../types/mesh';
 import { AppStateID, AppStateSyncInterface } from '../types/appstate';
 import { CommandID } from '../types/command';
-import { AppStateNotifyCommandClient, AppStateRetrieveCommandClient } from './appstate-command-clients';
+import { AppStateNotifyCommandClient, AppStateRetrieveCommandClient } from './command-clients';
+import { COMMAND_CLIENT_ID_APPSTATE_NOTIFY, COMMAND_CLIENT_ID_APPSTATE_RETRIEVE } from '../command/constants';
 
 
 interface AppStateSyncConnectorEvents {
     synced: (appStateId: AppStateID, source: P2PMacAddress) => void;
 }
-
-export class AppStateSyncConnector {
+class AppStateSyncConnector {
     private syncStates: Map<AppStateID, AppStateSyncInterface> = new Map();
-    private notifyClientId: number;
-    private retrieveClientId: number;
     public readonly eventEmitter = new EventEmitter<AppStateSyncConnectorEvents>();
 
-    constructor(notifyClientId: number, retrieveClientId: number) {
-        this.notifyClientId = notifyClientId;
-        this.retrieveClientId = retrieveClientId;
-
+    constructor() {
         mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[]) => {
             for (const device of connectedDevices) {
                 this.initializeNode(device);
+            }
+            if (mesh.getConnectedPeers().length > 0) {
+                this.retrieveAllStates(mesh.getConnectedPeers()[0]);
             }
         });
     }
@@ -56,7 +54,7 @@ export class AppStateSyncConnector {
 
         const first_peer_address = mesh.getConnectedPeers()[0];
         const command: CommandID = {
-            client_id: this.notifyClientId,
+            client_id: COMMAND_CLIENT_ID_APPSTATE_NOTIFY,
             type: appStateId,
         };
         const handler = commandDispatcher.getCommandHandler(first_peer_address, false);
@@ -72,7 +70,7 @@ export class AppStateSyncConnector {
 
         for (const state of this.syncStates.values()) {
             const command: CommandID = {
-                client_id: this.retrieveClientId,
+                client_id: COMMAND_CLIENT_ID_APPSTATE_RETRIEVE,
                 type: state.getID(),
             };
             const handler = commandDispatcher.getCommandHandler(destination, false);
@@ -98,7 +96,7 @@ export class AppStateSyncConnector {
 
         // Notify Command Client
         const notifyClient = new AppStateNotifyCommandClient(
-            this.notifyClientId,
+            COMMAND_CLIENT_ID_APPSTATE_NOTIFY,
             address,
             (sender: P2PMacAddress, type: number) =>
                 this.serializeNotifyState(sender, type),
@@ -112,7 +110,7 @@ export class AppStateSyncConnector {
 
         // Retrieve Command Client
         const retrieveClient = new AppStateRetrieveCommandClient(
-            this.retrieveClientId,
+            COMMAND_CLIENT_ID_APPSTATE_RETRIEVE,
             address,
             (sender: P2PMacAddress, type: number) =>
                 this.retrieveState(sender, type),
@@ -196,7 +194,7 @@ export class AppStateSyncConnector {
             console.warn('onNotifyResult(): failed');
             if (this.isAvailable(sender)) {
                 const command: CommandID = {
-                    client_id: this.notifyClientId,
+                    client_id: COMMAND_CLIENT_ID_APPSTATE_NOTIFY,
                     type,
                 };
                 const handler = commandDispatcher.getCommandHandler(sender, false);
@@ -220,7 +218,7 @@ export class AppStateSyncConnector {
             console.warn('onRetrieveResult(): failed');
             if (this.isAvailable(sender)) {
                 const command: CommandID = {
-                    client_id: this.retrieveClientId,
+                    client_id: COMMAND_CLIENT_ID_APPSTATE_RETRIEVE,
                     type,
                 };
                 const handler = commandDispatcher.getCommandHandler(sender, false);
@@ -228,5 +226,6 @@ export class AppStateSyncConnector {
             }
         }
     }
-
 }
+
+export const appStateSyncConnector = new AppStateSyncConnector();

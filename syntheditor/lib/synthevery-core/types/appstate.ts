@@ -3,7 +3,7 @@ import { P2PMacAddress } from './mesh';
 
 export type AppStateID = number;
 
-export interface AppStateStore {
+export interface AppStateStoreInterface {
     serialize(): Uint8Array;
     deserialize(data: Uint8Array): boolean;
 }
@@ -15,7 +15,7 @@ export interface AppStateSyncEvents {
 
 export interface AppStateSyncInterface {
     getID(): AppStateID;
-    getStore(): AppStateStore;
+    getStore(): AppStateStoreInterface;
     eventEmitter: EventEmitter<AppStateSyncEvents>;
     notifyChange(): void;
 }
