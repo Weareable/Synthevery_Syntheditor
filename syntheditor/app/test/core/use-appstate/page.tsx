@@ -3,14 +3,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import useMesh from '@/hooks/useMesh';
 import { playerSyncStates } from '@/lib/synthevery-core/player/states';
-
-import useAppState from '@/hooks/useAppState';
+import usePlayerControl from '@/hooks/usePlayerConrtol';
+import { useAppState, useReadOnlyAppState } from '@/hooks/useAppState';
 
 const AppStateExample: React.FC = () => {
     const { connectedDevices, connectedPeers, connectDevice, disconnectDevice } = useMesh();
 
     const [quantizerState, updateQuantizerState] = useAppState(playerSyncStates.quantizerState);
     const [metronomeState, updateMetronomeState] = useAppState(playerSyncStates.metronomeState);
+    const [recorderState, updateRecorderState] = useAppState(playerSyncStates.recorderState);
+    const { playingState, bpmState, setPlayingState, setBpmState, stop } = usePlayerControl();
 
     return (
         <div>
@@ -36,7 +38,21 @@ const AppStateExample: React.FC = () => {
                 <button onClick={() => updateQuantizerState(!quantizerState)}>Toggle</button>
             </div>
 
+            <div>
+                <h2>Recorder</h2>
+                Recorder: {recorderState ? 'On' : 'Off'}
+                <button onClick={() => updateRecorderState(!recorderState)}>Toggle</button>
+            </div>
 
+            <div>
+                <h2>Playing</h2>
+                Playing: {playingState ? 'On' : 'Off'}
+                <button onClick={() => setPlayingState(!playingState)}>Toggle</button>
+            </div>
+
+            <div>
+
+            </div>
         </div>
     );
 };
