@@ -1,4 +1,4 @@
-import { SyncState, AppStateStore, serializeBoolean, deserializeBoolean, serializeMap, deserializeMap, serializeStringP2PMacAddress, deserializeStringP2PMacAddress, serializeUint8, deserializeUint8, serializeArrayFixedLength, deserializeArrayFixedLength } from "../appstate/appstates";
+import { SyncState, ReadOnlySyncState, AppStateStore, serializeBoolean, deserializeBoolean, serializeMap, deserializeMap, serializeStringP2PMacAddress, deserializeStringP2PMacAddress, serializeUint8, deserializeUint8, serializeArrayFixedLength, deserializeArrayFixedLength } from "../appstate/appstates";
 import { appStateSyncConnector } from "../appstate/sync";
 import { APPSTATE_ID_PLAYER_METRONOME, APPSTATE_ID_PLAYER_RECORDER, APPSTATE_ID_PLAYER_QUANTIZER, APPSTATE_ID_PLAYER_CURRENT_TRACKS, APPSTATE_ID_PLAYER_TRACK_STATES, APPSTATE_ID_PLAYER_DEVICE_POSITIONS, APPSTATE_ID_PLAYER_TICK_CLOCK } from "../appstate/constants";
 import { serializeTickClockState, deserializeTickClockState, serializeTrackState, deserializeTrackState } from "./util";
@@ -6,7 +6,7 @@ import { TickClockState, TrackState } from "../types/player";
 
 class PlayerSyncStates {
     metronomeState: SyncState<boolean>;
-    tickClockState: SyncState<TickClockState>;
+    tickClockState: ReadOnlySyncState<TickClockState>;
     recorderState: SyncState<boolean>;
     quantizerState: SyncState<boolean>;
     currentTracksState: SyncState<Map<string, number>>;
@@ -17,7 +17,7 @@ class PlayerSyncStates {
         this.metronomeState = new SyncState(APPSTATE_ID_PLAYER_METRONOME, new AppStateStore(
             false, serializeBoolean, deserializeBoolean
         ));
-        this.tickClockState = new SyncState(APPSTATE_ID_PLAYER_TICK_CLOCK, new AppStateStore(
+        this.tickClockState = new ReadOnlySyncState(APPSTATE_ID_PLAYER_TICK_CLOCK, new AppStateStore(
             { playing: false, bpm: 120 }, serializeTickClockState, deserializeTickClockState
         ));
         this.recorderState = new SyncState(APPSTATE_ID_PLAYER_RECORDER, new AppStateStore(
