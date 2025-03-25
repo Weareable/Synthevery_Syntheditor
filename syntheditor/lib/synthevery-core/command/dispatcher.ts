@@ -18,8 +18,9 @@ class CommandDispatcher {
     getCommandHandler(nodeAddress: P2PMacAddress, create: boolean): CommandHandler | undefined {
         const address = getAddressString(nodeAddress.address);
         const handler = this.commandHandlers.get(address);
-        if (!handler && create) {
-            this.commandHandlers.set(address, new CommandHandlerImpl(
+
+        if (handler === undefined && create) {
+            const newHandler = new CommandHandlerImpl(
                 (data) => {
                     mesh.sendPacket(MESH_PACKET_TYPE_COMMAND, nodeAddress, data);
                 },
@@ -30,7 +31,9 @@ class CommandDispatcher {
                     COMMAND_TIMEOUT,
                     COMMAND_RETRY_COUNT
                 )
-            ));
+            );
+            this.commandHandlers.set(address, newHandler);
+            return newHandler;
         }
         return handler;
     }
