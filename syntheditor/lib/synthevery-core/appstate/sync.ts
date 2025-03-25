@@ -83,43 +83,42 @@ class AppStateSyncConnector {
     }
 
     private initializeNode(address: P2PMacAddress): void {
-        if (commandDispatcher.hasHandler(address)) {
-            console.warn("initializeNode() : handler already exists");
-            return;
-        }
-
         const handler = commandDispatcher.getCommandHandler(address, true);
-        if (!handler) {
-            console.warn("initializeNode() : handler could not be created");
+        if (handler === undefined) {
+            console.error("initializeNode() : handler could not be created");
             return;
         }
 
         // Notify Command Client
-        const notifyClient = new AppStateNotifyCommandClient(
-            COMMAND_CLIENT_ID_APPSTATE_NOTIFY,
-            address,
-            (sender: P2PMacAddress, type: number) =>
-                this.serializeNotifyState(sender, type),
-            (sender: P2PMacAddress, type: number, data: Uint8Array) =>
-                this.deserializeNotifiedState(sender, type, data),
-            (sender: P2PMacAddress, type: number, success: boolean) =>
-                this.onNotifyResult(sender, type, success),
-            () => false
-        );
-        handler?.setClientInterface(notifyClient);
+        if (!handler.hasClientInterface(COMMAND_CLIENT_ID_APPSTATE_NOTIFY)) {
+            const notifyClient = new AppStateNotifyCommandClient(
+                COMMAND_CLIENT_ID_APPSTATE_NOTIFY,
+                address,
+                (sender: P2PMacAddress, type: number) =>
+                    this.serializeNotifyState(sender, type),
+                (sender: P2PMacAddress, type: number, data: Uint8Array) =>
+                    this.deserializeNotifiedState(sender, type, data),
+                (sender: P2PMacAddress, type: number, success: boolean) =>
+                    this.onNotifyResult(sender, type, success),
+                () => false
+            );
+            handler?.setClientInterface(notifyClient);
+        }
 
         // Retrieve Command Client
-        const retrieveClient = new AppStateRetrieveCommandClient(
-            COMMAND_CLIENT_ID_APPSTATE_RETRIEVE,
-            address,
-            (sender: P2PMacAddress, type: number) =>
-                this.retrieveState(sender, type),
-            (sender: P2PMacAddress, type: number, data: Uint8Array) =>
-                this.deserializeRetrievedState(sender, type, data),
-            (sender: P2PMacAddress, type: number, success: boolean) =>
-                this.onRetrieveResult(sender, type, success)
-        );
-        handler?.setClientInterface(retrieveClient);
+        if (!handler.hasClientInterface(COMMAND_CLIENT_ID_APPSTATE_RETRIEVE)) {
+            const retrieveClient = new AppStateRetrieveCommandClient(
+                COMMAND_CLIENT_ID_APPSTATE_RETRIEVE,
+                address,
+                (sender: P2PMacAddress, type: number) =>
+                    this.retrieveState(sender, type),
+                (sender: P2PMacAddress, type: number, data: Uint8Array) =>
+                    this.deserializeRetrievedState(sender, type, data),
+                (sender: P2PMacAddress, type: number, success: boolean) =>
+                    this.onRetrieveResult(sender, type, success)
+            );
+            handler?.setClientInterface(retrieveClient);
+        }
     }
 
     private serializeNotifyState(

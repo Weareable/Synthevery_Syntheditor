@@ -22,6 +22,7 @@ export interface CommandClientInterface {
 
 export interface CommandHandler {
     setClientInterface(clientInterface: CommandClientInterface): void;
+    hasClientInterface(clientID: number): boolean;
     pushCommand(command: CommandID): boolean;
     clearQueue(): void;
     reset(): void;
@@ -58,6 +59,9 @@ export class CommandHandlerImpl implements CommandHandler {
     }
     setClientInterface(clientInterface: CommandClientInterface): void {
         this.clientInterfaces.set(clientInterface.getClientID(), clientInterface);
+    }
+    hasClientInterface(clientID: number): boolean {
+        return this.clientInterfaces.has(clientID);
     }
     pushCommand(command: CommandID): boolean {
         if (!this.clientInterfaces.has(command.client_id)) {
