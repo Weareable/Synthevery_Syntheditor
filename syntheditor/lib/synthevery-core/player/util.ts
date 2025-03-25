@@ -1,5 +1,5 @@
 import { TickClockState, TrackState } from "@/lib/synthevery-core/types/player";
-import { deserializeFloat32, serializeFloat32, deserializeBoolean, serializeBoolean, deserializeUint32, serializeUint32 } from "../appstate/appstates";
+import { deserializeFloat32, serializeFloat32, deserializeBoolean, serializeBoolean, deserializeUint32, serializeUint32, serializeUint8, deserializeUint8 } from "../appstate/appstates";
 
 export function deserializeTickClockState(data: Uint8Array): TickClockState | null {
     if (data.length < 9) {
@@ -26,7 +26,7 @@ export function deserializeTrackState(data: Uint8Array): TrackState | null {
     }
     const loopLengthTick = deserializeUint32(data.slice(0, 4));
     const mute = deserializeBoolean(data.slice(4, 5));
-    const volume = deserializeFloat32(data.slice(5, 6));
+    const volume = data[5];
     if (loopLengthTick === null || mute === null || volume === null) {
         return null;
     }
@@ -37,7 +37,7 @@ export function serializeTrackState(state: TrackState): Uint8Array {
     const data = new Uint8Array(6);
     const loopLengthTickData = serializeUint32(state.loopLengthTick);
     const muteData = serializeBoolean(state.mute);
-    const volumeData = serializeFloat32(state.volume);
+    const volumeData = serializeUint8(state.volume);
 
     data.set(loopLengthTickData, 0);
     data.set(muteData, 4);
