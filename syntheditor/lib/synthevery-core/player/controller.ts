@@ -100,14 +100,14 @@ class PlayerController {
     }
 
     private initializeNode(address: P2PMacAddress): void {
-        if (commandDispatcher.hasHandler(address)) {
-            console.warn("initializeNode() : handler already exists");
-            return;
-        }
-
         const handler = commandDispatcher.getCommandHandler(address, true);
         if (!handler) {
             console.warn("initializeNode() : handler could not be created");
+            return;
+        }
+
+        if (handler.hasClientInterface(COMMAND_CLIENT_ID_PLAYER_CONTROL)) {
+            console.warn("initializeNode() : client interface already exists");
             return;
         }
 
