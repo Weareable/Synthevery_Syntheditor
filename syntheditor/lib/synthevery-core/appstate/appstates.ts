@@ -299,3 +299,26 @@ export class SyncState<T> implements AppStateSyncInterface {
         this.eventEmitter.emit('notify');
     }
 }
+
+export class ReadOnlySyncState<T> implements AppStateSyncInterface {
+    private id: AppStateID;
+    private store: AppStateStore<T>;
+
+    eventEmitter: EventEmitter<AppStateSyncEvents>;
+
+    constructor(id: AppStateID, store: AppStateStore<T>) {
+        this.id = id;
+        this.store = store;
+        this.eventEmitter = new EventEmitter<AppStateSyncEvents>();
+    }
+
+    getID(): AppStateID {
+        return this.id;
+    }
+
+    getStore(): AppStateStore<T> {
+        return this.store;
+    }
+
+    notifyChange(): void { }
+}
