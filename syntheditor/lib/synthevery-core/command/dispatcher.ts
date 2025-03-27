@@ -20,6 +20,7 @@ class CommandDispatcher {
         const handler = this.commandHandlers.get(address);
 
         if (handler === undefined && create) {
+            console.log("create new handler for ", getAddressString(nodeAddress.address));
             const newHandler = new CommandHandlerImpl(
                 (data) => {
                     mesh.sendPacket(MESH_PACKET_TYPE_COMMAND, nodeAddress, data);
@@ -30,7 +31,8 @@ class CommandDispatcher {
                     },
                     COMMAND_TIMEOUT,
                     COMMAND_RETRY_COUNT
-                )
+                ),
+                getAddressString(nodeAddress.address)
             );
             this.commandHandlers.set(address, newHandler);
             return newHandler;

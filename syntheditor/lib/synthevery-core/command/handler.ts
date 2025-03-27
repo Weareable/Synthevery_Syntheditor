@@ -39,23 +39,21 @@ export class CommandHandlerImpl implements CommandHandler {
     private packetSender: (data: Uint8Array) => void;
     private commandIDByteSize: number = 2;
     private commandResultByteSize: number = 3;
+    private address: string | undefined;
+    private isWaitingForAck: boolean = false;
 
     constructor(
         packetSender: (data: Uint8Array) => void,
-        arqPacketHandler?: ARQPacketHandler,
-        resendInterval?: number,
-        resendAttempts?: number,
+        arqPacketHandler: ARQPacketHandler,
+        address?: string,
     ) {
         this.packetSender = packetSender;
-        this.arqPacketHandler = arqPacketHandler ?? new ARQPacketHandlerImpl(
-            (data) => this.packetSender(data),
-            resendInterval,
-            resendAttempts,
-        );
+        this.arqPacketHandler = arqPacketHandler;
         this.arqPacketHandler.setDataHandler((index, data) => this.handleData(index, data));
         this.arqPacketHandler.setAckHandler((index, data) => this.handleAck(index, data));
         this.arqPacketHandler.eventEmitter.on('ackCompleted', (event) => this.onAckCompleted(event.index));
         this.arqPacketHandler.eventEmitter.on('ackTimeout', (event) => this.onAckTimeout(event.index));
+        this.address = address;
     }
     setClientInterface(clientInterface: CommandClientInterface): void {
         this.clientInterfaces.set(clientInterface.getClientID(), clientInterface);
@@ -85,19 +83,26 @@ export class CommandHandlerImpl implements CommandHandler {
         this.arqPacketHandler.handlePacket(data);
     }
     private popCommand(): void {
+        console.log("popCommand() : commandQueue=", this.commandQueue, "address=", this.address);
+
         if (this.commandQueue.empty()) {
             console.warn("popCommand() : No command to pop!");
             return;
         }
-        if (this.arqPacketHandler.isWaitingForAck()) {
+        if (this.isWaitingForAck) {
             console.warn("popCommand() : Waiting for ack!");
             return;
+        } else {
+            this.isWaitingForAck = true;
         }
+
         const command = this.commandQueue.pop()!;
         this.currentCommand = command;
         const client = this.clientInterfaces.get(command.client_id);
         if (!client) {
             console.error("popCommand() : Client not found");
+            this.isWaitingForAck = false;
+            this.popCommand();
             return;
         }
         const data = client.generateData(command);
@@ -183,8 +188,10 @@ export class CommandHandlerImpl implements CommandHandler {
         return client.handleAck(commandResult.command, data.slice(this.commandResultByteSize));
     }
     private onAckCompleted(index: number): void {
+        console.log("onAckCompleted() : currentCommand=", this.currentCommand, "address=", this.address);
         if (!this.currentCommand) {
-            console.error("onAckCompleted : currentCommand is null");
+            console.error("onAckCompleted : currentCommand is null ", this.address);
+            console.error("onAckCompleted() : commandQueue=", this.commandQueue);
             return;
         }
         this.eventEmitter.emit('commandCompleted', { command: this.currentCommand });
@@ -193,9 +200,11 @@ export class CommandHandlerImpl implements CommandHandler {
             client.onComplete(this.currentCommand);
         }
         this.currentCommand = null;
+        this.isWaitingForAck = false;
         this.popCommand(); // 次のコマンドを送信
     }
     private onAckTimeout(index: number): void {
+        console.log("onAckTimeout() : currentCommand=", this.currentCommand, "address=", this.address);
         if (!this.currentCommand) {
             console.error("onAckTimeout : currentCommand is null");
             return;
@@ -206,6 +215,7 @@ export class CommandHandlerImpl implements CommandHandler {
             client.onTimeout(this.currentCommand);
         }
         this.currentCommand = null;
+        this.isWaitingForAck = false;
         this.popCommand(); // 次のコマンドを送信
     }
 }
