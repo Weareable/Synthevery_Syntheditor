@@ -1,6 +1,5 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
 import useMesh from '@/hooks/useMesh';
 import { playerSyncStates } from '@/lib/synthevery-core/player/states';
 import usePlayerControl from '@/hooks/usePlayerConrtol';
@@ -13,6 +12,9 @@ const AppStateExample: React.FC = () => {
     const [metronomeState, updateMetronomeState] = useAppState(playerSyncStates.metronomeState);
     const [recorderState, updateRecorderState] = useAppState(playerSyncStates.recorderState);
     const { playingState, bpmState, setPlayingState, setBpmState, stop } = usePlayerControl();
+
+    const [trackStates, updateTrackStates] = useAppState(playerSyncStates.trackStates);
+    const [currentTracks, updateCurrentTracks] = useAppState(playerSyncStates.currentTracksState);
 
     return (
         <div>
@@ -51,7 +53,32 @@ const AppStateExample: React.FC = () => {
             </div>
 
             <div>
+                <h2>BPM</h2>
+                BPM: {bpmState}
+                <button onClick={() => setBpmState(bpmState + 1)}>Increase</button>
+                <button onClick={() => setBpmState(bpmState - 1)}>Decrease</button>
+            </div>
 
+            <div>
+                <h2>Current Tracks</h2>
+                {Array.from(currentTracks.entries()).map(([key, value]) => (
+                    <div key={key}>
+                        <h3>Track {key}</h3>
+                        <p>Track: {value}</p>
+                    </div>
+                ))}
+            </div>
+
+
+            <div>
+                <h2>Track States</h2>
+                {trackStates.map((trackState, index) => (
+                    <div key={index}>
+                        <h3>Track {index}</h3>
+                        <p>Mute: {trackState.mute ? 'Muted' : 'Unmuted'}</p>
+                        <p>Volume: {trackState.volume}</p>
+                    </div>
+                ))}
             </div>
         </div>
     );
