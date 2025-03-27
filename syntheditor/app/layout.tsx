@@ -17,11 +17,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body>
-        <BLEProvider>
-          <MeshProvider>
-            {children}
-          </MeshProvider>
-        </BLEProvider>
+        {children}
       </body>
     </html>
   );
