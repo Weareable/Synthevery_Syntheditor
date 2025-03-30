@@ -7,7 +7,7 @@ import {
 } from '@/types/mesh';
 import { RoleRegistry } from './node-role';
 
-// todo : event emitter
+
 export const handleRolePacket = async (
     sendPacket: (
         type: number,
