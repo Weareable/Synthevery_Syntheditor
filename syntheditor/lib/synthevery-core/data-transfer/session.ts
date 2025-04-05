@@ -102,8 +102,9 @@ export class ReceiverSession implements ReceiverSessionInterface { // implements
     private status: SessionStatusType;
     private lastAliveCheckTime: number;
     private eventEmitter: EventEmitter;
+    private request: RequestData;
 
-    constructor(store: ReceiverDataStoreInterface) {
+    constructor(store: ReceiverDataStoreInterface, request: RequestData) {
         if (!store) {
             throw new Error("Receiver store cannot be null.");
         }
@@ -112,6 +113,7 @@ export class ReceiverSession implements ReceiverSessionInterface { // implements
         this.status = SessionStatus.kStatusPending;
         this.lastAliveCheckTime = Date.now();
         this.eventEmitter = new EventEmitter();
+        this.request = request;
     }
 
     getEventEmitter(): EventEmitter {
@@ -149,6 +151,10 @@ export class ReceiverSession implements ReceiverSessionInterface { // implements
     getStatus(): SessionStatusType {
         return this.status;
     }
+    getRequest(): RequestData {
+        return this.request;
+    }
+
 
     onRequest(data: RequestData): void {
         this.status = SessionStatus.kStatusTransferring;

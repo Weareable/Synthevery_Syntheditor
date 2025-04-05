@@ -60,6 +60,8 @@ export interface ReceiverPortInterface {
         receiver: ReceiverDataStoreInterface,
         responseData: ResponseData
     }
+    onStart(session: ReceiverSessionInterface, id: SessionID): void;
+    onFinish(session: ReceiverSessionInterface, id: SessionID): void;
 }
 
 // --- Session関連のインターフェースを修正 ---
@@ -84,6 +86,7 @@ export interface ReceiverSessionInterface {
     getResponse(): ResponseData;
     alive(): boolean;
     onCancel(data: CancelData): void;
+    getRequest(): RequestData;
 }
 
 // 読み取り専用のインターフェース (オプション)
