@@ -99,14 +99,14 @@ export class BLEDevice {
         if (!characteristic) {
             throw new Error(`Characteristic ${characteristicUuid} not found`);
         }
-        await characteristic.writeValue(data);
+        await characteristic.writeValueWithoutResponse(data);
     }
 
     async writeCharacteristic(characteristic: BluetoothRemoteGATTCharacteristic, data: BufferSource): Promise<void> {
         if (!this.server?.connected) {
             throw new Error('Device is not connected');
         }
-        await characteristic.writeValue(data);
+        await characteristic.writeValueWithoutResponse(data);
     }
 
     async startNotify(serviceUuid: string, characteristicUuid: string, onChange: (value: DataView) => void): Promise<void> {
