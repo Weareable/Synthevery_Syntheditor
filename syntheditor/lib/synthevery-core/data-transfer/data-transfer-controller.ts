@@ -13,7 +13,7 @@ import {
     CommandAck
 } from '../types/data-transfer';
 import { SessionCommandID, SessionStatus, SessionID, CommandType } from './constants';
-import { TransferCommandInterface, ReceiverPortInterface, SenderDataStoreInterface, ReceiverDataStoreInterface } from './interfaces';
+import { TransferCommandInterface, ReceiverPortInterface, SenderDataStoreInterface, ReceiverDataStoreInterface, SenderSessionInterface, ReceiverSessionInterface } from './interfaces';
 import { SenderSession, ReceiverSession } from './session';
 import { SenderSessionList, ReceiverSessionList } from './session-list';
 import { DataTransferCommandClient } from './command-client';
@@ -23,7 +23,7 @@ import { mesh } from '../connection/mesh';
 import { commandDispatcher } from '../command/dispatcher';
 import { COMMAND_CLIENT_ID_DATA_TRANSFER } from '../command/constants';
 
-export class DataTransferController implements TransferCommandInterface {
+class DataTransferController implements TransferCommandInterface {
     private senderSessions: Map<string, SenderSessionList>;
     private receiverSessions: Map<string, ReceiverSessionList>;
     private receiverPorts: Map<DataType, ReceiverPortInterface>;
@@ -56,6 +56,7 @@ export class DataTransferController implements TransferCommandInterface {
     }
 
     registerReceiverPort(port: ReceiverPortInterface): void {
+        console.log("DataTransferController: registerReceiverPort, type:", port.getDataType());
         this.receiverPorts.set(port.getDataType(), port);
     }
 
@@ -184,7 +185,7 @@ export class DataTransferController implements TransferCommandInterface {
             const response = result.responseData
 
             if (store) {
-                const session = new ReceiverSession(store);
+                const session = new ReceiverSession(store, data);
                 const success = this.receiverSessions.get(senderStr)!.registerSession(sessionId, session);
                 if (!success) {
                     return;
@@ -192,6 +193,8 @@ export class DataTransferController implements TransferCommandInterface {
                 //送受信のSession開始を通知
                 this.eventEmitter.emit("sessionStart", sender, sessionId, "receiver");
                 session.onRequest(data);
+
+                this.receiverPorts.get(data.type)!.onStart(session, sessionId);
             }
             this.sendCommand(sender, SessionCommandID.kResponse, sessionId);
         });
@@ -226,6 +229,9 @@ export class DataTransferController implements TransferCommandInterface {
             return CommandAck.kStatusInvalidSessionID;
         }
         session.onCancel(data);
+
+        this.receiverPorts.get(session.getRequest().type)!.onFinish(session, sessionId);
+
         return CommandAck.kStatusOK;
     }
 
@@ -255,12 +261,15 @@ export class DataTransferController implements TransferCommandInterface {
 
         session.onChunk(data);
 
+        console.log("DataTransferController: CHUNK", session.getPosition());
+
         if (session.getStatus() === SessionStatus.kStatusInvalidPosition) {
             return CommandAck.kStatusInvalidPosition;
         }
 
         if (session.getStatus() === SessionStatus.kStatusCompleted) {
             this.sendCommand(sender, SessionCommandID.kComplete, sessionId);
+            this.receiverPorts.get(session.getRequest().type)!.onFinish(session, sessionId);
             return CommandAck.kStatusOK;
         }
 
@@ -399,4 +408,44 @@ export class DataTransferController implements TransferCommandInterface {
     }
 }
 
-const dataTransferController = new DataTransferController();
+export const dataTransferController = new DataTransferController();
+
+export class MockReceiverDataStore implements ReceiverDataStoreInterface {
+    private data: Uint8Array;
+    private capacity: number;
+
+    constructor(capacity: number) {
+        this.data = new Uint8Array(capacity);
+        this.capacity = capacity;
+    }
+
+    write(data: Uint8Array, offset: number): void {
+        console.log("MockReceiverDataStore: write", data, offset);
+    }
+    size(): number {
+        return this.capacity;
+    }
+}
+
+export class MockReceiverPort implements ReceiverPortInterface {
+    getDataType(): DataType {
+        return 0;
+    }
+
+    handleRequest(sender: P2PMacAddress, sessionId: SessionID, data: RequestData): { receiver: ReceiverDataStoreInterface, responseData: ResponseData } {
+        console.log("MockReceiverPort: handleRequest sender: ", sender, "sessionId: ", sessionId, "data: ", data);
+        return { receiver: new MockReceiverDataStore(data.totalSize), responseData: { isAccepted: true, reason: 0 } };
+    }
+
+    onStart(session: ReceiverSessionInterface, id: SessionID): void {
+        console.warn("MockReceiverPort: onStart session: ", session, "id: ", id);
+    }
+
+    onFinish(session: ReceiverSessionInterface, id: SessionID): void {
+        console.warn("MockReceiverPort: onFinish session: ", session, "id: ", id);
+    }
+}
+
+const mockReceiverPort = new MockReceiverPort();
+
+dataTransferController.registerReceiverPort(mockReceiverPort);
