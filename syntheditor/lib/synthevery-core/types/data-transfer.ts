@@ -63,8 +63,13 @@ export function isValidSessionID(sessionId: SessionID): boolean {
 
 // --- シリアライズ/デシリアライズ関数 ---
 export function serializeRequestData(data: RequestData): Uint8Array {
-    const chainNodesSerialized = data.chainNodes.map(node => Array.from(node.address));
-    return msgpack.encode([data.type, data.metadata, data.totalSize, chainNodesSerialized]);
+    const chainNodesArray = new Uint8Array(data.chainNodes.length * 6);
+    for (let i = 0; i < data.chainNodes.length; i++) {
+        const node = data.chainNodes[i];
+        chainNodesArray.set(node.address, i * 6);
+    }
+    console.log("serializeRequestData", data.type, data.metadata, data.totalSize, chainNodesArray);
+    return msgpack.encode([data.type, data.metadata, data.totalSize, chainNodesArray]);
 }
 
 export function deserializeRequestData(data: Uint8Array): RequestData | null {

@@ -446,6 +446,34 @@ export class MockReceiverPort implements ReceiverPortInterface {
     }
 }
 
+export class MockSenderDataStore implements SenderDataStoreInterface {
+    private capacity: number;
+
+    constructor(capacity: number) {
+        this.capacity = capacity;
+    }
+
+    size(): number {
+        return this.capacity;
+    }
+
+    type(): DataType {
+        return 0;
+    }
+
+    get(offset: number, size: number): Uint8Array {
+        // 0から1ずつ増える値を返す
+        const data = new Uint8Array(size);
+        for (let i = 0; i < size; i++) {
+            data[i] = offset + i;
+        }
+        return data;
+    }
+
+    metadata(): string {
+        return "metadata";
+    }
+}
 const mockReceiverPort = new MockReceiverPort();
 
 dataTransferController.registerReceiverPort(mockReceiverPort);

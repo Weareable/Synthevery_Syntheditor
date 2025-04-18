@@ -2,9 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { mesh } from '@/lib/synthevery-core/connection/mesh';
-import { getAddressString } from '@/lib/synthevery-core/connection/util';
+import { getAddressString, getAddressFromString } from '@/lib/synthevery-core/connection/util';
 import { dataTransferController } from '@/lib/synthevery-core/data-transfer/data-transfer-controller';
-
+import { MockSenderDataStore } from '@/lib/synthevery-core/data-transfer/data-transfer-controller';
 dataTransferController.getEventEmitter();
 
 const DataTransferExample: React.FC = () => {
@@ -29,9 +29,19 @@ const DataTransferExample: React.FC = () => {
         }
     }, []);
 
+    const sendData = async (peer: string) => {
+        await dataTransferController.sendRequest(getAddressFromString(peer), new MockSenderDataStore(1800));
+    }
+
     return (
         <div>
-            <button onClick={() => connectDevice()}>Connect</button>
+            <div>
+                <button onClick={() => connectDevice()}>Connect</button>
+            </div>
+
+            <div>
+                {peerDevices.map(device => <div key={device}>{device} <button onClick={() => sendData(device)}>Send Data</button></div>)}
+            </div>
         </div>
     );
 };
