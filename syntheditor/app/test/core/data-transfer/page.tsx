@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { mesh } from '@/lib/synthevery-core/connection/mesh';
-import { getAddressString, getAddressFromString } from '@/lib/synthevery-core/connection/util';
-import { dataTransferController } from '@/lib/synthevery-core/data-transfer/data-transfer-controller';
-import { MockSenderDataStore } from '@/lib/synthevery-core/data-transfer/data-transfer-controller';
-dataTransferController.getEventEmitter();
+import { getAddressString } from '@/lib/synthevery-core/connection/util';
+import { mock } from '@/lib/synthevery-core/connection/srarq/mock';
+
+mock; // モックを呼び出す
 
 const DataTransferExample: React.FC = () => {
     const [peerDevices, setPeerDevices] = useState<string[]>([]);
@@ -29,10 +29,6 @@ const DataTransferExample: React.FC = () => {
         }
     }, []);
 
-    const sendData = async (peer: string) => {
-        await dataTransferController.sendRequest(getAddressFromString(peer), new MockSenderDataStore(1800));
-    }
-
     return (
         <div>
             <div>
@@ -40,7 +36,7 @@ const DataTransferExample: React.FC = () => {
             </div>
 
             <div>
-                {peerDevices.map(device => <div key={device}>{device} <button onClick={() => sendData(device)}>Send Data</button></div>)}
+                {peerDevices.map(device => <div key={device}>{device}</div>)}
             </div>
         </div>
     );
