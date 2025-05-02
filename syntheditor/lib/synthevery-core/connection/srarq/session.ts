@@ -5,7 +5,7 @@ import { getAddressString } from '../util';
 import { mesh } from '../mesh';
 import { MESH_PACKET_TYPE_SRARQ_DATA, MESH_PACKET_TYPE_SRARQ_ACK } from '../constants';
 
-class SRArqSenderSession {
+export class SRArqSenderSession {
     meshPacketTransmitter: PacketTransmitter;
     sender: SRArqSender;
     packetMap: Map<number, SendPacket> = new Map();
@@ -18,7 +18,7 @@ class SRArqSenderSession {
     }
 }
 
-class SRArqReceiverSession {
+export class SRArqReceiverSession {
     meshPacketTransmitter: PacketTransmitter;
     receiver: SRArqReceiver;
     packetMap: Map<number, ReceivePacket> = new Map();

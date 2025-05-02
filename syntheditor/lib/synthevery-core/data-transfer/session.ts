@@ -1,9 +1,10 @@
 // data-transfer/session.ts
-import { RequestData, ResponseData, RejectData, NextData, CancelData, ChunkData, CommandAck, DataType } from '../types/data-transfer';
+import { RequestData, ResponseData, RejectData, NextData, CancelData, ChunkData, CommandAck, DataType, ResultData, serializeChunkData, serializeCRCPacket } from '../types/data-transfer';
 import { SessionID, CommandType, SessionStatusType, SessionStatus } from './constants';
 import { SenderDataStoreInterface, ReceiverDataStoreInterface, SenderSessionInterface, ReceiverSessionInterface } from './interfaces'; // 修正
 import EventEmitter from 'eventemitter3';
-
+import { SRArqSenderSession, SRArqReceiverSession } from '../connection/srarq/session';
+import { P2PMacAddress } from '../types/mesh';
 const kChunkSize = 192;
 
 export class SenderSession implements SenderSessionInterface { // implements を修正
@@ -12,25 +13,24 @@ export class SenderSession implements SenderSessionInterface { // implements を
     private status: SessionStatusType;
     private lastAliveCheckTime: number;
     private eventEmitter: EventEmitter;
-
-    constructor(store: SenderDataStoreInterface) {
+    private senderSession: SRArqSenderSession;
+    private chainNodes: P2PMacAddress[];
+    constructor(store: SenderDataStoreInterface, senderSession: SRArqSenderSession, chainNodes: P2PMacAddress[]) {
         this.store = store;
         this.position = 0;
         this.status = SessionStatus.kStatusPending;
         this.lastAliveCheckTime = Date.now();
         this.eventEmitter = new EventEmitter();
+        this.senderSession = senderSession;
+        this.chainNodes = chainNodes;
+
+        this.senderSession.sender.eventEmitter.on("windowAvailable", () => {
+            this.sendData();
+        });
     }
     getEventEmitter(): EventEmitter {
         return this.eventEmitter;
     }
-
-    getChunk(): ChunkData {
-        const start = Math.min(this.position, this.store.size());
-        const end = Math.min(start + kChunkSize, this.store.size());
-        const size = end - start;
-        return { position: this.position, data: this.store.get(start, size) };
-    }
-
     setPosition(offset: number): void {
         this.position = offset;
     }
@@ -45,7 +45,7 @@ export class SenderSession implements SenderSessionInterface { // implements を
             type: this.store.type(),
             metadata: this.store.metadata(),
             totalSize: this.store.size(),
-            chainNodes: [] // 今回は空
+            chainNodes: this.chainNodes
         };
     }
     onResponse(data: ResponseData): void {
@@ -61,21 +61,7 @@ export class SenderSession implements SenderSessionInterface { // implements を
         this.status = SessionStatus.kStatusRejected;
         this.eventEmitter.emit('statusChanged', this.status);
     }
-    onNext(data: NextData): void {
-        if (data.position > this.position + kChunkSize) {
-            this.status = SessionStatus.kStatusInvalidPosition;
-        } else {
-            this.position = Math.min(
-                Math.max(this.position + kChunkSize, data.position),
-                this.store.size()
-            );
-            this.lastAliveCheckTime = Date.now();
-        }
-        this.eventEmitter.emit('positionChanged', this.position); // positionの変化を通知
-        this.eventEmitter.emit('statusChanged', this.status);
-    }
-
-    onComplete(): void {
+    onResult(data: ResultData): void {
         this.status = SessionStatus.kStatusCompleted;
         this.eventEmitter.emit('statusChanged', this.status);
         this.eventEmitter.emit('completed');
@@ -93,7 +79,32 @@ export class SenderSession implements SenderSessionInterface { // implements を
         }
         return true;
     }
+    private sendData(): void {
+        this.lastAliveCheckTime = Date.now();
 
+        while (true) {
+            if (this.position >= this.store.size()) {
+                // データがなければ終了
+                return;
+            }
+
+            const chunkSize = Math.min(kChunkSize, this.store.size() - this.position);
+            const data = this.store.get(this.position, chunkSize);
+
+            const packet = serializeCRCPacket({
+                data: data,
+                position: this.position,
+            }, serializeChunkData);
+
+            const result = this.senderSession.sender.send(packet);
+            if (result === null) {
+                // キューが一杯
+                return;
+            }
+
+            this.position = Math.min(this.position + chunkSize, this.store.size());
+        }
+    }
 }
 
 export class ReceiverSession implements ReceiverSessionInterface { // implements を修正

@@ -66,20 +66,16 @@ export interface ReceiverPortInterface {
 
 // --- Session関連のインターフェースを修正 ---
 export interface SenderSessionInterface {
-    getChunk(): ChunkData;
     getPosition(): number;
     getStatus(): SessionStatusType;
     getRequest(): RequestData;
     onResponse(data: ResponseData): void;
     alive(): boolean;
     onReject(data: RejectData): void;
-    onNext(data: NextData): void;
-    onComplete(): void;
+    onResult(data: ResultData): void;
 }
 
 export interface ReceiverSessionInterface {
-    onChunk(data: ChunkData): void;
-    getNext(): NextData;
     getPosition(): number;
     getStatus(): SessionStatusType;
     onRequest(data: RequestData): void;
