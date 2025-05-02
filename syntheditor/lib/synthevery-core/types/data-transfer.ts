@@ -34,7 +34,7 @@ export interface ChunkData {
     data: Uint8Array;
 }
 
-export interface CompleteData {
+export interface ResultData {
     result: number;
 }
 
@@ -157,15 +157,15 @@ export function deserializeChunkData(data: Uint8Array): ChunkData | null {
     }
 }
 
-export function serializeCompleteData(data: CompleteData): Uint8Array {
+export function serializeResultData(data: ResultData): Uint8Array {
     return msgpack.encode([data.result]);
 }
-export function deserializeCompleteData(data: Uint8Array): CompleteData | null {
+export function deserializeResultData(data: Uint8Array): ResultData | null {
     try {
         const decoded = msgpack.decode(data) as [number];
         return { result: decoded[0] };
     } catch (e) {
-        console.error("deserializeCompleteData failed.", e);
+        console.error("deserializeResultData failed.", e);
         return null;
     }
 }

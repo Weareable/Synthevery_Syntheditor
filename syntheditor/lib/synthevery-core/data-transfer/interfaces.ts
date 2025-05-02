@@ -1,7 +1,7 @@
 // data-transfer/interfaces.ts
 
 import { P2PMacAddress } from '../types/mesh';
-import { RequestData, ResponseData, RejectData, NextData, CancelData, ChunkData, CommandAck, DataType } from '../types/data-transfer';
+import { RequestData, ResponseData, RejectData, NextData, CancelData, ChunkData, CommandAck, DataType, ResultData } from '../types/data-transfer';
 import { SessionID, CommandType, SessionStatusType } from './constants';
 
 export interface TransferCommandInterface {
@@ -16,7 +16,7 @@ export interface TransferCommandInterface {
     onReject(receiver: P2PMacAddress, sessionId: SessionID, data: RejectData): CommandAck['statusCode'];
     onChunk(sender: P2PMacAddress, sessionId: SessionID, data: ChunkData): CommandAck['statusCode'];
     onNext(receiver: P2PMacAddress, sessionId: SessionID, data: NextData): CommandAck['statusCode'];
-    onComplete(receiver: P2PMacAddress, sessionId: SessionID): CommandAck['statusCode'];
+    onResult(receiver: P2PMacAddress, sessionId: SessionID, data: ResultData): CommandAck['statusCode'];
 
     onSuccess(peer: P2PMacAddress, commandType: CommandType, sessionId: SessionID): void;
     onError(peer: P2PMacAddress, commandType: CommandType, sessionId: SessionID, statusCode: number): void;
