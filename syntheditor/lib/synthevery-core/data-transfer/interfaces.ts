@@ -5,8 +5,6 @@ import { RequestData, ResponseData, RejectData, NextData, CancelData, ChunkData,
 import { SessionID, CommandType, SessionStatusType } from './constants';
 
 export interface TransferCommandInterface {
-    getChunk(receiver: P2PMacAddress, sessionId: SessionID): { success: boolean, chunkData?: ChunkData };
-    getNext(sender: P2PMacAddress, sessionId: SessionID): { success: boolean, nextData?: NextData };
     getRequest(sender: P2PMacAddress, sessionId: SessionID): { success: boolean, requestData?: RequestData };
     getResponse(receiver: P2PMacAddress, sessionId: SessionID): { success: boolean, responseData?: ResponseData };
 
@@ -14,8 +12,6 @@ export interface TransferCommandInterface {
     onResponse(receiver: P2PMacAddress, sessionId: SessionID, data: ResponseData): CommandAck['statusCode'];
     onCancel(sender: P2PMacAddress, sessionId: SessionID, data: CancelData): CommandAck['statusCode'];
     onReject(receiver: P2PMacAddress, sessionId: SessionID, data: RejectData): CommandAck['statusCode'];
-    onChunk(sender: P2PMacAddress, sessionId: SessionID, data: ChunkData): CommandAck['statusCode'];
-    onNext(receiver: P2PMacAddress, sessionId: SessionID, data: NextData): CommandAck['statusCode'];
     onResult(receiver: P2PMacAddress, sessionId: SessionID, data: ResultData): CommandAck['statusCode'];
 
     onSuccess(peer: P2PMacAddress, commandType: CommandType, sessionId: SessionID): void;

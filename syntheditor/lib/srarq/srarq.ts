@@ -170,6 +170,7 @@ export interface ReceivePacket {
 
 export interface SRArqReceiverEvents {
     received: (sequenceNumber: number) => void;
+    dataOrdered: (sequenceNumber: number, data: Uint8Array) => void;
 }
 
 export class SRArqReceiver {
@@ -276,6 +277,10 @@ export class SRArqReceiver {
 
         // スライディングウィンドウから外れたパケットを破棄
         for (let i = initialSlidingWindowStart; this.sequenceNumberOperations.isInRange(i, initialSlidingWindowStart, this.slidingWindowStart); i = this.sequenceNumberOperations.increment(i, 1)) {
+            const packet = this.packetMap.get(i);
+            if (packet !== undefined) {
+                this.eventEmitter.emit("dataOrdered", i, packet.data);
+            }
             this.packetMap.delete(i);
         }
     }

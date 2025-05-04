@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { mesh } from '@/lib/synthevery-core/connection/mesh';
 import { getAddressString } from '@/lib/synthevery-core/connection/util';
-import { mock } from '@/lib/synthevery-core/connection/srarq/mock';
 
-mock; // モックを呼び出す
+import { dataTransferController } from '@/lib/synthevery-core/data-transfer/data-transfer-controller';
+
+dataTransferController;
 
 const DataTransferExample: React.FC = () => {
     const [peerDevices, setPeerDevices] = useState<string[]>([]);
@@ -36,7 +37,9 @@ const DataTransferExample: React.FC = () => {
             </div>
 
             <div>
-                {peerDevices.map(device => <div key={device}>{device}</div>)}
+                {peerDevices.map(device => <div key={device}>
+                    {device}
+                </div>)}
             </div>
         </div>
     );

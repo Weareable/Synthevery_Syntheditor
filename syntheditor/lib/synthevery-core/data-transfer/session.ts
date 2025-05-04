@@ -1,5 +1,5 @@
 // data-transfer/session.ts
-import { RequestData, ResponseData, RejectData, NextData, CancelData, ChunkData, CommandAck, DataType, ResultData, serializeChunkData, serializeCRCPacket } from '../types/data-transfer';
+import { RequestData, ResponseData, RejectData, NextData, CancelData, ChunkData, CommandAck, DataType, ResultData, serializeChunkData, serializeCRCPacket, deserializeCRCPacket, deserializeChunkData } from '../types/data-transfer';
 import { SessionID, CommandType, SessionStatusType, SessionStatus } from './constants';
 import { SenderDataStoreInterface, ReceiverDataStoreInterface, SenderSessionInterface, ReceiverSessionInterface } from './interfaces'; // 修正
 import EventEmitter from 'eventemitter3';
@@ -52,6 +52,8 @@ export class SenderSession implements SenderSessionInterface { // implements を
         if (data.isAccepted) {
             this.status = SessionStatus.kStatusTransferring;
             this.lastAliveCheckTime = Date.now();
+            // 初回データ送信
+            this.sendData();
         } else {
             this.status = SessionStatus.kStatusRejected;
         }
@@ -114,8 +116,9 @@ export class ReceiverSession implements ReceiverSessionInterface { // implements
     private lastAliveCheckTime: number;
     private eventEmitter: EventEmitter;
     private request: RequestData;
+    private receiverSession: SRArqReceiverSession;
 
-    constructor(store: ReceiverDataStoreInterface, request: RequestData) {
+    constructor(store: ReceiverDataStoreInterface, request: RequestData, receiverSession: SRArqReceiverSession) {
         if (!store) {
             throw new Error("Receiver store cannot be null.");
         }
@@ -125,36 +128,19 @@ export class ReceiverSession implements ReceiverSessionInterface { // implements
         this.lastAliveCheckTime = Date.now();
         this.eventEmitter = new EventEmitter();
         this.request = request;
+        this.receiverSession = receiverSession;
+
+        this.receiverSession.receiver.eventEmitter.on("received", (sequenceNumber: number) => {
+            this.validateData(sequenceNumber);
+        });
+
+        this.receiverSession.receiver.eventEmitter.on("dataOrdered", (sequenceNumber: number, data: Uint8Array) => {
+            this.writeData(sequenceNumber, data);
+        });
     }
 
     getEventEmitter(): EventEmitter {
         return this.eventEmitter;
-    }
-
-    onChunk(data: ChunkData): void {
-        if (!this.store) {
-            console.error("this.store is null");
-            return;
-        }
-
-        if (data.position > this.position + kChunkSize) {
-            this.status = SessionStatus.kStatusInvalidPosition;
-        } else {
-            this.store.write(data.data, data.position);
-            this.position = Math.max(
-                Math.min(this.position + kChunkSize, this.store.size()), data.position
-            );
-        }
-
-        if (this.position === this.store.size()) {
-            this.status = SessionStatus.kStatusCompleted;
-        }
-        this.eventEmitter.emit('positionChanged', this.position); // positionの変化を通知
-        this.eventEmitter.emit('statusChanged', this.status);
-    }
-
-    getNext(): NextData {
-        return { position: this.position };
     }
     getPosition(): number {
         return this.position;
@@ -176,6 +162,10 @@ export class ReceiverSession implements ReceiverSessionInterface { // implements
         return { isAccepted: true, reason: 0 }; // 仮
     }
 
+    getResult(): ResultData {
+        return { result: this.status };
+    }
+
     onCancel(data: CancelData): void {
         this.status = SessionStatus.kStatusCanceled;
         this.eventEmitter.emit('statusChanged', this.status);
@@ -192,5 +182,43 @@ export class ReceiverSession implements ReceiverSessionInterface { // implements
             return false;
         }
         return true;
+    }
+
+    private validateData(sequenceNumber: number): void {
+        const receivedData = this.receiverSession.receiver.getReceivedData(sequenceNumber);
+        if (receivedData === null) {
+            // データがない
+            return;
+        }
+
+        const packet = deserializeCRCPacket(receivedData, deserializeChunkData);
+        if (packet === null) {
+            // パケットが壊れている
+            return;
+        }
+
+        this.lastAliveCheckTime = Date.now();
+
+        this.eventEmitter.emit('dataReceived', packet.data);
+
+        this.receiverSession.receiver.sendAck(sequenceNumber, true);
+    }
+
+    private writeData(sequenceNumber: number, data: Uint8Array): void {
+        const packet = deserializeCRCPacket(data, deserializeChunkData);
+        if (packet === null) {
+            // パケットが壊れている
+            return;
+        }
+
+        this.store.write(packet.data.data, packet.data.position);
+        this.position = Math.min(this.position + packet.data.data.length, this.store.size());
+
+        if (this.position >= this.store.size()) {
+            this.status = SessionStatus.kStatusCompleted;
+            this.eventEmitter.emit("statusChanged", this.status);
+        }
+
+        this.eventEmitter.emit("completed");
     }
 }

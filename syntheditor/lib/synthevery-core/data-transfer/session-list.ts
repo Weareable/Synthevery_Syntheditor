@@ -2,72 +2,22 @@
 
 import { SessionID, SessionCommandID } from './constants';
 import { SenderSession, ReceiverSession } from './session'; // 修正
+import { EventEmitter } from 'eventemitter3';
 
-export class SenderSessionList { // クラス名を変更
-    private sessions: Map<SessionID, SenderSession>; // 型を修正
-    private lastSessionId: SessionID;
 
-    constructor() {
-        this.sessions = new Map();
-        this.lastSessionId = 0;
-    }
-
-    registerSession(session: SenderSession): { sessionId: SessionID, session: SenderSession } | null { // 型を修正
-        const sessionId = this.generateSessionID();
-        if (sessionId === SessionCommandID.kInvalidSessionID) {
-            return null;
-        }
-        this.sessions.set(sessionId, session);
-        return { sessionId, session: this.sessions.get(sessionId)! };
-    }
-
-    removeSession(sessionId: SessionID): void {
-        this.sessions.delete(sessionId);
-    }
-
-    getSession(sessionId: SessionID): SenderSession | undefined { // 型を修正
-        return this.sessions.get(sessionId);
-    }
-
-    sessionExists(sessionId: SessionID): boolean {
-        return this.sessions.has(sessionId);
-    }
-
-    getSessionCount(): number {
-        return this.sessions.size;
-    }
-
-    canAddSession(): boolean {
-        return this.getSessionCount() < SessionCommandID.kSessionIDMax;
-    }
-    checkSessions(): void {
-        for (const [sessionId, session] of this.sessions) {
-            if (!session.alive()) {
-                this.sessions.delete(sessionId);
-            }
-        }
-    }
-
-    private generateSessionID(): SessionID {
-        for (let i = 0; i <= SessionCommandID.kSessionIDMax; i++) {
-            const sessionId = (this.lastSessionId + i) % (SessionCommandID.kSessionIDMax + 1);
-            if (!this.sessionExists(sessionId)) {
-                this.lastSessionId = sessionId;
-                return sessionId;
-            }
-        }
-        return SessionCommandID.kInvalidSessionID;
-    }
+interface SessionListEvents {
+    sessionDead: (sessionId: SessionID) => void;
 }
 
-export class ReceiverSessionList { // クラス名を変更
-    private sessions: Map<SessionID, ReceiverSession>; // 型を修正
+export class SessionList<T extends SenderSession | ReceiverSession> { // クラス名を変更
+    private sessions: Map<SessionID, T>; // 型を修正
+    public readonly eventEmitter = new EventEmitter<SessionListEvents>();
 
     constructor() {
         this.sessions = new Map();
     }
 
-    registerSession(sessionId: SessionID, session: ReceiverSession): boolean { //型を修正
+    registerSession(sessionId: SessionID, session: T): boolean { //型を修正
         if (!SessionCommandID.isValidSessionID(sessionId) || this.sessionExists(sessionId)) {
             return false;
         }
@@ -79,7 +29,7 @@ export class ReceiverSessionList { // クラス名を変更
         this.sessions.delete(sessionId);
     }
 
-    getSession(sessionId: SessionID): ReceiverSession | undefined { // 型を修正
+    getSession(sessionId: SessionID): T | undefined { // 型を修正
         return this.sessions.get(sessionId);
     }
 
@@ -94,6 +44,7 @@ export class ReceiverSessionList { // クラス名を変更
     checkSessions(): void {
         for (const [sessionId, session] of this.sessions) {
             if (!session.alive()) {
+                this.eventEmitter.emit('sessionDead', sessionId);
                 this.sessions.delete(sessionId);
             }
         }

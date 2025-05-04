@@ -58,7 +58,7 @@ class SRArqSessionsController {
         });
     }
 
-    createSenderSession(address: P2PMacAddress): SRArqSenderSession | null {
+    createSenderSession(address: P2PMacAddress): { session: SRArqSenderSession, sessionId: number } | null {
         let senderSession = this.senderSessions.get(getAddressString(address));
         if (senderSession === undefined) {
             senderSession = new Map();
@@ -73,7 +73,7 @@ class SRArqSessionsController {
         const session = new SRArqSenderSession(address, sessionId);
         senderSession.set(sessionId, session);
 
-        return session;
+        return { session, sessionId };
     }
 
     createReceiverSession(address: P2PMacAddress, sessionId: number): SRArqReceiverSession | null {
@@ -92,6 +92,22 @@ class SRArqSessionsController {
         receiverSession.set(sessionId, session);
 
         return session;
+    }
+
+    removeSenderSession(address: P2PMacAddress, sessionId: number): void {
+        const senderSession = this.senderSessions.get(getAddressString(address));
+        if (senderSession === undefined) {
+            return;
+        }
+        senderSession.delete(sessionId);
+    }
+
+    removeReceiverSession(address: P2PMacAddress, sessionId: number): void {
+        const receiverSession = this.receiverSessions.get(getAddressString(address));
+        if (receiverSession === undefined) {
+            return;
+        }
+        receiverSession.delete(sessionId);
     }
 
     getSenderSession(address: P2PMacAddress, sessionId: number): SRArqSenderSession | null {
