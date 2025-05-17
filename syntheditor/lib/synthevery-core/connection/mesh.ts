@@ -82,8 +82,12 @@ class BLEMeshDevice {
     }
 
     private handleMeshPacketReceived(value: DataView): void {
-        const packet = decodeMeshPacket(new Uint8Array(value.buffer));
-        this.packetReceiver(packet);
+        try {
+            const packet = decodeMeshPacket(new Uint8Array(value.buffer));
+            this.packetReceiver(packet);
+        } catch (error) {
+            console.error('Error decoding mesh packet:', error);
+        }
     }
 
     private handleConnectedDevicesChanged(value: DataView): void {
