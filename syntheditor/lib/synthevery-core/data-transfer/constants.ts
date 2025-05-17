@@ -4,6 +4,11 @@ export type SessionID = number;
 
 export const kChunkSize = 192;
 
+export namespace DataTypes {
+    export const kNoteBuilderConfig: number = 10;
+    export const kGeneratorConfig: number = 11;
+}
+
 export namespace SessionCommandID {
     export const kSessionIDBits = 5;
     export const kCommandTypeBits = 3;
@@ -17,9 +22,7 @@ export namespace SessionCommandID {
     export const kResponse: CommandType = 0x01;
     export const kReject: CommandType = 0x02;
     export const kCancel: CommandType = 0x03;
-    export const kChunk: CommandType = 0x04;
-    export const kNext: CommandType = 0x05;
-    export const kComplete: CommandType = 0x06;
+    export const kResult: CommandType = 0x06;
     export const kGetStatus: CommandType = 0x07;
 
     export function toCommandIDType(commandType: CommandType, sessionId: SessionID): number {

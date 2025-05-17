@@ -157,7 +157,10 @@ class BLEMeshDevice {
         meshPacketCopy.index = currentIndex;
 
         const data = encodeMeshPacket(meshPacketCopy);
+
+        const now = new Date();
         await this.bleDevice.writeCharacteristic(this.meshPacketTxCharacteristic, data);
+        console.log("SENT", new Date().getTime() - now.getTime(), meshPacket.type, meshPacket.data);
     }
 }
 
@@ -311,7 +314,7 @@ class Mesh {
     }
 
     getConnectedPeers(): P2PMacAddress[] {
-        return Array.from(this.meshDevices.values().map(bleMeshDevice => bleMeshDevice.getAddress()));
+        return Array.from(this.meshDevices.values()).map(bleMeshDevice => bleMeshDevice.getAddress());
     }
 
     getConnectedDevices(): P2PMacAddress[] {

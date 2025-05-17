@@ -1,7 +1,7 @@
 // data-transfer/data-transfer-controller.ts
 
-import { CommandHandler } from '@/lib/synthevery/connection/command-handler';
-import { P2PMacAddress } from '@/types/mesh';
+import { CommandHandler } from '../command/handler';
+import { P2PMacAddress } from '../types/mesh';
 import {
     DataType,
     RequestData,
@@ -10,34 +10,30 @@ import {
     NextData,
     CancelData,
     ChunkData,
-    CommandAck
-} from './types';
+    CommandAck,
+    ResultData
+} from '../types/data-transfer';
 import { SessionCommandID, SessionStatus, SessionID, CommandType } from './constants';
-import { TransferCommandInterface, ReceiverPortInterface, SenderDataStoreInterface, ReceiverDataStoreInterface } from './interfaces';
+import { TransferCommandInterface, ReceiverPortInterface, SenderDataStoreInterface, ReceiverDataStoreInterface, SenderSessionInterface, ReceiverSessionInterface } from './interfaces';
 import { SenderSession, ReceiverSession } from './session';
-import { SenderSessionList, ReceiverSessionList } from './session-list';
+import { SessionList } from './session-list';
 import { DataTransferCommandClient } from './command-client';
-import { getAddressString } from '@/lib/synthevery/connection/mesh-node';
+import { getAddressString } from '../connection/util';
 import EventEmitter from 'eventemitter3';
+import { mesh } from '../connection/mesh';
+import { commandDispatcher } from '../command/dispatcher';
+import { COMMAND_CLIENT_ID_DATA_TRANSFER } from '../command/constants';
+import { srarqSessionsController } from '../connection/srarq/session';
 
-
-export class DataTransferController implements TransferCommandInterface {
-    private clientId: number;
-    private dispatcher: { getCommandHandler: (address: P2PMacAddress, create: boolean) => CommandHandler | undefined }; // CommandProvider の Context
-    private senderSessions: Map<string, SenderSessionList>;
-    private receiverSessions: Map<string, ReceiverSessionList>;
+class DataTransferController implements TransferCommandInterface {
+    private senderSessions: Map<string, SessionList<SenderSession>>;
+    private receiverSessions: Map<string, SessionList<ReceiverSession>>;
     private receiverPorts: Map<DataType, ReceiverPortInterface>;
     private eventEmitter: EventEmitter;
 
-
-    constructor(
-        clientId: number,
-        dispatcher: { getCommandHandler: (address: P2PMacAddress, create: boolean) => CommandHandler | undefined },
-    ) {
-        this.clientId = clientId;
-        this.dispatcher = dispatcher;
-        this.senderSessions = new Map<string, SenderSessionList>();
-        this.receiverSessions = new Map<string, ReceiverSessionList>();
+    constructor() {
+        this.senderSessions = new Map<string, SessionList<SenderSession>>();
+        this.receiverSessions = new Map<string, SessionList<ReceiverSession>>();
         this.receiverPorts = new Map();
         this.eventEmitter = new EventEmitter();
 
@@ -49,6 +45,12 @@ export class DataTransferController implements TransferCommandInterface {
                 receiverSessionList.checkSessions();
             });
         }, 500);
+
+        mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[]) => {
+            for (const device of connectedDevices) {
+                this.initializeNode(device);
+            }
+        });
     }
 
     getEventEmitter(): EventEmitter {
@@ -56,26 +58,47 @@ export class DataTransferController implements TransferCommandInterface {
     }
 
     registerReceiverPort(port: ReceiverPortInterface): void {
+        console.log("DataTransferController: registerReceiverPort, type:", port.getDataType());
         this.receiverPorts.set(port.getDataType(), port);
     }
 
-    initializeNode(address: P2PMacAddress): void {
+    private initializeNode(address: P2PMacAddress): void {
         const addressStr = getAddressString(address.address);
-        const handler = this.dispatcher.getCommandHandler(address, true);
+        const handler = commandDispatcher.getCommandHandler(address, true);
 
         if (!handler) {
             console.error(`Failed to get CommandHandler for address: ${addressStr}`);
             return;
         }
-        const client = new DataTransferCommandClient(this.clientId, this, address);
+
+        if (this.senderSessions.has(addressStr)) {
+            console.log(`DataTransferController: initializeNode: ${addressStr} already initialized`);
+            return;
+        }
+
+        console.log("data-transfer: initializeNode: ", addressStr);
+
+        const client = new DataTransferCommandClient(COMMAND_CLIENT_ID_DATA_TRANSFER, this, address);
         handler.setClientInterface(client);
-        this.senderSessions.set(addressStr, new SenderSessionList());
-        this.receiverSessions.set(addressStr, new ReceiverSessionList());
+
+        const senderSessionList = new SessionList<SenderSession>();
+        senderSessionList.eventEmitter.on('sessionDead', (sessionId: SessionID) => {
+            srarqSessionsController.removeSenderSession(address, sessionId);
+        });
+
+        const receiverSessionList = new SessionList<ReceiverSession>();
+        receiverSessionList.eventEmitter.on('sessionDead', (sessionId: SessionID) => {
+            srarqSessionsController.removeReceiverSession(address, sessionId);
+        });
+
+        this.senderSessions.set(addressStr, senderSessionList);
+        this.receiverSessions.set(addressStr, receiverSessionList);
     }
 
     sendRequest(
         receiver: P2PMacAddress,
-        store: SenderDataStoreInterface
+        store: SenderDataStoreInterface,
+        chainNodes: P2PMacAddress[]
     ): { sessionId: SessionID; session: SenderSession } | null {
         const receiverStr = getAddressString(receiver.address);
 
@@ -84,24 +107,26 @@ export class DataTransferController implements TransferCommandInterface {
             return null;
         }
 
-        const senderSessionList = this.senderSessions.get(receiverStr)!;
-        if (!senderSessionList.canAddSession()) {
-            console.error("DataTransferController: sendRequest: Cannot add session");
+        const srarq_sender_session = srarqSessionsController.createSenderSession(receiver);
+        if (srarq_sender_session === null) {
+            console.error("DataTransferController: sendRequest: Failed to create SRAQR sender session");
             return null;
         }
 
-        const session = new SenderSession(store);
-        const sessionInfo = senderSessionList.registerSession(session);
+        const senderSessionList = this.senderSessions.get(receiverStr)!;
+        const session = new SenderSession(store, srarq_sender_session.session, chainNodes);
 
-        if (!sessionInfo) {
+        const result = senderSessionList.registerSession(srarq_sender_session.sessionId, session);
+        if (!result) {
             console.error("DataTransferController: sendRequest: Failed to register session");
             return null;
         }
-        //送受信のSession開始を通知
-        this.eventEmitter.emit("sessionStart", receiver, sessionInfo.sessionId, "sender");
 
-        this.sendCommand(receiver, SessionCommandID.kRequest, sessionInfo.sessionId);
-        return sessionInfo;
+        //送受信のSession開始を通知
+        this.eventEmitter.emit("sessionStart", receiver, srarq_sender_session.sessionId, "sender");
+
+        this.sendCommand(receiver, SessionCommandID.kRequest, srarq_sender_session.sessionId);
+        return { sessionId: srarq_sender_session.sessionId, session: session };
     }
 
     // --- TransferCommandInterface の実装 ---
@@ -132,19 +157,7 @@ export class DataTransferController implements TransferCommandInterface {
         return { success: true, responseData: session.getResponse() };
     }
 
-    getChunk(receiver: P2PMacAddress, sessionId: SessionID): { success: boolean; chunkData?: ChunkData } {
-        const receiverStr = getAddressString(receiver.address);
-        if (!this.senderSessions.has(receiverStr)) {
-            return { success: false };
-        }
-        const session = this.senderSessions.get(receiverStr)!.getSession(sessionId);
-        if (!session) {
-            return { success: false };
-        }
-        return { success: true, chunkData: session.getChunk() };
-    }
-
-    getNext(sender: P2PMacAddress, sessionId: SessionID): { success: boolean; nextData?: NextData } {
+    getResult(sender: P2PMacAddress, sessionId: SessionID): { success: boolean; resultData?: ResultData } {
         const senderStr = getAddressString(sender.address);
         if (!this.receiverSessions.has(senderStr)) {
             return { success: false };
@@ -153,8 +166,7 @@ export class DataTransferController implements TransferCommandInterface {
         if (!session) {
             return { success: false };
         }
-
-        return { success: true, nextData: session.getNext() };
+        return { success: true, resultData: session.getResult() };
     }
 
     onRequest(sender: P2PMacAddress, sessionId: SessionID, data: RequestData): CommandAck['statusCode'] {
@@ -178,7 +190,13 @@ export class DataTransferController implements TransferCommandInterface {
             const response = result.responseData
 
             if (store) {
-                const session = new ReceiverSession(store);
+                const srarqReceiverSession = srarqSessionsController.createReceiverSession(sender, sessionId);
+                if (srarqReceiverSession === null) {
+                    console.error("DataTransferController: onRequest: Failed to create SRAQR receiver session");
+                    return;
+                }
+
+                const session = new ReceiverSession(store, data, srarqReceiverSession);
                 const success = this.receiverSessions.get(senderStr)!.registerSession(sessionId, session);
                 if (!success) {
                     return;
@@ -186,6 +204,8 @@ export class DataTransferController implements TransferCommandInterface {
                 //送受信のSession開始を通知
                 this.eventEmitter.emit("sessionStart", sender, sessionId, "receiver");
                 session.onRequest(data);
+
+                this.receiverPorts.get(data.type)!.onStart(session, sessionId);
             }
             this.sendCommand(sender, SessionCommandID.kResponse, sessionId);
         });
@@ -204,9 +224,6 @@ export class DataTransferController implements TransferCommandInterface {
 
         session.onResponse(data);
 
-        if (data.isAccepted) {
-            this.sendCommand(receiver, SessionCommandID.kChunk, sessionId);
-        }
         return CommandAck.kStatusOK;
     }
 
@@ -220,6 +237,9 @@ export class DataTransferController implements TransferCommandInterface {
             return CommandAck.kStatusInvalidSessionID;
         }
         session.onCancel(data);
+
+        this.receiverPorts.get(session.getRequest().type)!.onFinish(session, sessionId);
+
         return CommandAck.kStatusOK;
     }
 
@@ -236,54 +256,7 @@ export class DataTransferController implements TransferCommandInterface {
         return CommandAck.kStatusOK;
     }
 
-    onChunk(sender: P2PMacAddress, sessionId: SessionID, data: ChunkData): CommandAck['statusCode'] {
-        const senderStr = getAddressString(sender.address);
-
-        if (!this.receiverSessions.has(senderStr)) {
-            return CommandAck.kStatusInvalidPeerAddress;
-        }
-        const session = this.receiverSessions.get(senderStr)!.getSession(sessionId);
-        if (!session) {
-            return CommandAck.kStatusInvalidSessionID;
-        }
-
-        session.onChunk(data);
-
-        if (session.getStatus() === SessionStatus.kStatusInvalidPosition) {
-            return CommandAck.kStatusInvalidPosition;
-        }
-
-        if (session.getStatus() === SessionStatus.kStatusCompleted) {
-            this.sendCommand(sender, SessionCommandID.kComplete, sessionId);
-            return CommandAck.kStatusOK;
-        }
-
-        this.sendCommand(sender, SessionCommandID.kNext, sessionId);
-        return CommandAck.kStatusOK;
-    }
-
-    onNext(receiver: P2PMacAddress, sessionId: SessionID, data: NextData): CommandAck['statusCode'] {
-        const receiverStr = getAddressString(receiver.address);
-        if (!this.senderSessions.has(receiverStr)) {
-            return CommandAck.kStatusInvalidPeerAddress;
-        }
-        const session = this.senderSessions.get(receiverStr)!.getSession(sessionId);
-
-        if (!session) {
-            return CommandAck.kStatusInvalidSessionID;
-        }
-
-        session.onNext(data);
-
-        if (session.getStatus() === SessionStatus.kStatusInvalidPosition) {
-            return CommandAck.kStatusInvalidPosition;
-        }
-
-        this.sendCommand(receiver, SessionCommandID.kChunk, sessionId);
-        return CommandAck.kStatusOK;
-    }
-
-    onComplete(receiver: P2PMacAddress, sessionId: SessionID): CommandAck['statusCode'] {
+    onResult(receiver: P2PMacAddress, sessionId: SessionID, data: ResultData): CommandAck['statusCode'] {
         const receiverStr = getAddressString(receiver.address);
         if (!this.senderSessions.has(receiverStr)) {
             return CommandAck.kStatusInvalidPeerAddress;
@@ -292,7 +265,7 @@ export class DataTransferController implements TransferCommandInterface {
         if (!session) {
             return CommandAck.kStatusInvalidSessionID;
         }
-        session.onComplete();
+        session.onResult(data);
         return CommandAck.kStatusOK;
     }
 
@@ -308,7 +281,6 @@ export class DataTransferController implements TransferCommandInterface {
         switch (commandType) {
             // 送信側コマンドのエラー
             case SessionCommandID.kRequest:
-            case SessionCommandID.kChunk:
             case SessionCommandID.kCancel:
                 if (!this.senderSessions.has(peerStr)) {
                     console.error("DataTransferController: onError: Invalid peer address");
@@ -322,9 +294,8 @@ export class DataTransferController implements TransferCommandInterface {
 
             // 受信側コマンドのエラー
             case SessionCommandID.kResponse:
-            case SessionCommandID.kNext:
-            case SessionCommandID.kComplete:
             case SessionCommandID.kReject:
+            case SessionCommandID.kResult:
                 if (!this.receiverSessions.has(peerStr)) {
                     console.error("DataTransferController: onError: Invalid peer address");
                     return; // 早期return
@@ -382,13 +353,83 @@ export class DataTransferController implements TransferCommandInterface {
         sessionId: SessionID
     ): void {
         const commandIdType = SessionCommandID.toCommandIDType(commandType, sessionId);
-        const handler = this.dispatcher.getCommandHandler(peerAddress, false); // create = false
+        const handler = commandDispatcher.getCommandHandler(peerAddress, false); // create = false
 
         if (!handler) {
             console.warn(`Could not get command handler for ${peerAddress}`);
             return;
         }
 
-        handler.pushCommand({ client_id: this.clientId, type: commandIdType });
+        handler.pushCommand({ client_id: COMMAND_CLIENT_ID_DATA_TRANSFER, type: commandIdType });
     }
 }
+
+export const dataTransferController = new DataTransferController();
+
+export class MockReceiverDataStore implements ReceiverDataStoreInterface {
+    private data: Uint8Array;
+    private capacity: number;
+
+    constructor(capacity: number) {
+        this.data = new Uint8Array(capacity);
+        this.capacity = capacity;
+    }
+
+    write(data: Uint8Array, offset: number): void {
+        console.log("MockReceiverDataStore: write", data, offset);
+    }
+    size(): number {
+        return this.capacity;
+    }
+}
+
+export class MockReceiverPort implements ReceiverPortInterface {
+    getDataType(): DataType {
+        return 0;
+    }
+
+    handleRequest(sender: P2PMacAddress, sessionId: SessionID, data: RequestData): { receiver: ReceiverDataStoreInterface, responseData: ResponseData } {
+        console.log("MockReceiverPort: handleRequest sender: ", sender, "sessionId: ", sessionId, "data: ", data);
+        return { receiver: new MockReceiverDataStore(data.totalSize), responseData: { isAccepted: true, reason: 0 } };
+    }
+
+    onStart(session: ReceiverSessionInterface, id: SessionID): void {
+        console.warn("MockReceiverPort: onStart session: ", session, "id: ", id);
+    }
+
+    onFinish(session: ReceiverSessionInterface, id: SessionID): void {
+        console.warn("MockReceiverPort: onFinish session: ", session, "id: ", id);
+    }
+}
+
+export class MockSenderDataStore implements SenderDataStoreInterface {
+    private capacity: number;
+
+    constructor(capacity: number) {
+        this.capacity = capacity;
+    }
+
+    size(): number {
+        return this.capacity;
+    }
+
+    type(): DataType {
+        return 0;
+    }
+
+    get(offset: number, size: number): Uint8Array {
+        // 0から1ずつ増える値を返す
+        const data = new Uint8Array(size);
+        for (let i = 0; i < size; i++) {
+            data[i] = offset + i;
+        }
+        return data;
+    }
+
+    metadata(): string {
+        return "metadata";
+    }
+}
+const mockReceiverPort = new MockReceiverPort();
+
+dataTransferController.registerReceiverPort(mockReceiverPort);

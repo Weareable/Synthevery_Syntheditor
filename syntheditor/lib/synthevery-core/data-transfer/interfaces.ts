@@ -1,12 +1,10 @@
 // data-transfer/interfaces.ts
 
-import { P2PMacAddress } from '@/types/mesh';
-import { RequestData, ResponseData, RejectData, NextData, CancelData, ChunkData, CommandAck, DataType } from './types';
+import { P2PMacAddress } from '../types/mesh';
+import { RequestData, ResponseData, RejectData, NextData, CancelData, ChunkData, CommandAck, DataType, ResultData } from '../types/data-transfer';
 import { SessionID, CommandType, SessionStatusType } from './constants';
 
 export interface TransferCommandInterface {
-    getChunk(receiver: P2PMacAddress, sessionId: SessionID): { success: boolean, chunkData?: ChunkData };
-    getNext(sender: P2PMacAddress, sessionId: SessionID): { success: boolean, nextData?: NextData };
     getRequest(sender: P2PMacAddress, sessionId: SessionID): { success: boolean, requestData?: RequestData };
     getResponse(receiver: P2PMacAddress, sessionId: SessionID): { success: boolean, responseData?: ResponseData };
 
@@ -14,9 +12,7 @@ export interface TransferCommandInterface {
     onResponse(receiver: P2PMacAddress, sessionId: SessionID, data: ResponseData): CommandAck['statusCode'];
     onCancel(sender: P2PMacAddress, sessionId: SessionID, data: CancelData): CommandAck['statusCode'];
     onReject(receiver: P2PMacAddress, sessionId: SessionID, data: RejectData): CommandAck['statusCode'];
-    onChunk(sender: P2PMacAddress, sessionId: SessionID, data: ChunkData): CommandAck['statusCode'];
-    onNext(receiver: P2PMacAddress, sessionId: SessionID, data: NextData): CommandAck['statusCode'];
-    onComplete(receiver: P2PMacAddress, sessionId: SessionID): CommandAck['statusCode'];
+    onResult(receiver: P2PMacAddress, sessionId: SessionID, data: ResultData): CommandAck['statusCode'];
 
     onSuccess(peer: P2PMacAddress, commandType: CommandType, sessionId: SessionID): void;
     onError(peer: P2PMacAddress, commandType: CommandType, sessionId: SessionID, statusCode: number): void;
@@ -60,30 +56,29 @@ export interface ReceiverPortInterface {
         receiver: ReceiverDataStoreInterface,
         responseData: ResponseData
     }
+    onStart(session: ReceiverSessionInterface, id: SessionID): void;
+    onFinish(session: ReceiverSessionInterface, id: SessionID): void;
 }
 
 // --- Session関連のインターフェースを修正 ---
 export interface SenderSessionInterface {
-    getChunk(): ChunkData;
     getPosition(): number;
     getStatus(): SessionStatusType;
     getRequest(): RequestData;
     onResponse(data: ResponseData): void;
     alive(): boolean;
     onReject(data: RejectData): void;
-    onNext(data: NextData): void;
-    onComplete(): void;
+    onResult(data: ResultData): void;
 }
 
 export interface ReceiverSessionInterface {
-    onChunk(data: ChunkData): void;
-    getNext(): NextData;
     getPosition(): number;
     getStatus(): SessionStatusType;
     onRequest(data: RequestData): void;
     getResponse(): ResponseData;
     alive(): boolean;
     onCancel(data: CancelData): void;
+    getRequest(): RequestData;
 }
 
 // 読み取り専用のインターフェース (オプション)

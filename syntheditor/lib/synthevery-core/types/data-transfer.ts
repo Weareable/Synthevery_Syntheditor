@@ -1,8 +1,8 @@
 // data-transfer/types.ts
 import { P2PMacAddress } from '@/types/mesh';
 import * as msgpack from "@msgpack/msgpack";
-import { calculateCRC32 } from '@/lib/synthevery/data-transfer/crc';
-import { SessionCommandID, SessionID } from '@/lib/synthevery/data-transfer/constants';
+import { calculateCRC32 } from '@/lib/synthevery-core/data-transfer/crc';
+import { SessionCommandID, SessionID } from '@/lib/synthevery-core/data-transfer/constants';
 export type DataType = number;
 
 export interface RequestData {
@@ -34,7 +34,7 @@ export interface ChunkData {
     data: Uint8Array;
 }
 
-export interface CompleteData {
+export interface ResultData {
     result: number;
 }
 
@@ -63,8 +63,13 @@ export function isValidSessionID(sessionId: SessionID): boolean {
 
 // --- シリアライズ/デシリアライズ関数 ---
 export function serializeRequestData(data: RequestData): Uint8Array {
-    const chainNodesSerialized = data.chainNodes.map(node => Array.from(node.address));
-    return msgpack.encode([data.type, data.metadata, data.totalSize, chainNodesSerialized]);
+    const chainNodesArray = new Uint8Array(data.chainNodes.length * 6);
+    for (let i = 0; i < data.chainNodes.length; i++) {
+        const node = data.chainNodes[i];
+        chainNodesArray.set(node.address, i * 6);
+    }
+    console.log("serializeRequestData", data.type, data.metadata, data.totalSize, chainNodesArray);
+    return msgpack.encode([data.type, data.metadata, data.totalSize, chainNodesArray]);
 }
 
 export function deserializeRequestData(data: Uint8Array): RequestData | null {
@@ -139,7 +144,7 @@ export function deserializeCancelData(data: Uint8Array): CancelData | null {
 }
 
 export function serializeChunkData(data: ChunkData): Uint8Array {
-    return msgpack.encode([data.position, data.data]);
+    return msgpack.encode([data.data, data.position]);
 }
 
 export function deserializeChunkData(data: Uint8Array): ChunkData | null {
@@ -152,15 +157,15 @@ export function deserializeChunkData(data: Uint8Array): ChunkData | null {
     }
 }
 
-export function serializeCompleteData(data: CompleteData): Uint8Array {
+export function serializeResultData(data: ResultData): Uint8Array {
     return msgpack.encode([data.result]);
 }
-export function deserializeCompleteData(data: Uint8Array): CompleteData | null {
+export function deserializeResultData(data: Uint8Array): ResultData | null {
     try {
         const decoded = msgpack.decode(data) as [number];
         return { result: decoded[0] };
     } catch (e) {
-        console.error("deserializeCompleteData failed.", e);
+        console.error("deserializeResultData failed.", e);
         return null;
     }
 }

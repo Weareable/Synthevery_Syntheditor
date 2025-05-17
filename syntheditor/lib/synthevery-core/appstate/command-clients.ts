@@ -1,5 +1,5 @@
 import { CommandID, CommandResult } from '@/types/command';
-import { CommandClientInterface } from '@/lib/synthevery/connection/command-handler';
+import { CommandClientInterface } from '@/lib/synthevery-core/command/handler';
 import { P2PMacAddress } from '@/types/mesh';
 
 export class AppStateNotifyCommandClient implements CommandClientInterface {

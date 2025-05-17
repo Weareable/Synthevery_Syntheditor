@@ -1,6 +1,6 @@
 // data-transfer/data-transfer-client.ts
-import { CommandID } from '@/types/command';
-import { P2PMacAddress } from '@/types/mesh';
+import { CommandID } from '../types/command';
+import { P2PMacAddress } from '../types/mesh';
 import {
     DataType,
     RequestData,
@@ -9,29 +9,26 @@ import {
     NextData,
     CancelData,
     ChunkData,
-    CompleteData,
+    ResultData,
     CommandAck,
     serializeCRCPacket,
     deserializeCRCPacket,
     serializeCommandAck,
     deserializeCommandAck,
-    serializeChunkData,
-    serializeNextData,
-    serializeCompleteData,
     serializeCancelData,
     serializeRejectData,
     serializeRequestData,
     serializeResponseData,
-    deserializeChunkData,
-    deserializeNextData,
+    deserializeCancelData,
     deserializeRequestData,
     deserializeResponseData,
-    deserializeCancelData,
-    deserializeRejectData
-} from './types';
+    deserializeRejectData,
+    deserializeResultData,
+    serializeResultData
+} from '../types/data-transfer';
 import { SessionCommandID } from './constants';
 import { TransferCommandInterface } from './interfaces';
-import { CommandClientInterface } from '@/lib/synthevery/connection/command-handler';
+import { CommandClientInterface } from '../command/handler';
 
 export class DataTransferCommandClient implements CommandClientInterface {
     private clientId: number;
@@ -48,22 +45,8 @@ export class DataTransferCommandClient implements CommandClientInterface {
         const { commandType, sessionId } = SessionCommandID.fromCommandID(commandId.type);
 
         switch (commandType) {
-            case SessionCommandID.kChunk: {
-                const result = this.commands.getChunk(this.peerAddress, sessionId);
-                if (!result.success || !result.chunkData) {
-                    return new Uint8Array();
-                }
-                return serializeCRCPacket(result.chunkData, serializeChunkData);
-            }
-            case SessionCommandID.kNext: {
-                const result = this.commands.getNext(this.peerAddress, sessionId);
-                if (!result.success || !result.nextData) {
-                    return new Uint8Array();
-                }
-                return serializeCRCPacket(result.nextData, serializeNextData);
-            }
-            case SessionCommandID.kComplete: {
-                return serializeCompleteData({ result: 0 }); //仮
+            case SessionCommandID.kResult: {
+                return serializeResultData({ result: 0 }); //仮
             }
             case SessionCommandID.kRequest: { // 追加
                 const result = this.commands.getRequest(this.peerAddress, sessionId);
@@ -95,24 +78,12 @@ export class DataTransferCommandClient implements CommandClientInterface {
     handleData(command: CommandID, data: Uint8Array): [boolean, Uint8Array] {
         const { commandType, sessionId } = SessionCommandID.fromCommandID(command.type);
         switch (commandType) {
-            case SessionCommandID.kChunk: {
-                const packet = deserializeCRCPacket(data, deserializeChunkData);
-                if (!packet) {
-                    return [false, serializeCommandAck(CommandAck.kStatusInvalidCRC)];
-                }
-                const ack = this.commands.onChunk(this.peerAddress, sessionId, packet.data);
-                return [true, serializeCommandAck(ack)];
-            }
-            case SessionCommandID.kNext: {
-                const packet = deserializeCRCPacket(data, deserializeNextData);
+            case SessionCommandID.kResult: {
+                const packet = deserializeResultData(data);
                 if (!packet) {
                     return [false, serializeCommandAck(CommandAck.kStatusInvalidData)];
                 }
-                const ack = this.commands.onNext(this.peerAddress, sessionId, packet.data);
-                return [true, serializeCommandAck(ack)];
-            }
-            case SessionCommandID.kComplete: {
-                const ack = this.commands.onComplete(this.peerAddress, sessionId);
+                const ack = this.commands.onResult(this.peerAddress, sessionId, packet);
                 return [true, serializeCommandAck(ack)];
             }
             case SessionCommandID.kRequest: {

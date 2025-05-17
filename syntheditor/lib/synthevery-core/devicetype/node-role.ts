@@ -5,7 +5,7 @@ import {
     P2PMacAddress,
 } from '@/types/mesh';
 
-import { getAddressString, getAddressFromString } from '@/lib/synthevery/connection/mesh-node';
+import { getAddressString, getAddressFromString } from '@/lib/synthevery-core/connection/util';
 
 
 export interface RoleRegistry {
