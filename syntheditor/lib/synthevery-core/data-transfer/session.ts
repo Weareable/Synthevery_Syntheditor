@@ -98,6 +98,8 @@ export class SenderSession implements SenderSessionInterface { // implements を
                 position: this.position,
             }, serializeChunkData);
 
+            console.log("SenderSession: sendData", packet);
+
             const result = this.senderSession.sender.send(packet);
             if (result === null) {
                 // キューが一杯
