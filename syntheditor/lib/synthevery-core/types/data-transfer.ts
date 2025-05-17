@@ -1,8 +1,8 @@
 // data-transfer/types.ts
 import { P2PMacAddress } from '@/types/mesh';
 import * as msgpack from "@msgpack/msgpack";
-import { calculateCRC32 } from '@/lib/synthevery/data-transfer/crc';
-import { SessionCommandID, SessionID } from '@/lib/synthevery/data-transfer/constants';
+import { calculateCRC32 } from '@/lib/synthevery-core/data-transfer/crc';
+import { SessionCommandID, SessionID } from '@/lib/synthevery-core/data-transfer/constants';
 export type DataType = number;
 
 export interface RequestData {
