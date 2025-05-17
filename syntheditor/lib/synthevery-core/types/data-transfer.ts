@@ -144,7 +144,7 @@ export function deserializeCancelData(data: Uint8Array): CancelData | null {
 }
 
 export function serializeChunkData(data: ChunkData): Uint8Array {
-    return msgpack.encode([data.position, data.data]);
+    return msgpack.encode([data.data, data.position]);
 }
 
 export function deserializeChunkData(data: Uint8Array): ChunkData | null {
