@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { mesh } from '@/lib/synthevery-core/connection/mesh';
-import { getAddressString } from '@/lib/synthevery-core/connection/util';
+import { getAddressFromString, getAddressString } from '@/lib/synthevery-core/connection/util';
 
-import { dataTransferController } from '@/lib/synthevery-core/data-transfer/data-transfer-controller';
+import { dataTransferController, MockSenderDataStore } from '@/lib/synthevery-core/data-transfer/data-transfer-controller';
+import { sendGeneratorConfig, sendNoteBuilderConfig } from '@/lib/synthevery-core/player/config';
 
 dataTransferController;
 
@@ -30,6 +31,14 @@ const DataTransferExample: React.FC = () => {
         }
     }, []);
 
+    const sendConfig = useCallback((peer: string) => {
+        const peerAddress = getAddressFromString(peer);
+
+        sendNoteBuilderConfig(peerAddress, [{ type: "bongo" }, { type: "bongo" }, { type: "bongo" }]);
+
+        sendGeneratorConfig(peerAddress, [{ class: "sf", params: { filename: "/rock_drum.sf2", preset_index: 9, is_drum: true } }, { class: "sf", params: { filename: "/rock_drum.sf2", preset_index: 9, is_drum: true } }, { class: "sf", params: { filename: "/rock_drum.sf2", preset_index: 9, is_drum: true } }]);
+    }, []);
+
     return (
         <div>
             <div>
@@ -39,6 +48,7 @@ const DataTransferExample: React.FC = () => {
             <div>
                 {peerDevices.map(device => <div key={device}>
                     {device}
+                    <button onClick={() => sendConfig(device)}>Send</button>
                 </div>)}
             </div>
         </div>
