@@ -65,10 +65,11 @@ const AppStateExample: React.FC = () => {
                     <div key={key}>
                         <h3>Track {key}</h3>
                         <p>Track: {value}</p>
+                        <button onClick={() => updateCurrentTracks(new Map(currentTracks).set(key, (value + 1) % 8))}>Increase</button>
+                        <button onClick={() => updateCurrentTracks(new Map(currentTracks).set(key, (value + 7) % 8))}>Decrease</button>
                     </div>
                 ))}
             </div>
-
 
             <div>
                 <h2>Track States</h2>
@@ -76,7 +77,10 @@ const AppStateExample: React.FC = () => {
                     <div key={index}>
                         <h3>Track {index}</h3>
                         <p>Mute: {trackState.mute ? 'Muted' : 'Unmuted'}</p>
+                        <button onClick={() => updateTrackStates([...trackStates].map((value, i) => i === index ? { ...value, mute: !value.mute } : value))}>Toggle</button>
                         <p>Volume: {trackState.volume}</p>
+                        <button onClick={() => updateTrackStates([...trackStates].map((value, i) => i === index ? { ...value, volume: value.volume + 10 } : value))}>Increase</button>
+                        <button onClick={() => updateTrackStates([...trackStates].map((value, i) => i === index ? { ...value, volume: value.volume - 10 } : value))}>Decrease</button>
                     </div>
                 ))}
             </div>
