@@ -314,7 +314,7 @@ class Mesh {
     }
 
     getConnectedPeers(): P2PMacAddress[] {
-        return Array.from(this.meshDevices.values().map(bleMeshDevice => bleMeshDevice.getAddress()));
+        return Array.from(this.meshDevices.values()).map(bleMeshDevice => bleMeshDevice.getAddress());
     }
 
     getConnectedDevices(): P2PMacAddress[] {
