@@ -4,6 +4,11 @@ export type SessionID = number;
 
 export const kChunkSize = 192;
 
+export namespace DataTypes {
+    export const kNoteBuilderConfig: number = 10;
+    export const kGeneratorConfig: number = 11;
+}
+
 export namespace SessionCommandID {
     export const kSessionIDBits = 5;
     export const kCommandTypeBits = 3;
