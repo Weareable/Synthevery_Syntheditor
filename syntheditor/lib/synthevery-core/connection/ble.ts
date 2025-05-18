@@ -2,14 +2,14 @@
 
 // eventemitter3
 import EventEmitter from 'eventemitter3';
-import { BLE_SERVICE_UUID, MAC_ADDRESS_CHAR_UUID, MESH_SERVICE_UUID, CONNECTION_INFO_SERVICE_UUID } from './constants';
+import { BLE_SERVICE_UUID, MAC_ADDRESS_CHAR_UUID, MESH_SERVICE_UUID, CONNECTION_INFO_SERVICE_UUID, BLE_MIDI_SERVICE_UUID } from './constants';
 import { getAddressString } from './util';
 
 const CONNECTION_STATUS_CHECK_INTERVAL = 100;
 
 export const SyntheveryDeviceFilter = {
-    filters: [{ services: [MESH_SERVICE_UUID] }],
-    optionalServices: [MESH_SERVICE_UUID, CONNECTION_INFO_SERVICE_UUID],
+    filters: [{ services: [MESH_SERVICE_UUID], namePrefix: "Synthevery" }, { services: [BLE_MIDI_SERVICE_UUID], namePrefix: "Synthevery" }],
+    optionalServices: [MESH_SERVICE_UUID, CONNECTION_INFO_SERVICE_UUID, BLE_MIDI_SERVICE_UUID],
 };
 
 interface BLEDeviceEvents {
