@@ -149,7 +149,8 @@ class AppStateSyncConnector {
         // Receiverに対して, onSynced()をemitする
         state.eventEmitter.emit('synced', { source: sender });
 
-        this.notifyStateUpdate(type, sender);
+        // Web Appはリーダーではないので通知は送信しない
+        // this.notifyStateUpdate(type, sender);
 
         return AppStateNotifyCommandClient.ReceptionResult.kSuccess;
     }
