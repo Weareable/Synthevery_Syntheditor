@@ -1,12 +1,36 @@
+'use client'
 import React from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+
+const navigationItems = [
+    { href: '/player/synthesizer', icon: '🎹', label: 'シンセサイザー' },
+    { href: '/player/drums', icon: '🥁', label: 'ドラムス' },
+    { href: '/player/bass', icon: '🎸', label: 'ベース' },
+    { href: '/player/sampler', icon: '🎵', label: 'サンプラー' }
+]
 
 export function VerticalNavigationBar() {
+    const pathname = usePathname()
+
     return (
         <nav className="flex flex-col gap-4 items-center mt-4">
-            <button className="w-10 h-10 rounded bg-zinc-800 border border-zinc-700 text-zinc-300">A</button>
-            <button className="w-10 h-10 rounded bg-zinc-800 border border-zinc-700 text-zinc-300">B</button>
-            <button className="w-10 h-10 rounded bg-zinc-800 border border-zinc-700 text-zinc-300">C</button>
-            <button className="w-10 h-10 rounded bg-zinc-800 border border-zinc-700 text-zinc-300">D</button>
+            {navigationItems.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                    <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`w-10 h-10 rounded border flex items-center justify-center text-lg transition-colors ${isActive
+                                ? 'bg-blue-600 border-blue-500 text-white'
+                                : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
+                            }`}
+                        title={item.label}
+                    >
+                        {item.icon}
+                    </Link>
+                )
+            })}
         </nav>
     )
 } 
