@@ -1,6 +1,6 @@
 'use client'
 import React from 'react'
-import { ToggleButton } from '@/components/ui/ToggleButton'
+import { ToggleButton } from '@/components/ui/toggle-button'
 
 export default function DrumsPage() {
     return (
