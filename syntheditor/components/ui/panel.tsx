@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const panelVariants = cva(
-    "flex flex-col rounded-lg bg-card text-card-foreground",
+    "flex rounded-lg bg-card text-card-foreground",
     {
         variants: {
             variant: {
