@@ -5,10 +5,10 @@ import React from 'react'
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex flex-col h-screen bg-zinc-950">
-            <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-col h-screen bg-background gap-2 p-2">
+            <div className="flex flex-1 overflow-hidden gap-2">
                 {/* 左ナビゲーションバー */}
-                <aside className="w-16 bg-zinc-900 border-r flex-shrink-0 flex flex-col items-center py-2">
+                <aside className="flex-none justify-center">
                     <VerticalNavigationBar />
                 </aside>
                 {/* メイン表示領域 */}
@@ -16,12 +16,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     {children}
                 </main>
                 {/* デバイスステータス領域 */}
-                <aside className="w-64 bg-zinc-900 border-l flex-shrink-0 flex flex-col items-center py-2">
+                <aside className="w-64 bg-zinc-900 border-l flex flex-col items-center py-2">
                     <DeviceStatusPanel />
                 </aside>
             </div>
             {/* メディアコントロールバー */}
-            <footer className="h-20 bg-zinc-900 border-t flex items-center justify-center">
+            <footer className="flex-none bg-background flex items-center justify-center">
                 <MediaControlBar />
             </footer>
         </div>
