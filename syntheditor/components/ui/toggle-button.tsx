@@ -1,5 +1,6 @@
 'use client'
 import React, { useState } from 'react'
+import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
@@ -27,29 +28,37 @@ const toggleButtonVariants = cva(
 interface ToggleButtonProps extends VariantProps<typeof toggleButtonVariants> {
     label?: string;
     defaultActive?: boolean;
+    active?: boolean;
     onToggle?: (isActive: boolean) => void;
     className?: string;
+    asChild?: boolean;
 }
 
 export function ToggleButton({
     label = 'M',
     defaultActive = false,
+    active,
     onToggle,
     className = '',
     variant,
     size,
+    asChild = false,
+    children,
     ...props
-}: ToggleButtonProps) {
-    const [isActive, setIsActive] = useState(defaultActive)
+}: ToggleButtonProps & React.ComponentProps<"button">) {
+    const isControlled = active !== undefined;
+    const [internalActive, setInternalActive] = useState(defaultActive);
+    const isActive = isControlled ? active : internalActive;
+    const Comp = asChild ? Slot : "button"
 
     const handleToggle = () => {
-        const newState = !isActive
-        setIsActive(newState)
-        onToggle?.(newState)
+        const newState = !isActive;
+        if (!isControlled) setInternalActive(newState);
+        onToggle?.(newState);
     }
 
     return (
-        <button
+        <Comp
             onClick={handleToggle}
             className={cn(
                 toggleButtonVariants({
@@ -58,9 +67,10 @@ export function ToggleButton({
                     className
                 })
             )}
+            aria-pressed={isActive}
             {...props}
         >
-            {label}
-        </button>
+            {children || label}
+        </Comp>
     )
 } 
