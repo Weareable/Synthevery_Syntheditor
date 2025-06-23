@@ -1,8 +1,10 @@
 'use client'
-import React from 'react'
+import React, { useState } from 'react'
 import { ToggleButton } from '@/components/ui/toggle-button'
 
 export default function SynthesizerPage() {
+    const [isMuted, setIsMuted] = useState(false);
+
     return (
         <div className="w-full h-full flex flex-col items-center justify-center text-zinc-200">
             <div className="text-4xl mb-6">🎹</div>
@@ -12,10 +14,11 @@ export default function SynthesizerPage() {
             <div className="mb-8">
                 <div className="text-sm mb-2 text-zinc-400">ミュート</div>
                 <ToggleButton
-                    label="M"
-                    defaultActive={false}
-                    onToggle={(isActive) => console.log('Mute:', isActive)}
-                />
+                    pressed={isMuted}
+                    onPressedChange={setIsMuted}
+                >
+                    M
+                </ToggleButton>
             </div>
 
             <div className="grid grid-cols-8 gap-2">

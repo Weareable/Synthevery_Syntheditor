@@ -1,8 +1,11 @@
 'use client'
-import React from 'react'
+import React, { useState } from 'react'
 import { ToggleButton } from '@/components/ui/toggle-button'
 
 export default function DrumsPage() {
+    const [isMuted, setIsMuted] = useState(false);
+    const [isSolo, setIsSolo] = useState(false);
+
     return (
         <div className="w-full h-full flex flex-col items-center justify-center text-zinc-200">
             <div className="text-4xl mb-6">🥁</div>
@@ -13,18 +16,20 @@ export default function DrumsPage() {
                 <div>
                     <div className="text-sm mb-2 text-zinc-400">ミュート</div>
                     <ToggleButton
-                        label="M"
-                        defaultActive={false}
-                        onToggle={(isActive) => console.log('Mute:', isActive)}
-                    />
+                        pressed={isMuted}
+                        onPressedChange={setIsMuted}
+                    >
+                        M
+                    </ToggleButton>
                 </div>
                 <div>
                     <div className="text-sm mb-2 text-zinc-400">ソロ</div>
                     <ToggleButton
-                        label="S"
-                        defaultActive={false}
-                        onToggle={(isActive) => console.log('Solo:', isActive)}
-                    />
+                        pressed={isSolo}
+                        onPressedChange={setIsSolo}
+                    >
+                        S
+                    </ToggleButton>
                 </div>
             </div>
 
