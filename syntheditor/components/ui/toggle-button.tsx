@@ -1,6 +1,6 @@
 'use client'
-import React, { useState } from 'react'
-import { Slot } from "@radix-ui/react-slot"
+import React from 'react'
+import * as TogglePrimitive from "@radix-ui/react-toggle"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
@@ -9,8 +9,7 @@ const toggleButtonVariants = cva(
     {
         variants: {
             variant: {
-                default: "bg-transparent text-secondary-foreground border-border hover:bg-accent hover:text-accent-foreground border-b-3",
-                active: "bg-transparent text-primary-foreground border-primary border-t-3",
+                default: "bg-transparent text-secondary-foreground border-border hover:bg-accent hover:text-accent-foreground border-b-3 data-[state=on]:bg-transparent data-[state=on]:text-primary-foreground data-[state=on]:border-primary data-[state=on]:border-t-3 data-[state=on]:border-b-1",
             },
             size: {
                 default: "w-10 h-10",
@@ -25,52 +24,18 @@ const toggleButtonVariants = cva(
     }
 )
 
-interface ToggleButtonProps extends VariantProps<typeof toggleButtonVariants> {
-    label?: string;
-    defaultActive?: boolean;
-    active?: boolean;
-    onToggle?: (isActive: boolean) => void;
-    className?: string;
-    asChild?: boolean;
-}
-
 export function ToggleButton({
-    label = 'M',
-    defaultActive = false,
-    active,
-    onToggle,
-    className = '',
+    className,
     variant,
     size,
-    asChild = false,
-    children,
     ...props
-}: ToggleButtonProps & React.ComponentProps<"button">) {
-    const isControlled = active !== undefined;
-    const [internalActive, setInternalActive] = useState(defaultActive);
-    const isActive = isControlled ? active : internalActive;
-    const Comp = asChild ? Slot : "button"
-
-    const handleToggle = () => {
-        const newState = !isActive;
-        if (!isControlled) setInternalActive(newState);
-        onToggle?.(newState);
-    }
-
+}: React.ComponentProps<typeof TogglePrimitive.Root> &
+    VariantProps<typeof toggleButtonVariants>) {
     return (
-        <Comp
-            onClick={handleToggle}
-            className={cn(
-                toggleButtonVariants({
-                    variant: isActive ? "active" : "default",
-                    size,
-                    className
-                })
-            )}
-            aria-pressed={isActive}
+        <TogglePrimitive.Root
+            data-slot="toggle-button"
+            className={cn(toggleButtonVariants({ variant, size, className }))}
             {...props}
-        >
-            {children || label}
-        </Comp>
+        />
     )
 } 
