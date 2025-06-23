@@ -4,15 +4,15 @@ import { PlayIcon, PauseIcon } from "@/components/icons/media";
 
 interface PlayingToggleButtonProps {
     isPlaying: boolean;
-    onChange: (playing: boolean) => void;
+    onChange: (isActive: boolean) => void;
     className?: string;
 }
 
 export function PlayingToggleButton({ isPlaying, onChange, className }: PlayingToggleButtonProps) {
     return (
         <ToggleButton
-            active={isPlaying}
-            onToggle={onChange}
+            pressed={isPlaying}
+            onPressedChange={onChange}
             aria-label={isPlaying ? "Pause" : "Play"}
             className={className}
         >
