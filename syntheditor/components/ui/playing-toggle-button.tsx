@@ -16,7 +16,7 @@ export function PlayingToggleButton({ isPlaying, onChange, className }: PlayingT
             aria-label={isPlaying ? "Pause" : "Play"}
             className={className}
         >
-            {isPlaying ? <PauseIcon width={12} height={12} /> : <PlayIcon width={12} height={12} />}
+            {isPlaying ? <PauseIcon width={10} height={10} strokeWidth={2} /> : <PlayIcon width={10} height={10} strokeWidth={2} />}
         </ToggleButton>
     );
 } 
