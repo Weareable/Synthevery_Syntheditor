@@ -14,12 +14,12 @@ const PlayIcon: React.FC<React.SVGProps<SVGElement>> = (props) => (
             stroke="none"
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeWidth="1"
+            strokeWidth={props.strokeWidth}
         >
             <g
                 id="Group"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth={props.strokeWidth}
                 transform="translate(-749 -379)"
             >
                 <path
@@ -46,12 +46,12 @@ const PauseIcon: React.FC<React.SVGProps<SVGElement>> = (props) => (
             stroke="none"
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeWidth="1"
+            strokeWidth={props.strokeWidth}
         >
             <g
                 id="Group"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth={props.strokeWidth}
                 transform="translate(-896 -378)"
             >
                 <g id="Shape">
@@ -76,12 +76,12 @@ const StopIcon: React.FC<React.SVGProps<SVGElement>> = (props) => (
             stroke="none"
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeWidth="1"
+            strokeWidth={props.strokeWidth}
         >
             <g
                 id="Group"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth={props.strokeWidth}
                 transform="translate(-1043 -378)"
             >
                 <path
@@ -94,4 +94,23 @@ const StopIcon: React.FC<React.SVGProps<SVGElement>> = (props) => (
     </svg>
 );
 
-export { PlayIcon, PauseIcon, StopIcon }
+const RecordIcon: React.FC<React.SVGProps<SVGElement>> = (props) => (
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width={props.width}
+        height={props.height}
+        fill="none"
+        viewBox="-0.5 0 25 25"
+    >
+        <path
+            id="SVGRepo_iconCarrier"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={props.strokeWidth}
+            d="M12 21.67a9.25 9.25 0 1 0 0-18.5 9.25 9.25 0 0 0 0 18.5"
+        ></path>
+    </svg>
+);
+
+export { PlayIcon, PauseIcon, StopIcon, RecordIcon }
