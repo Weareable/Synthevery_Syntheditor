@@ -238,15 +238,12 @@ class Mesh {
             this.recalculateConnectedDevices();
         });
 
-        try {
-            await device.connect(SyntheveryDeviceFilter);
-            await meshDevice.initialize(device, this.receivePacket.bind(this));
-            this.meshDevices.set(getAddressString(meshDevice.getAddress()), meshDevice);
-            this.eventEmitter.emit('peerConnected', meshDevice.getAddress());
-            this.recalculateConnectedDevices();
-        } catch (error) {
-            console.error('Error connecting to device:', error);
-        }
+
+        await device.connect(SyntheveryDeviceFilter);
+        await meshDevice.initialize(device, this.receivePacket.bind(this));
+        this.meshDevices.set(getAddressString(meshDevice.getAddress()), meshDevice);
+        this.eventEmitter.emit('peerConnected', meshDevice.getAddress());
+        this.recalculateConnectedDevices();
     }
 
     async disconnectDevice(address: P2PMacAddress): Promise<void> {
