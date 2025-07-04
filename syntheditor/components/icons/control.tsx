@@ -8,6 +8,7 @@ const UndoIcon: React.FC<React.SVGProps<SVGElement>> = (props) => (
         fill="none"
         stroke={props.stroke ?? "currentColor"}
         strokeLinecap="round"
+        strokeWidth={props.strokeWidth}
         viewBox="0 0 24 24"
     >
         <path d="M3 9h18v11h-9"></path>
@@ -23,6 +24,7 @@ const RedoIcon: React.FC<React.SVGProps<SVGElement>> = (props) => (
         fill="none"
         stroke={props.stroke ?? "currentColor"}
         strokeLinecap="round"
+        strokeWidth={props.strokeWidth}
         viewBox="0 0 24 24"
     >
         <g id="SVGRepo_iconCarrier" transform="translate(12,0) scale(-1,1) translate(-12,0)">
