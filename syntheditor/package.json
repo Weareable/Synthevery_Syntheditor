@@ -24,8 +24,7 @@
     "next-themes": "^0.4.6",
     "react": "^18",
     "react-dom": "^18",
-    "tailwind-merge": "^3.3.0",
-    "webbluetooth": "^3.2.1"
+    "tailwind-merge": "^3.3.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.8",
