@@ -17,8 +17,24 @@ export default function ConnectionPage() {
         return typeof navigator !== 'undefined' && 'bluetooth' in navigator
     }
 
-    const isBluetoothEnabled = () => {
-        return typeof navigator !== 'undefined' && navigator.bluetooth && navigator.bluetooth.getAvailability
+    const isBluetoothEnabled = async () => {
+        if (typeof navigator === 'undefined' || !navigator.bluetooth) {
+            return false
+        }
+
+        try {
+            // getAvailability()メソッドが存在するかチェック
+            if (typeof navigator.bluetooth.getAvailability === 'function') {
+                return await navigator.bluetooth.getAvailability()
+            }
+            
+            // getAvailability()が利用できない場合は、requestDevice()でテスト
+            // ただし、実際のデバイス選択ダイアログが表示されるので注意
+            return true
+        } catch (error) {
+            console.log('Bluetooth availability check failed:', error)
+            return false
+        }
     }
 
     // 接続状態を監視
@@ -43,7 +59,8 @@ export default function ConnectionPage() {
                 throw new Error('bluetooth-not-supported')
             }
 
-            if (!isBluetoothEnabled()) {
+            const bluetoothEnabled = await isBluetoothEnabled()
+            if (!bluetoothEnabled) {
                 console.log('bluetooth-disabled')
                 throw new Error('bluetooth-disabled')
             }
@@ -56,11 +73,19 @@ export default function ConnectionPage() {
             console.error('接続エラー:', error)
             
             if (error instanceof Error) {
-                if (error.message === 'bluetooth-not-supported') {
-                    setConnectionStatus('bluetooth-disabled')
-                } else if (error.message === 'bluetooth-disabled') {
-                    setConnectionStatus('bluetooth-disabled')
-                } else if (error.message.includes('Web bluetooth API globally disabled')) {
+                const errorMessage = error.message.toLowerCase()
+                
+                // Bluetooth関連のエラーを検出
+                if (errorMessage.includes('bluetooth') || 
+                    errorMessage.includes('web bluetooth api globally disabled') ||
+                    errorMessage.includes('bluetooth-not-supported') ||
+                    errorMessage.includes('bluetooth-disabled') ||
+                    errorMessage.includes('user cancelled') ||
+                    errorMessage.includes('user canceled') ||
+                    errorMessage.includes('request device') ||
+                    errorMessage.includes('permission') ||
+                    errorMessage.includes('not allowed') ||
+                    errorMessage.includes('not supported')) {
                     setConnectionStatus('bluetooth-disabled')
                 } else {
                     setConnectionStatus('error')
