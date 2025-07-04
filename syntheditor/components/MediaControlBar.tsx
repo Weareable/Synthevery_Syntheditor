@@ -14,6 +14,7 @@ export function MediaControlBar() {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isQActive, setIsQActive] = useState(false);
     const [isMActive, setIsMActive] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
 
     return (
         <Panel className="flex gap-2 items-center p-2 w-full justify-center">
@@ -56,8 +57,8 @@ export function MediaControlBar() {
                 </OneshotButton>
                 <ToggleButton
                     size="default"
-                    pressed={isMActive}
-                    onPressedChange={setIsMActive}
+                    pressed={isRecording}
+                    onPressedChange={setIsRecording}
                 >
                     <RecordIcon width={10} height={10} strokeWidth={2} />
                 </ToggleButton>
