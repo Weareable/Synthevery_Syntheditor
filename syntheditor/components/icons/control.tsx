@@ -1,4 +1,4 @@
-import * as React from "react";
+import React from 'react'
 
 const UndoIcon: React.FC<React.SVGProps<SVGElement>> = (props) => (
     <svg
@@ -6,7 +6,7 @@ const UndoIcon: React.FC<React.SVGProps<SVGElement>> = (props) => (
         width={props.width}
         height={props.height}
         fill="none"
-        stroke={props.stroke}
+        stroke={props.stroke ?? "currentColor"}
         strokeLinecap="round"
         viewBox="0 0 24 24"
     >
@@ -21,12 +21,11 @@ const RedoIcon: React.FC<React.SVGProps<SVGElement>> = (props) => (
         width={props.width}
         height={props.height}
         fill="none"
-        stroke={props.stroke}
+        stroke={props.stroke ?? "currentColor"}
         strokeLinecap="round"
-        transform="scale(-1 1)"
         viewBox="0 0 24 24"
     >
-        <g id="SVGRepo_iconCarrier">
+        <g id="SVGRepo_iconCarrier" transform="translate(12,0) scale(-1,1) translate(-12,0)">
             <path d="M3 9h18v11h-9"></path>
             <path d="M8 4 3 9l5 5"></path>
         </g>
