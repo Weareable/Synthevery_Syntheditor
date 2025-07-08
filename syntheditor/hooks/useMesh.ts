@@ -4,8 +4,12 @@ import { getAddressFromString, getAddressString } from "@/lib/synthevery-core/co
 import { P2PMacAddress } from "@/lib/synthevery-core/types/mesh";
 
 export default function useMesh() {
-    const [connectedDevices, setConnectedDevices] = useState<string[]>([]);
-    const [connectedPeers, setConnectedPeers] = useState<string[]>([]);
+    const [connectedDevices, setConnectedDevices] = useState<string[]>(() =>
+        mesh.getConnectedDevices().map((device) => getAddressString(device))
+    );
+    const [connectedPeers, setConnectedPeers] = useState<string[]>(() =>
+        mesh.getConnectedPeers().map((device) => getAddressString(device))
+    );
 
     useEffect(() => {
         const handleConnectedDevicesChanged = (devices: P2PMacAddress[]) => {
