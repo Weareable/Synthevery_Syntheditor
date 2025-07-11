@@ -12,7 +12,7 @@ export function ReconnectModal({ isOpen, onClose, onReconnect, deviceName }: Rec
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-500 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-6 max-w-md w-full mx-4">
                 <div className="text-center">
                     <div className="text-4xl mb-4">🔌</div>
