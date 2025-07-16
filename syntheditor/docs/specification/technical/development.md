@@ -380,29 +380,6 @@ describe('useCustomHook', () => {
 });
 ```
 
-### コミット規約
-
-#### コミットメッセージ形式
-```
-type(scope): description
-
-feat: 新機能追加
-fix: バグ修正
-docs: ドキュメント更新
-style: コードスタイル修正
-refactor: リファクタリング
-test: テスト追加・修正
-chore: その他の変更
-```
-
-#### 例
-```
-feat(player): add synthesizer page
-fix(connection): resolve BLE connection timeout
-docs(spec): update architecture documentation
-style(ui): improve button component styling
-```
-
 ## ビルド・デプロイ
 
 ### ビルド設定

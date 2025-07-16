@@ -22,323 +22,120 @@ Syntheveryアプリケーションは、複数のSyntheveryデバイスを制御
 
 ### 2. 音楽制作機能
 
-#### シンセサイザー機能
-```typescript
-interface SynthesizerFeatures {
-    // 音階演奏
-    notePlayback: {
-        octave: number;           // オクターブ選択（2-6）
-        notes: string[];          // 音階（C, C#, D, ...）
-        velocity: number;         // 音の強さ（0-127）
-    };
-    
-    // 音色設定
-    soundSettings: {
-        instrument: string;       // 楽器タイプ
-        preset: number;          // プリセット番号
-        volume: number;          // 音量（0-100）
-        pan: number;             // パン（-100-100）
-    };
-    
-    // エフェクト
-    effects: {
-        reverb: boolean;         // リバーブ有効/無効
-        delay: boolean;          // ディレイ有効/無効
-        chorus: boolean;         // コーラス有効/無効
-    };
-}
-```
+- **トラック管理**
+  - 各デバイスは8トラックを持ち、各トラックの状態（ミュート、音量、ループ長など）を管理します。
+  - 実装型例:
+    ```typescript
+    // 実装に合わせたTrackState
+    interface TrackState {
+      loopLengthTick: number; // ループ長（ティック）
+      mute: boolean;          // ミュート
+      volume: number;         // 音量
+    }
+    ```
+  - 各デバイスが現在どのトラックを選択しているかを管理します。
+    ```typescript
+    // 実装に合わせたCurrentTracksState
+    type CurrentTracksState = Map<string, number>; // deviceIdごとに選択中のトラック番号
+    ```
+  - 音色選択・シーケンス編集等は未実装（将来対応予定）
 
-#### ドラムス機能
-```typescript
-interface DrumsFeatures {
-    // ドラムパッド
-    drumPads: {
-        kick: boolean;           // キック
-        snare: boolean;          // スネア
-        hiHat: boolean;          // ハイハット
-        crash: boolean;          // クラッシュ
-        tom: boolean;            // トム
-        ride: boolean;           // ライド
-        clap: boolean;           // クラップ
-        perc: boolean;           // パーカッション
-    };
-    
-    // ドラムパターン
-    patterns: {
-        pattern1: DrumPattern;   // パターン1
-        pattern2: DrumPattern;   // パターン2
-        pattern3: DrumPattern;   // パターン3
-        pattern4: DrumPattern;   // パターン4
-    };
-    
-    // ミキシング
-    mixing: {
-        mute: boolean;           // ミュート
-        solo: boolean;           // ソロ
-        volume: number;          // 音量（0-100）
-    };
-}
-```
+- **演奏制御・同期**
+  - 再生/停止/BPM/メトロノーム/クオンタイザー/録音の状態をAppStateで管理します。
+    ```typescript
+    class PlayerSyncStates {
+      metronomeState: SyncState<boolean>;
+      tickClockState: ReadOnlySyncState<TickClockState>;
+      recorderState: SyncState<boolean>;
+      quantizerState: SyncState<boolean>;
+      currentTracksState: SyncState<Map<string, number>>;
+      trackStates: SyncState<Array<TrackState>>;
+      devicePositions: SyncState<Map<string, number>>;
+    }
+    interface TickClockState {
+      playing: boolean; // 再生中
+      bpm: number;      // BPM
+    }
+    ```
+  - BPM・再生状態・トラック状態・Position状態などは全デバイス間でリアルタイム同期されます。
 
-#### ベース機能
-```typescript
-interface BassFeatures {
-    // 弦楽器シミュレーション
-    strings: {
-        E: BassString;          // E弦
-        A: BassString;          // A弦
-        D: BassString;          // D弦
-        G: BassString;          // G弦
-    };
-    
-    // フレットボード
-    fretboard: {
-        frets: number;           // フレット数（12）
-        tuning: string[];        // チューニング
-        scale: string;           // スケール
-    };
-    
-    // 演奏技法
-    techniques: {
-        pluck: boolean;          // ピッキング
-        slap: boolean;           // スラップ
-        pop: boolean;            // ポップ
-        slide: boolean;          // スライド
-    };
-}
-```
-
-#### サンプラー機能
-```typescript
-interface SamplerFeatures {
-    // サンプルパッド
-    samplePads: {
-        pad1: SamplePad;        // パッド1
-        pad2: SamplePad;        // パッド2
-        // ... パッド16まで
-        pad16: SamplePad;       // パッド16
-    };
-    
-    // 録音機能
-    recording: {
-        record: boolean;         // 録音中
-        play: boolean;           // 再生中
-        stop: boolean;           // 停止
-        loop: boolean;           // ループ再生
-    };
-    
-    // サンプル編集
-    editing: {
-        trim: boolean;           // トリム
-        fade: boolean;           // フェード
-        reverse: boolean;        // リバース
-        pitch: number;           // ピッチ変更
-    };
-}
-```
+- **未実装・将来機能**
+  - 音色選択、シーケンス編集、エフェクト編集などは今後実装予定です。
 
 ### 3. メディアコントロール機能
 
-#### 再生制御
-```typescript
-interface PlaybackControl {
-    // 再生状態
-    playingState: "play" | "pause" | "stop";
-    
-    // テンポ制御
-    bpm: number;                // BPM（40-300）
-    tempo: number;              // テンポ倍率（0.5-2.0）
-    
-    // 拍子制御
-    timeSignature: {
-        numerator: number;       // 分子（1-16）
-        denominator: number;     // 分母（2, 4, 8, 16）
-    };
-}
-```
-
-#### メトロノーム機能
-```typescript
-interface MetronomeFeatures {
-    // メトロノーム設定
-    enabled: boolean;           // 有効/無効
-    volume: number;             // 音量（0-100）
-    accent: boolean;            // アクセント有効/無効
-    
-    // 拍子設定
-    beats: number;              // 拍数（1-16）
-    subdivision: number;         // 分割（1, 2, 4, 8）
-}
-```
-
-#### クオンタイザー機能
-```typescript
-interface QuantizerFeatures {
-    // クオンタイザー設定
-    enabled: boolean;           // 有効/無効
-    resolution: number;         // 解像度（1/4, 1/8, 1/16）
-    strength: number;           // 強度（0-100%）
-    
-    // スイング設定
-    swing: number;              // スイング（0-100%）
-}
-```
-
-#### 録音機能
-```typescript
-interface RecordingFeatures {
-    // 録音状態
-    recording: boolean;         // 録音中
-    overdub: boolean;           // オーバーダブ
-    
-    // 録音設定
-    format: "wav" | "mp3";     // 録音形式
-    quality: "low" | "medium" | "high"; // 品質
-    duration: number;           // 録音時間（秒）
-}
-```
+- **再生制御・BPM・メトロノーム・クオンタイザー・録音**
+  - MediaControlBarコンポーネント等でUI・状態管理を実装
+  - 各状態はAppStateで同期され、全デバイスで一貫した制御が可能
 
 ### 4. 状態同期機能
 
-#### アプリケーション状態同期
-```typescript
-interface AppStateSync {
-    // プレイヤー状態
-    player: {
-        playing: boolean;        // 再生中
-        bpm: number;            // BPM
-        position: number;        // 再生位置
-    };
-    
-    // デバイス状態
-    devices: {
-        connected: string[];     // 接続済みデバイス
-        roles: Map<string, string>; // デバイスロール
-    };
-    
-    // トラック状態
-    tracks: {
-        mute: boolean[];         // ミュート状態
-        solo: boolean[];         // ソロ状態
-        volume: number[];        // 音量
-    };
-}
-```
+- **アプリケーション状態同期**
+  - プレイヤー状態、デバイス状態、トラック状態、Position状態などをAppStateで同期
+  - 型例:
+    ```typescript
+    interface AppStateSync {
+      player: TickClockState;
+      devices: {
+        connected: string[]; // 接続済みデバイス
+        // roles: Map<string, string>; // デバイスロール（未実装）
+      };
+      tracks: Array<TrackState>;
+      positions: Map<string, number>; // deviceIdごとのPosition（実装はnumber型）
+    }
+    interface TickClockState {
+      playing: boolean; // 再生中
+      bpm: number;      // BPM
+    }
+    ```
+  - BPM同期、演奏状態同期、音量同期などをサポート
 
-#### リアルタイム同期
-- **BPM同期**: 全デバイス間でのBPM同期
-- **演奏状態同期**: 再生/停止/一時停止の同期
-- **音量同期**: 各デバイスの音量設定同期
-- **エフェクト同期**: エフェクト設定の同期
+### 5. トラック管理機能
 
-### 5. データ転送機能
+- 各デバイスは8つのトラックを持ち、トラックごとにミュート・音量・ループ長などを個別に設定できます（TrackState）。
+- 演奏時は、各デバイスがどのトラックを選択しているかをCurrentTracksStateで管理します。
+- 詳細仕様は [app/tracks.md](../tracks.md) を参照。
 
-#### 音声データ転送
-```typescript
-interface AudioDataTransfer {
-    // SoundFont転送
-    soundFont: {
-        filename: string;        // ファイル名
-        data: Uint8Array;       // ファイルデータ
-        size: number;           // ファイルサイズ
-    };
-    
-    // サンプル転送
-    sample: {
-        filename: string;        // ファイル名
-        data: Uint8Array;       // ファイルデータ
-        format: string;         // ファイル形式
-    };
-    
-    // 設定転送
-    config: {
-        generator: GeneratorConfig; // 音声生成設定
-        noteBuilder: NoteBuilderConfig; // ノート構築設定
-    };
-}
-```
+### 6. Position管理機能
 
-#### 設定データ転送
-- **デバイス設定**: デバイス固有の設定
-- **ユーザー設定**: ユーザー固有の設定
-- **プロジェクト設定**: プロジェクト全体の設定
+- 各デバイスは「手持ち」「左腕」「右腕」「左足」「右足」などのPosition（装着位置）を持ち、devicePositionsStateで管理します。
+- Position情報に応じて、デバイスは自律的に演奏モードやモーション検知方法を切り替えます。
+- アプリ上ではPositionの設定のみ可能で、モード切替はデバイス側で行われます。
+- 詳細仕様は [device/position-management.md](../device/position-management.md) を参照。
 
-### 6. ユーザーインターフェース機能
+### 7. データ転送機能
 
-#### レスポンシブデザイン
-- **デスクトップ**: フル機能版UI
-- **タブレット**: タッチ最適化UI
-- **モバイル**: 簡易版UI
+- **音声データ転送**
+  - SoundFontやサンプル音源、設定データの転送機能をサポート
+  - 現状は基本的なデータ転送のみ実装、詳細な管理・UIは未実装
 
-#### テーマ機能
-- **ダークテーマ**: ダークモード
-- **ライトテーマ**: ライトモード
-- **カスタムテーマ**: ユーザーカスタム
+- **設定データ転送**
+  - デバイス設定・ユーザー設定・プロジェクト設定の転送を想定（未実装）
 
-#### アクセシビリティ
-- **キーボードナビゲーション**: キーボード操作対応
-- **スクリーンリーダー**: 音声読み上げ対応
-- **ハイコントラスト**: 高コントラスト表示
+### 8. ユーザーインターフェース機能
 
-### 7. エラー処理・ログ機能
+- **レスポンシブデザイン**: デスクトップ/タブレット/モバイル対応
+- **テーマ機能**: ダーク/ライト/カスタムテーマ
+- **アクセシビリティ**: キーボードナビゲーション、スクリーンリーダー、高コントラスト
+- **主要UIコンポーネント**: MediaControlBar, DeviceStatusPanel, VerticalNavigationBar など
 
-#### エラー処理
-```typescript
-interface ErrorHandling {
-    // 接続エラー
-    connection: {
-        timeout: number;         // タイムアウト時間
-        retryCount: number;      // 再試行回数
-        fallback: boolean;       // フォールバック機能
-    };
-    
-    // 通信エラー
-    communication: {
-        packetLoss: number;      // パケットロス率
-        latency: number;         // レイテンシ
-        bandwidth: number;       // 帯域幅
-    };
-    
-    // アプリケーションエラー
-    application: {
-        crashRecovery: boolean;  // クラッシュ復旧
-        dataBackup: boolean;     // データバックアップ
-        errorReporting: boolean; // エラー報告
-    };
-}
-```
+### 9. エラー処理・ログ機能
 
-#### ログ機能
-- **デバッグログ**: 開発用詳細ログ
-- **エラーログ**: エラー情報の記録
-- **パフォーマンスログ**: 性能情報の記録
-- **ユーザーアクションログ**: ユーザー操作の記録
+- **エラー処理**: 接続・通信・アプリケーションエラーのハンドリング（基本的な例外処理のみ実装、詳細なUI/ログは未実装）
+- **ログ機能**: デバッグログ・エラーログ・パフォーマンスログ・ユーザーアクションログ（今後拡充予定）
 
-### 8. 将来機能（予定）
+### 10. 将来機能（予定）
 
-#### AI機能
-- **自動伴奏**: AIによる自動伴奏生成
-- **音声認識**: 音声による操作
-- **楽曲分析**: 楽曲の自動分析
-
-#### クラウド機能
-- **プロジェクト同期**: クラウドでのプロジェクト同期
-- **音声ライブラリ**: オンライン音声ライブラリ
-- **コラボレーション**: オンライン協調制作
-
-#### 拡張機能
-- **プラグインシステム**: サードパーティプラグイン
-- **MIDI対応**: 外部MIDI機器との連携
-- **DAW連携**: 外部DAWとの連携
+- **AI機能**: 自動伴奏、音声認識、楽曲分析
+- **クラウド機能**: プロジェクト同期、音声ライブラリ、コラボレーション
+- **拡張機能**: プラグインシステム、MIDI対応、DAW連携
 
 ## 機能要件
 
 ### 必須機能
 - [x] BLE接続機能
 - [x] Meshネットワーク機能
-- [x] 基本的な音楽制作機能
-- [x] 状態同期機能
+- [x] 基本的な音楽制作機能（トラック管理・演奏制御・状態同期）
 - [x] リアルタイム制御機能
 
 ### 推奨機能

@@ -9,27 +9,35 @@ Syntheveryアプリケーションは、複数の通信プロトコルを組み�
 ### プロトコルスタック
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Synthevery Application                  │
+│                    Synthevery Application                    │
 ├─────────────────────────────────────────────────────────────┤
 │  AppState Protocol  │  Command Protocol  │  Data Transfer  │
 ├─────────────────────────────────────────────────────────────┤
-│                    Mesh Network Protocol                   │
+│                ARQ (Automatic Repeat Request)                │
 ├─────────────────────────────────────────────────────────────┤
-│                ARQ (Automatic Repeat Request)              │
+│                    Mesh Network Protocol                     │
 ├─────────────────────────────────────────────────────────────┤
-│              Bluetooth Low Energy (BLE)                    │
+│              Bluetooth Low Energy (BLE)                      │
 ├─────────────────────────────────────────────────────────────┤
-│                    Physical Layer                          │
+│                    Physical Layer                            │
 └─────────────────────────────────────────────────────────────┘
+```
+
+### 通信経路
+```
+Mesh Network Protocol
+├── ARQ ── Command Protocol ── AppState Protocol ── App
+└── SRARQ ── Data Transfer Protocol ── App
 ```
 
 ### プロトコル間の関係
 - **BLE**: 物理層通信プロトコル
-- **ARQ**: 信頼性保証プロトコル
 - **Mesh**: ネットワーク層プロトコル
-- **Command**: アプリケーション層コマンドプロトコル
-- **AppState**: アプリケーション層状態同期プロトコル
-- **Data Transfer**: アプリケーション層データ転送プロトコル
+- **ARQ**: 信頼性保証プロトコル（Mesh上で動作）
+- **SRARQ**: 信頼性保証プロトコル（Mesh上で動作、データ転送専用）
+- **Command**: アプリケーション層コマンドプロトコル（ARQ上で動作）
+- **AppState**: アプリケーション層状態同期プロトコル（Command上で動作）
+- **Data Transfer**: アプリケーション層データ転送プロトコル（SRARQ上で動作）
 
 ## BLEプロトコル詳細
 
@@ -184,6 +192,78 @@ interface ARQConfig {
     retryCount: number;     // 3回
     maxIndex: number;       // 127
     windowSize: number;     // 1（シーケンシャル）
+}
+```
+
+## SRARQプロトコル詳細
+
+### パケット構造
+
+#### SRARQヘッダー
+```typescript
+interface SRARQHeader {
+    header: number;  // 1バイト
+    // bit 7: ACKフラグ (1=ACK, 0=DATA)
+    // bit 6-0: パケットインデックス (0-127)
+    sessionId: number;  // 1バイト - セッションID
+}
+```
+
+#### SRARQパケット
+```typescript
+interface SRARQPacket {
+    header: SRARQHeader;
+    data: Uint8Array;  // 可変長データ
+}
+```
+
+### SRARQ通信フロー
+
+#### データ送信フロー
+```typescript
+interface SRARQDataFlow {
+    // 1. セッション確立
+    establishSession: (peerAddress: P2PMacAddress) => number;
+    
+    // 2. パケット生成
+    generatePacket: (data: Uint8Array, sessionId: number, index: number) => SRARQPacket;
+    
+    // 3. 送信
+    sendPacket: (packet: SRARQPacket) => void;
+    
+    // 4. ACK待機
+    waitForAck: (sessionId: number, index: number, timeout: number) => Promise<boolean>;
+    
+    // 5. 再送信（タイムアウト時）
+    retransmit: (packet: SRARQPacket) => void;
+}
+```
+
+#### ACK処理フロー
+```typescript
+interface SRARQAckFlow {
+    // 1. ACK受信
+    receiveAck: (sessionId: number, index: number, ackData: Uint8Array) => void;
+    
+    // 2. 重複検出
+    checkDuplicate: (sessionId: number, index: number) => boolean;
+    
+    // 3. 応答データ生成
+    generateResponse: (sessionId: number, index: number, data: Uint8Array) => Uint8Array;
+    
+    // 4. ACK送信
+    sendAck: (sessionId: number, index: number, responseData: Uint8Array) => void;
+}
+```
+
+### SRARQ設定
+```typescript
+interface SRARQConfig {
+    timeout: number;        // 2000ms（データ転送用に長め）
+    retryCount: number;     // 5回（データ転送用に多め）
+    maxIndex: number;       // 127
+    windowSize: number;     // 1（シーケンシャル）
+    maxSessionId: number;   // 255
 }
 ```
 
@@ -542,100 +622,3 @@ enum DataTransferError {
     TRANSFER_TIMEOUT = 5,           // 転送タイムアウト
 }
 ```
-
-### リカバリメカニズム
-
-#### 自動再接続
-```typescript
-interface ReconnectionMechanism {
-    // 接続断検出
-    detectDisconnection: () => boolean;
-    
-    // 再接続試行
-    attemptReconnection: () => Promise<boolean>;
-    
-    // 指数バックオフ
-    calculateBackoff: (attempt: number) => number;
-    
-    // 最大試行回数
-    maxAttempts: number;  // 5回
-}
-```
-
-#### パケット再送信
-```typescript
-interface RetransmissionMechanism {
-    // タイムアウト検出
-    detectTimeout: (packetId: number) => boolean;
-    
-    // 再送信
-    retransmit: (packetId: number) => void;
-    
-    // 重複検出
-    detectDuplicate: (packetId: number) => boolean;
-    
-    // 最大再送信回数
-    maxRetries: number;  // 3回
-}
-```
-
-## パフォーマンス最適化
-
-### 通信最適化
-
-#### パケットサイズ最適化
-```typescript
-interface PacketOptimization {
-    // 最大パケットサイズ
-    maxPacketSize: number;  // 512バイト
-    
-    // フラグメンテーション
-    fragment: (data: Uint8Array) => Uint8Array[];
-    
-    // 再構築
-    reassemble: (fragments: Uint8Array[]) => Uint8Array;
-}
-```
-
-#### 帯域幅最適化
-```typescript
-interface BandwidthOptimization {
-    // 圧縮
-    compress: (data: Uint8Array) => Uint8Array;
-    
-    // 展開
-    decompress: (data: Uint8Array) => Uint8Array;
-    
-    // 優先度制御
-    setPriority: (packetType: number, priority: number) => void;
-}
-```
-
-### レイテンシ最適化
-
-#### レイテンシ測定
-```typescript
-interface LatencyMeasurement {
-    // 往復時間測定
-    measureRTT: (packetId: number) => number;
-    
-    // 平均レイテンシ計算
-    calculateAverageLatency: () => number;
-    
-    // レイテンシ予測
-    predictLatency: () => number;
-}
-```
-
-#### レイテンシ最適化
-```typescript
-interface LatencyOptimization {
-    // パケット優先度
-    setPacketPriority: (packet: MeshPacket, priority: number) => void;
-    
-    // ルーティング最適化
-    optimizeRoute: (destination: P2PMacAddress) => P2PMacAddress[];
-    
-    // バッファサイズ調整
-    adjustBufferSize: (latency: number) => void;
-} 
