@@ -4,14 +4,14 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { mesh } from '@/lib/synthevery-core/connection/mesh';
 import { getAddressFromString, getAddressString } from '@/lib/synthevery-core/connection/util';
 
-import { dataTransferController, MockSenderDataStore } from '@/lib/synthevery-core/data-transfer/data-transfer-controller';
-import { sendGeneratorConfig, sendNoteBuilderConfig, NoteBuilderConfigReceiverPort, GeneratorConfigReceiverPort } from '@/lib/synthevery-core/player/config';
-import { playerController } from '@/lib/synthevery-core/player/controller';
+import { sendGeneratorConfig, sendNoteBuilderConfig } from '@/lib/synthevery-core/player/config';
+import { deviceConfigManager } from '@/lib/synthevery-core/player/device-config-manager';
 
-dataTransferController;
+
 
 const DataTransferExample: React.FC = () => {
     const [peerDevices, setPeerDevices] = useState<string[]>([]);
+    const [deviceConfigs, setDeviceConfigs] = useState<Map<string, any[]>>(new Map());
 
     const connectDevice = async () => {
         await mesh.connectDevice();
@@ -23,22 +23,19 @@ const DataTransferExample: React.FC = () => {
     }
 
     useEffect(() => {
-        // Receiver portsを登録
-        const noteBuilderConfigReceiverPort = new NoteBuilderConfigReceiverPort();
-        const generatorConfigReceiverPort = new GeneratorConfigReceiverPort();
-
-        // 受信イベントのリスナーを設定
-        noteBuilderConfigReceiverPort.eventEmitter.on('received', (config) => {
-            console.log('Received NoteBuilderConfig:', config);
+        // deviceConfigManagerのイベントリスナーを設定
+        deviceConfigManager.eventEmitter.on('configReceived', (device, config) => {
+            console.log('DeviceConfigManager: Received config from:', getAddressString(device), 'config:', config);
+            setDeviceConfigs(new Map(deviceConfigManager.getAllConfigs()));
         });
 
-        generatorConfigReceiverPort.eventEmitter.on('received', (config) => {
-            console.log('Received GeneratorConfig:', config);
+        deviceConfigManager.eventEmitter.on('deviceConnected', (device) => {
+            console.log('DeviceConfigManager: Device connected:', getAddressString(device));
         });
 
-        // DataTransferControllerにreceiver portsを登録
-        dataTransferController.registerReceiverPort(noteBuilderConfigReceiverPort);
-        dataTransferController.registerReceiverPort(generatorConfigReceiverPort);
+        deviceConfigManager.eventEmitter.on('deviceDisconnected', (device) => {
+            console.log('DeviceConfigManager: Device disconnected:', getAddressString(device));
+        });
 
         mesh.eventEmitter.on('peerConnected', updatePeerDevices);
         mesh.eventEmitter.on('peerDisconnected', updatePeerDevices);
@@ -59,8 +56,8 @@ const DataTransferExample: React.FC = () => {
 
     const retrieveConfig = useCallback((peer: string) => {
         const peerAddress = getAddressFromString(peer);
-        const config = playerController.requestNoteBuilderConfig(peerAddress);
-        console.log(config);
+        const config = deviceConfigManager.getConfig(peerAddress);
+        console.log('Retrieved config for', peer, ':', config);
     }, []);
 
     return (
@@ -70,10 +67,16 @@ const DataTransferExample: React.FC = () => {
             </div>
 
             <div>
+                <h3>Connected Devices:</h3>
                 {peerDevices.map(device => <div key={device}>
-                    {device}
-                    <button onClick={() => sendConfig(device)}>Send</button>
-                    <button onClick={() => retrieveConfig(device)}>Retrieve</button>
+                    <strong>{device}</strong>
+                    <button onClick={() => sendConfig(device)}>Send Config</button>
+                    <button onClick={() => retrieveConfig(device)}>Get Config</button>
+                    {deviceConfigs.has(device) && (
+                        <div style={{ marginLeft: '20px', fontSize: '0.9em' }}>
+                            <strong>Config:</strong> {JSON.stringify(deviceConfigs.get(device))}
+                        </div>
+                    )}
                 </div>)}
             </div>
         </div>
