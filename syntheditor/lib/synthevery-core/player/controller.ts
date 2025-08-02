@@ -11,6 +11,7 @@ class PlayerCommandClient implements CommandClientInterface {
     static readonly COMMAND_TYPE_PLAYING_STATE = 0x00;
     static readonly COMMAND_TYPE_BPM = 0x01;
     static readonly COMMAND_TYPE_STOP = 0x02;
+    static readonly COMMAND_TYPE_REQUEST_NOTE_BUILDER_CONFIG = 0x10;
 
     static readonly COMMAND_TYPE_PLAYING_STATE_SIZE = 1;
     static readonly COMMAND_TYPE_BPM_SIZE = 4;
@@ -22,6 +23,8 @@ class PlayerCommandClient implements CommandClientInterface {
             case PlayerCommandClient.COMMAND_TYPE_BPM:
                 return serializeFloat32(playerSyncStates.tickClockState.getStore().value.bpm);
             case PlayerCommandClient.COMMAND_TYPE_STOP:
+                return new Uint8Array();
+            case PlayerCommandClient.COMMAND_TYPE_REQUEST_NOTE_BUILDER_CONFIG:
                 return new Uint8Array();
         }
 
@@ -96,6 +99,19 @@ class PlayerController {
         this.sendCommand({
             client_id: COMMAND_CLIENT_ID_PLAYER_CONTROL,
             type: PlayerCommandClient.COMMAND_TYPE_BPM,
+        });
+    }
+
+    requestNoteBuilderConfig(peer: P2PMacAddress): void {
+        const handler = commandDispatcher.getCommandHandler(peer, false);
+        if (!handler) {
+            console.warn("requestNoteBuilderConfig() : handler unavailable");
+            return;
+        }
+
+        handler.pushCommand({
+            client_id: COMMAND_CLIENT_ID_PLAYER_CONTROL,
+            type: PlayerCommandClient.COMMAND_TYPE_REQUEST_NOTE_BUILDER_CONFIG,
         });
     }
 
