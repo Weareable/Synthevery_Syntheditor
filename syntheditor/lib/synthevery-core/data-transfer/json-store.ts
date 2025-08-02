@@ -1,5 +1,6 @@
 import { SenderDataStoreInterface, ReceiverDataStoreInterface } from "./interfaces";
 import { EventEmitter } from "eventemitter3";
+import { P2PMacAddress } from "../types/mesh";
 
 export class JsonSenderDataStore implements SenderDataStoreInterface {
     private data: Uint8Array;
@@ -32,17 +33,19 @@ export class JsonSenderDataStore implements SenderDataStoreInterface {
 }
 
 interface JsonReceiverDataStoreEvents {
-    received: (json: any) => void;
+    received: (json: any, sender: P2PMacAddress) => void;
 }
 
 export class JsonReceiverDataStore implements ReceiverDataStoreInterface {
     private data: Uint8Array;
     private capacity: number;
+    private sender: P2PMacAddress;
     readonly eventEmitter = new EventEmitter<JsonReceiverDataStoreEvents>();
 
-    constructor(capacity: number) {
+    constructor(capacity: number, sender: P2PMacAddress) {
         this.data = new Uint8Array(capacity);
         this.capacity = capacity;
+        this.sender = sender;
     }
 
     write(data: Uint8Array, offset: number): void {
@@ -51,7 +54,7 @@ export class JsonReceiverDataStore implements ReceiverDataStoreInterface {
             try {
                 const jsonString = new TextDecoder().decode(this.data);
                 const json = JSON.parse(jsonString);
-                this.eventEmitter.emit('received', json);
+                this.eventEmitter.emit('received', json, this.sender);
             } catch (error) {
                 console.error(error);
             }

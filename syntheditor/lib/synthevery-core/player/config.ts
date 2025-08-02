@@ -8,11 +8,11 @@ import { EventEmitter } from "eventemitter3";
 import { NoteBuilderConfig, GeneratorConfig } from "../types/player";
 
 interface NoteBuilderConfigReceiverPortEvents {
-    received: (json: any) => void;
+    received: (json: any, sender: P2PMacAddress) => void;
 }
 
 interface GeneratorConfigReceiverPortEvents {
-    received: (json: any) => void;
+    received: (json: any, sender: P2PMacAddress) => void;
 }
 
 export class NoteBuilderConfigReceiverPort implements ReceiverPortInterface {
@@ -23,9 +23,9 @@ export class NoteBuilderConfigReceiverPort implements ReceiverPortInterface {
     }
 
     handleRequest(sender: P2PMacAddress, sessionId: SessionID, data: RequestData): { receiver: ReceiverDataStoreInterface, responseData: ResponseData } {
-        const receiver = new JsonReceiverDataStore(data.totalSize);
-        receiver.eventEmitter.on('received', (json: any) => {
-            this.eventEmitter.emit('received', json);
+        const receiver = new JsonReceiverDataStore(data.totalSize, sender);
+        receiver.eventEmitter.on('received', (json: any, sender: P2PMacAddress) => {
+            this.eventEmitter.emit('received', json, sender);
         });
         const responseData: ResponseData = {
             isAccepted: true,
@@ -52,9 +52,9 @@ export class GeneratorConfigReceiverPort implements ReceiverPortInterface {
     }
 
     handleRequest(sender: P2PMacAddress, sessionId: SessionID, data: RequestData): { receiver: ReceiverDataStoreInterface, responseData: ResponseData } {
-        const receiver = new JsonReceiverDataStore(data.totalSize);
-        receiver.eventEmitter.on('received', (json: any) => {
-            this.eventEmitter.emit('received', json);
+        const receiver = new JsonReceiverDataStore(data.totalSize, sender);
+        receiver.eventEmitter.on('received', (json: any, sender: P2PMacAddress) => {
+            this.eventEmitter.emit('received', json, sender);
         });
         const responseData: ResponseData = {
             isAccepted: true,
@@ -90,3 +90,4 @@ export function sendGeneratorConfig(receiver: P2PMacAddress, config: GeneratorCo
     }
     return true;
 }
+
