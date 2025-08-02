@@ -30,8 +30,8 @@ export interface CancelData {
 }
 
 export interface ChunkData {
-    position: number;
     data: Uint8Array;
+    position: number;
 }
 
 export interface ResultData {
@@ -149,8 +149,8 @@ export function serializeChunkData(data: ChunkData): Uint8Array {
 
 export function deserializeChunkData(data: Uint8Array): ChunkData | null {
     try {
-        const decoded = msgpack.decode(data) as [number, Uint8Array];
-        return { position: decoded[0], data: decoded[1] };
+        const decoded = msgpack.decode(data) as [Uint8Array, number];
+        return { data: decoded[0], position: decoded[1] };
     } catch (e) {
         console.error("deserializeChunkData failed.", e);
         return null;
