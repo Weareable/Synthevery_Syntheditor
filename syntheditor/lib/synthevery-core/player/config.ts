@@ -11,6 +11,10 @@ interface NoteBuilderConfigReceiverPortEvents {
     received: (json: any) => void;
 }
 
+interface GeneratorConfigReceiverPortEvents {
+    received: (json: any) => void;
+}
+
 export class NoteBuilderConfigReceiverPort implements ReceiverPortInterface {
     readonly eventEmitter = new EventEmitter<NoteBuilderConfigReceiverPortEvents>();
 
@@ -36,6 +40,35 @@ export class NoteBuilderConfigReceiverPort implements ReceiverPortInterface {
 
     onFinish(session: ReceiverSessionInterface, id: SessionID): void {
         console.warn("NoteBuilderConfigReceiverPort: onFinish session: ", session, "id: ", id);
+    }
+
+}
+
+export class GeneratorConfigReceiverPort implements ReceiverPortInterface {
+    readonly eventEmitter = new EventEmitter<GeneratorConfigReceiverPortEvents>();
+
+    getDataType(): DataType {
+        return DataTypes.kGeneratorConfig;
+    }
+
+    handleRequest(sender: P2PMacAddress, sessionId: SessionID, data: RequestData): { receiver: ReceiverDataStoreInterface, responseData: ResponseData } {
+        const receiver = new JsonReceiverDataStore(data.totalSize);
+        receiver.eventEmitter.on('received', (json: any) => {
+            this.eventEmitter.emit('received', json);
+        });
+        const responseData: ResponseData = {
+            isAccepted: true,
+            reason: 0
+        };
+        return { receiver, responseData };
+    }
+
+    onStart(session: ReceiverSessionInterface, id: SessionID): void {
+        console.warn("GeneratorConfigReceiverPort: onStart session: ", session, "id: ", id);
+    }
+
+    onFinish(session: ReceiverSessionInterface, id: SessionID): void {
+        console.warn("GeneratorConfigReceiverPort: onFinish session: ", session, "id: ", id);
     }
 
 }
