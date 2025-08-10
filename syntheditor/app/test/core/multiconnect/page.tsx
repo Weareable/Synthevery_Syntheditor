@@ -17,13 +17,13 @@ const DevicePanel: React.FC<{ address: string }> = ({ address }) => {
         };
 
         if (device) {
-            device.eventEmitter.on('connectedDevicesChanged', handleConnectedDevicesChanged);
+            device.eventEmitter.on('bleConnectedDevicesChanged', handleConnectedDevicesChanged);
             handleConnectedDevicesChanged();
         }
 
         return () => {
             if (device) {
-                device.eventEmitter.removeListener('connectedDevicesChanged', handleConnectedDevicesChanged);
+                device.eventEmitter.removeListener('bleConnectedDevicesChanged', handleConnectedDevicesChanged);
             }
         };
 
