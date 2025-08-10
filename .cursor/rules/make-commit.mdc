@@ -16,8 +16,9 @@ alwaysApply: false
 ## 注意点
 - **git initは実行しないでください。既にリポジトリは初期化されています。**
   - not a git repositoryエラーが生じた場合は、適切な場所にcdしてからgitの操作を行ってください。
-- 作業内容を確認する際は、git --no-pager diffを実行してください。
+- 作業内容を確認する際は、`git --no-pager status && git --no-pager diff`を実行してください。
   - --no-pagerは、git diffの出力をページャーではなく標準出力にするためのオプションです。これを必ず付け、作業を続行してください。
+  - Untracked filesも確認してください。
 - logにおいても、--no-pagerを付けてください。(git --no-pager log)
 
 ## Git コミットメッセージのルール
