@@ -1,6 +1,5 @@
 'use client'
 import { VerticalNavigationBar } from '@/components/VerticalNavigationBar'
-import { DeviceStatusPanel } from '@/components/DeviceStatusPanel'
 import { MediaControlBar } from '@/components/MediaControlBar'
 import { ReconnectModal } from '@/components/ui/reconnect-modal'
 import useMesh from '@/hooks/useMesh'
@@ -52,10 +51,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     <main className="flex-1 overflow-auto bg-zinc-800 flex items-center justify-center">
                         {children}
                     </main>
-                    {/* デバイスステータス領域 */}
-                    <aside className="w-64 bg-zinc-900 border-l border-zinc-700 flex flex-col items-center py-2">
-                        <DeviceStatusPanel />
-                    </aside>
                 </div>
                 {/* メディアコントロールバー */}
                 <footer className="flex-none bg-background flex items-center justify-center">
