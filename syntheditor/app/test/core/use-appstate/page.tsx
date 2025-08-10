@@ -2,7 +2,7 @@
 
 import useMesh from '@/hooks/useMesh';
 import { playerSyncStates } from '@/lib/synthevery-core/player/states';
-import usePlayerControl from '@/hooks/usePlayerConrtol';
+import useDeviceControl from '@/hooks/useDeviceControl';
 import { useAppState, useReadOnlyAppState } from '@/hooks/useAppState';
 
 const AppStateExample: React.FC = () => {
@@ -11,7 +11,7 @@ const AppStateExample: React.FC = () => {
     const [quantizerState, updateQuantizerState] = useAppState(playerSyncStates.quantizerState);
     const [metronomeState, updateMetronomeState] = useAppState(playerSyncStates.metronomeState);
     const [recorderState, updateRecorderState] = useAppState(playerSyncStates.recorderState);
-    const { playingState, bpmState, setPlayingState, setBpmState, stop } = usePlayerControl();
+    const { playingState, bpmState, setPlayingState, setBpmState, stop } = useDeviceControl();
 
     const [trackStates, updateTrackStates] = useAppState(playerSyncStates.trackStates);
     const [currentTracks, updateCurrentTracks] = useAppState(playerSyncStates.currentTracksState);

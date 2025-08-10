@@ -10,7 +10,7 @@ import { StopIcon, RecordIcon } from '@/components/icons/media'
 import { UndoIcon, RedoIcon } from '@/components/icons/control'
 import BPMInput from './ui/bpm-input'
 import { useAppState } from '@/hooks/useAppState'
-import usePlayerControl from '@/hooks/usePlayerConrtol'
+import useDeviceControl from '@/hooks/useDeviceControl'
 import { playerSyncStates } from '@/lib/synthevery-core/player/states'
 
 export function MediaControlBar() {
@@ -20,7 +20,7 @@ export function MediaControlBar() {
     const [isRecording, setIsRecording] = useAppState(playerSyncStates.recorderState);
 
     // プレイヤーコントロール
-    const { playingState, bpmState, setPlayingState, setBpmState, stop } = usePlayerControl();
+    const { playingState, bpmState, setPlayingState, setBpmState, stop } = useDeviceControl();
 
     // BPMInput用のローカル状態
     const [localBpm, setLocalBpm] = useState(bpmState);

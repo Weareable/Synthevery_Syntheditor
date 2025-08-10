@@ -1,30 +1,33 @@
 import { CommandClientInterface } from "../command/handler";
 import { CommandID } from "../types/command";
-import { COMMAND_CLIENT_ID_PLAYER_CONTROL } from "../command/constants";
-import { playerSyncStates } from "./states";
+import { COMMAND_CLIENT_ID_DEVICE_CONTROL } from "../command/constants";
+import { playerSyncStates } from "../player/states";
 import { mesh } from "../connection/mesh";
 import { P2PMacAddress } from "../types/mesh";
 import { commandDispatcher } from "../command/dispatcher";
 import { serializeBoolean, serializeFloat32 } from "../appstate/appstates";
 
-class PlayerCommandClient implements CommandClientInterface {
+class DeviceCommandClient implements CommandClientInterface {
     static readonly COMMAND_TYPE_PLAYING_STATE = 0x00;
     static readonly COMMAND_TYPE_BPM = 0x01;
     static readonly COMMAND_TYPE_STOP = 0x02;
     static readonly COMMAND_TYPE_REQUEST_NOTE_BUILDER_CONFIG = 0x10;
+    static readonly COMMAND_TYPE_REQUEST_GENERATOR_CONFIG = 0x11;
 
     static readonly COMMAND_TYPE_PLAYING_STATE_SIZE = 1;
     static readonly COMMAND_TYPE_BPM_SIZE = 4;
 
     generateData(commandId: CommandID): Uint8Array {
         switch (commandId.type) {
-            case PlayerCommandClient.COMMAND_TYPE_PLAYING_STATE:
+            case DeviceCommandClient.COMMAND_TYPE_PLAYING_STATE:
                 return serializeBoolean(playerSyncStates.metronomeState.getStore().value);
-            case PlayerCommandClient.COMMAND_TYPE_BPM:
+            case DeviceCommandClient.COMMAND_TYPE_BPM:
                 return serializeFloat32(playerSyncStates.tickClockState.getStore().value.bpm);
-            case PlayerCommandClient.COMMAND_TYPE_STOP:
+            case DeviceCommandClient.COMMAND_TYPE_STOP:
                 return new Uint8Array();
-            case PlayerCommandClient.COMMAND_TYPE_REQUEST_NOTE_BUILDER_CONFIG:
+            case DeviceCommandClient.COMMAND_TYPE_REQUEST_NOTE_BUILDER_CONFIG:
+                return new Uint8Array();
+            case DeviceCommandClient.COMMAND_TYPE_REQUEST_GENERATOR_CONFIG:
                 return new Uint8Array();
         }
 
@@ -48,14 +51,15 @@ class PlayerCommandClient implements CommandClientInterface {
     }
 
     getClientID(): number {
-        return COMMAND_CLIENT_ID_PLAYER_CONTROL;
+        return COMMAND_CLIENT_ID_DEVICE_CONTROL;
     }
 }
 
-class PlayerController {
+class DeviceController {
     constructor() {
-        mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[]) => {
-            for (const device of connectedDevices) {
+        mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
+            // 新規追加されたデバイスのみ初期化
+            for (const device of added) {
                 this.initializeNode(device);
             }
         });
@@ -66,22 +70,22 @@ class PlayerController {
             case "play":
                 playerSyncStates.metronomeState.getStore().value = true;
                 this.sendCommand({
-                    client_id: COMMAND_CLIENT_ID_PLAYER_CONTROL,
-                    type: PlayerCommandClient.COMMAND_TYPE_PLAYING_STATE,
+                    client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+                    type: DeviceCommandClient.COMMAND_TYPE_PLAYING_STATE,
                 });
                 break;
             case "pause":
                 playerSyncStates.metronomeState.getStore().value = false;
                 this.sendCommand({
-                    client_id: COMMAND_CLIENT_ID_PLAYER_CONTROL,
-                    type: PlayerCommandClient.COMMAND_TYPE_PLAYING_STATE,
+                    client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+                    type: DeviceCommandClient.COMMAND_TYPE_PLAYING_STATE,
                 });
                 break;
             case "stop":
                 playerSyncStates.metronomeState.getStore().value = false;
                 this.sendCommand({
-                    client_id: COMMAND_CLIENT_ID_PLAYER_CONTROL,
-                    type: PlayerCommandClient.COMMAND_TYPE_STOP,
+                    client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+                    type: DeviceCommandClient.COMMAND_TYPE_STOP,
                 });
                 break;
             default:
@@ -97,8 +101,8 @@ class PlayerController {
         }
         playerSyncStates.tickClockState.getStore().value.bpm = bpm;
         this.sendCommand({
-            client_id: COMMAND_CLIENT_ID_PLAYER_CONTROL,
-            type: PlayerCommandClient.COMMAND_TYPE_BPM,
+            client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+            type: DeviceCommandClient.COMMAND_TYPE_BPM,
         });
     }
 
@@ -110,8 +114,21 @@ class PlayerController {
         }
 
         handler.pushCommand({
-            client_id: COMMAND_CLIENT_ID_PLAYER_CONTROL,
-            type: PlayerCommandClient.COMMAND_TYPE_REQUEST_NOTE_BUILDER_CONFIG,
+            client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+            type: DeviceCommandClient.COMMAND_TYPE_REQUEST_NOTE_BUILDER_CONFIG,
+        });
+    }
+
+    requestGeneratorConfig(peer: P2PMacAddress): void {
+        const handler = commandDispatcher.getCommandHandler(peer, false);
+        if (!handler) {
+            console.warn("requestGeneratorConfig() : handler unavailable");
+            return;
+        }
+
+        handler.pushCommand({
+            client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+            type: DeviceCommandClient.COMMAND_TYPE_REQUEST_GENERATOR_CONFIG,
         });
     }
 
@@ -122,12 +139,12 @@ class PlayerController {
             return;
         }
 
-        if (handler.hasClientInterface(COMMAND_CLIENT_ID_PLAYER_CONTROL)) {
+        if (handler.hasClientInterface(COMMAND_CLIENT_ID_DEVICE_CONTROL)) {
             console.warn("initializeNode() : client interface already exists");
             return;
         }
 
-        handler.setClientInterface(new PlayerCommandClient());
+        handler.setClientInterface(new DeviceCommandClient());
     }
 
     sendCommand(commandId: CommandID): void {
@@ -146,4 +163,4 @@ class PlayerController {
     }
 }
 
-export const playerController = new PlayerController();
+export const deviceController = new DeviceController();
