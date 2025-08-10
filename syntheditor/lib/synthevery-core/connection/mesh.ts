@@ -8,7 +8,7 @@ import { getAddressString, equalsAddress } from './util';
 
 
 export interface BLEMeshDeviceEvents {
-    connectedDevicesChanged: (devices: P2PMacAddress[]) => void;
+    bleConnectedDevicesChanged: (devices: P2PMacAddress[]) => void;
     disconnected: () => void;
 }
 
@@ -78,7 +78,7 @@ class BLEMeshDevice {
         this.bleDevice = null;
         this.connectedDevices = [];
         this.packetReceiver = () => { };
-        this.eventEmitter.emit('connectedDevicesChanged', []);
+        this.eventEmitter.emit('bleConnectedDevicesChanged', []);
     }
 
     private handleMeshPacketReceived(value: DataView): void {
@@ -93,7 +93,7 @@ class BLEMeshDevice {
     private handleConnectedDevicesChanged(value: DataView): void {
         const connectedDevices = decodeConnectedDevices(new Uint8Array(value.buffer));
         this.connectedDevices = connectedDevices;
-        this.eventEmitter.emit('connectedDevicesChanged', connectedDevices);
+        this.eventEmitter.emit('bleConnectedDevicesChanged', connectedDevices);
     }
 
     getAddress(): P2PMacAddress {
@@ -169,7 +169,7 @@ class BLEMeshDevice {
 }
 
 export interface MeshEvents {
-    connectedDevicesChanged: (devices: P2PMacAddress[]) => void;
+    connectedDevicesChanged: (devices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => void;
     connected: (address: P2PMacAddress) => void;
     disconnected: (address: P2PMacAddress) => void;
     peerConnected: (address: P2PMacAddress) => void;
@@ -220,7 +220,7 @@ class Mesh {
         });
 
         if (newDevices.length > 0 || disconnectedDevices.length > 0) {
-            this.eventEmitter.emit('connectedDevicesChanged', currentDevices);
+            this.eventEmitter.emit('connectedDevicesChanged', currentDevices, newDevices, disconnectedDevices);
         }
     }
 
@@ -234,7 +234,7 @@ class Mesh {
             this.recalculateConnectedDevices();
         });
 
-        meshDevice.eventEmitter.on('connectedDevicesChanged', () => {
+        meshDevice.eventEmitter.on('bleConnectedDevicesChanged', () => {
             this.recalculateConnectedDevices();
         });
 

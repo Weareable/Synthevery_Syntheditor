@@ -46,8 +46,9 @@ class DataTransferController implements TransferCommandInterface {
             });
         }, 500);
 
-        mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[]) => {
-            for (const device of connectedDevices) {
+        mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
+            // 新規追加されたデバイスのみ初期化
+            for (const device of added) {
                 this.initializeNode(device);
             }
         });

@@ -12,7 +12,7 @@ export default function useMesh() {
     );
 
     useEffect(() => {
-        const handleConnectedDevicesChanged = (devices: P2PMacAddress[]) => {
+        const handleConnectedDevicesChanged = (devices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
             setConnectedDevices(devices.map((device) => getAddressString(device)));
         };
         mesh.eventEmitter.on("connectedDevicesChanged", handleConnectedDevicesChanged);
