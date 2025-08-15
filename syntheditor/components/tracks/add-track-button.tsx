@@ -22,7 +22,7 @@ export const AddTrackButton: React.FC<AddTrackButtonProps> = ({
                 'border-gray-400/30 text-gray-400',
                 'hover:border-gray-400/50 hover:text-gray-300',
                 'transition-all duration-200',
-                'min-h-[120px] min-w-[100px]',
+                'min-h-0 h-full w-full',
                 className
             )}
         >
