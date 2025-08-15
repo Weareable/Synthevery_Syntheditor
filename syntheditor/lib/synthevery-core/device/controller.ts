@@ -13,6 +13,7 @@ class DeviceCommandClient implements CommandClientInterface {
     static readonly COMMAND_TYPE_STOP = 0x02;
     static readonly COMMAND_TYPE_REQUEST_NOTE_BUILDER_CONFIG = 0x10;
     static readonly COMMAND_TYPE_REQUEST_GENERATOR_CONFIG = 0x11;
+    static readonly COMMAND_TYPE_REQUEST_TRACK_DETAIL = 0x12;
 
     static readonly COMMAND_TYPE_PLAYING_STATE_SIZE = 1;
     static readonly COMMAND_TYPE_BPM_SIZE = 4;
@@ -28,6 +29,8 @@ class DeviceCommandClient implements CommandClientInterface {
             case DeviceCommandClient.COMMAND_TYPE_REQUEST_NOTE_BUILDER_CONFIG:
                 return new Uint8Array();
             case DeviceCommandClient.COMMAND_TYPE_REQUEST_GENERATOR_CONFIG:
+                return new Uint8Array();
+            case DeviceCommandClient.COMMAND_TYPE_REQUEST_TRACK_DETAIL:
                 return new Uint8Array();
         }
 
@@ -129,6 +132,19 @@ class DeviceController {
         handler.pushCommand({
             client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
             type: DeviceCommandClient.COMMAND_TYPE_REQUEST_GENERATOR_CONFIG,
+        });
+    }
+
+    requestTrackDetail(peer: P2PMacAddress): void {
+        const handler = commandDispatcher.getCommandHandler(peer, false);
+        if (!handler) {
+            console.warn("requestTrackDetail() : handler unavailable");
+            return;
+        }
+
+        handler.pushCommand({
+            client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+            type: DeviceCommandClient.COMMAND_TYPE_REQUEST_TRACK_DETAIL,
         });
     }
 

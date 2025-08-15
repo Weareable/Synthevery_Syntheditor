@@ -1,15 +1,16 @@
 import { mesh } from "../connection/mesh";
 import { dataTransferController } from "../data-transfer/data-transfer-controller";
 import { P2PMacAddress } from "../types/mesh";
-import { NoteBuilderConfig, GeneratorConfig } from "../types/player";
-import { NoteBuilderConfigReceiverPort, GeneratorConfigReceiverPort } from "./config";
+import { NoteBuilderConfig, GeneratorConfig, TrackDetail } from "../types/player";
+import { NoteBuilderConfigReceiverPort, GeneratorConfigReceiverPort, TrackDetailReceiverPort } from "./config";
 import { getAddressString, getAddressFromString } from "../connection/util";
 import { EventEmitter } from "eventemitter3";
 import { deviceController } from "./controller";
 
 interface DeviceConfigManagerEvents {
-    configReceived: (device: P2PMacAddress, config: NoteBuilderConfig[]) => void;
+    noteBuilderConfigReceived: (device: P2PMacAddress, config: NoteBuilderConfig[]) => void;
     generatorConfigReceived: (device: P2PMacAddress, config: GeneratorConfig[]) => void;
+    trackDetailReceived: (device: P2PMacAddress, trackDetails: TrackDetail[]) => void;
     deviceConnected: (device: P2PMacAddress) => void;
     deviceDisconnected: (device: P2PMacAddress) => void;
 }
@@ -17,13 +18,16 @@ interface DeviceConfigManagerEvents {
 class DeviceConfigManager {
     private deviceConfigs: Map<string, NoteBuilderConfig[]> = new Map();
     private generatorConfigs: Map<string, GeneratorConfig[]> = new Map();
+    private trackDetails: Map<string, TrackDetail[]> = new Map();
     private noteBuilderConfigReceiverPort: NoteBuilderConfigReceiverPort;
     private generatorConfigReceiverPort: GeneratorConfigReceiverPort;
+    private trackDetailReceiverPort: TrackDetailReceiverPort;
     readonly eventEmitter = new EventEmitter<DeviceConfigManagerEvents>();
 
     constructor() {
         this.noteBuilderConfigReceiverPort = new NoteBuilderConfigReceiverPort();
         this.generatorConfigReceiverPort = new GeneratorConfigReceiverPort();
+        this.trackDetailReceiverPort = new TrackDetailReceiverPort();
         this.setupEventListeners();
         this.registerReceiverPort();
 
@@ -51,6 +55,13 @@ class DeviceConfigManager {
             this.saveReceivedGeneratorConfig(config, sender);
         });
 
+        // TrackDetail受信時の処理
+        this.trackDetailReceiverPort.eventEmitter.on('received', (trackDetails: TrackDetail[], sender: P2PMacAddress) => {
+            // 受信したTrackDetailを保存
+            console.log('Received TrackDetail from:', getAddressString(sender), 'trackDetails:', trackDetails);
+            this.saveReceivedTrackDetail(trackDetails, sender);
+        });
+
         // データ転送セッション開始時の処理（デバッグ用）
         dataTransferController.getEventEmitter().on('sessionStart', (peer: P2PMacAddress, sessionId: number, type: string) => {
             if (type === 'receiver') {
@@ -62,9 +73,8 @@ class DeviceConfigManager {
     private registerReceiverPort(): void {
         dataTransferController.registerReceiverPort(this.noteBuilderConfigReceiverPort);
         dataTransferController.registerReceiverPort(this.generatorConfigReceiverPort);
+        dataTransferController.registerReceiverPort(this.trackDetailReceiverPort);
     }
-
-
 
     private handleDevicesChanged(devices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]): void {
         // 新規追加されたデバイスに対してリクエストを送信
@@ -72,6 +82,7 @@ class DeviceConfigManager {
             console.log('New device added:', getAddressString(device));
             this.requestNoteBuilderConfig(device);
             this.requestGeneratorConfig(device);
+            this.requestTrackDetail(device);
             this.eventEmitter.emit('deviceConnected', device);
         });
 
@@ -80,21 +91,10 @@ class DeviceConfigManager {
             console.log('Device removed:', getAddressString(device));
             this.removeDeviceConfig(device);
             this.removeGeneratorConfig(device);
+            this.removeTrackDetail(device);
             this.eventEmitter.emit('deviceDisconnected', device);
         });
     }
-
-    // より堅牢な解決策: CommandHandlerの状態を直接監視
-    // private async waitForCommandHandler(device: P2PMacAddress, maxRetries: number = 10): Promise<boolean> {
-    //     for (let i = 0; i < maxRetries; i++) {
-    //         const handler = commandDispatcher.getCommandHandler(device, false);
-    //         if (handler && handler.hasClientInterface(COMMAND_CLIENT_ID_PLAYER_CONTROL)) {
-    //             return true;
-    //         }
-    //         await new Promise(resolve => setTimeout(resolve, 50));
-    //     }
-    //     return false;
-    // }
 
     private requestNoteBuilderConfig(device: P2PMacAddress): void {
         // webアプリ（自分自身）にはリクエストを送信しない
@@ -122,6 +122,19 @@ class DeviceConfigManager {
         console.log('Requesting GeneratorConfig from device:', getAddressString(device));
     }
 
+    private requestTrackDetail(device: P2PMacAddress): void {
+        // webアプリ（自分自身）にはリクエストを送信しない
+        const myAddress = mesh.getAddress();
+        if (getAddressString(device) === getAddressString(myAddress)) {
+            console.log('Skipping TrackDetail request to self:', getAddressString(device));
+            return;
+        }
+
+        // TrackDetailのリクエストを送信
+        deviceController.requestTrackDetail(device);
+        console.log('Requesting TrackDetail from device:', getAddressString(device));
+    }
+
     private removeDeviceConfig(device: P2PMacAddress): void {
         const deviceStr = getAddressString(device);
         this.deviceConfigs.delete(deviceStr);
@@ -134,7 +147,11 @@ class DeviceConfigManager {
         console.log('Removed generator config for device:', deviceStr);
     }
 
-
+    private removeTrackDetail(device: P2PMacAddress): void {
+        const deviceStr = getAddressString(device);
+        this.trackDetails.delete(deviceStr);
+        console.log('Removed track detail for device:', deviceStr);
+    }
 
     private saveReceivedConfig(config: NoteBuilderConfig[], sender: P2PMacAddress): void {
         // 受信した設定を送信元デバイスに保存
@@ -143,7 +160,7 @@ class DeviceConfigManager {
         console.log('Saved config for device:', senderStr, 'config:', config);
 
         // イベントを発火
-        this.eventEmitter.emit('configReceived', sender, config);
+        this.eventEmitter.emit('noteBuilderConfigReceived', sender, config);
     }
 
     private saveReceivedGeneratorConfig(config: GeneratorConfig[], sender: P2PMacAddress): void {
@@ -156,6 +173,16 @@ class DeviceConfigManager {
         this.eventEmitter.emit('generatorConfigReceived', sender, config);
     }
 
+    private saveReceivedTrackDetail(trackDetails: TrackDetail[], sender: P2PMacAddress): void {
+        // 受信したTrackDetailを送信元デバイスに保存
+        const senderStr = getAddressString(sender);
+        this.trackDetails.set(senderStr, trackDetails);
+        console.log('Saved track detail for device:', senderStr, 'trackDetails:', trackDetails);
+
+        // イベントを発火
+        this.eventEmitter.emit('trackDetailReceived', sender, trackDetails);
+    }
+
     private initializeExistingDevices(): void {
         // 初期化時に既存の接続デバイスに対してNoteBuilderConfigをリクエスト
         const existingDevices = mesh.getConnectedDevices();
@@ -166,6 +193,7 @@ class DeviceConfigManager {
             if (getAddressString(device) !== getAddressString(myAddress)) {
                 this.requestNoteBuilderConfig(device);
                 this.requestGeneratorConfig(device);
+                this.requestTrackDetail(device);
             }
         });
         console.log('Initialized with existing devices:', existingDevices.map(d => getAddressString(d)));
@@ -179,6 +207,10 @@ class DeviceConfigManager {
         return this.generatorConfigs.get(getAddressString(device));
     }
 
+    getTrackDetail(device: P2PMacAddress): TrackDetail[] | undefined {
+        return this.trackDetails.get(getAddressString(device));
+    }
+
     getAllConfigs(): Map<string, NoteBuilderConfig[]> {
         return new Map(this.deviceConfigs);
     }
@@ -187,7 +219,9 @@ class DeviceConfigManager {
         return new Map(this.generatorConfigs);
     }
 
-
+    getAllTrackDetails(): Map<string, TrackDetail[]> {
+        return new Map(this.trackDetails);
+    }
 }
 
 export const deviceConfigManager = new DeviceConfigManager(); 
