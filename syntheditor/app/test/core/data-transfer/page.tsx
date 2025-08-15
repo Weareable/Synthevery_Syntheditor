@@ -25,7 +25,7 @@ const DataTransferExample: React.FC = () => {
 
     useEffect(() => {
         // deviceConfigManagerのイベントリスナーを設定
-        deviceConfigManager.eventEmitter.on('configReceived', (device, config) => {
+        deviceConfigManager.eventEmitter.on('noteBuilderConfigReceived', (device, config) => {
             console.log('DeviceConfigManager: Received config from:', getAddressString(device), 'config:', config);
             setDeviceConfigs(new Map(deviceConfigManager.getAllConfigs()));
         });

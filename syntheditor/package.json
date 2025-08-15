@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "WATCHPACK_POLLING=true next dev",
+    "dev:local": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
