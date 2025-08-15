@@ -7,6 +7,7 @@ export const kChunkSize = 192;
 export namespace DataTypes {
     export const kNoteBuilderConfig: number = 10;
     export const kGeneratorConfig: number = 11;
+    export const kTrackDetail: number = 12;
 }
 
 export namespace SessionCommandID {
