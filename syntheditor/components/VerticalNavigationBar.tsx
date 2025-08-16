@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Panel } from '@/components/ui/panel'
 
 const navigationItems = [
+    { href: '/player/tracks', icon: '🎼', label: 'トラック選択' },
     { href: '/player/synthesizer', icon: '🎹', label: 'シンセサイザー' },
     { href: '/player/drums', icon: '🥁', label: 'ドラムス' },
     { href: '/player/bass', icon: '🎸', label: 'ベース' },
