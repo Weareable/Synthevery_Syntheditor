@@ -22,7 +22,12 @@ class DeviceTypeSynchronizer {
 
         this.intervalId = setInterval(() => {
             this.registry.updateNodeRoles(mesh.getConnectedDevices());
-            refreshRegistry(mesh.sendPacket, this.registry, mesh.getAddress, true);
+            refreshRegistry(
+                (type: number, destination: P2PMacAddress, data: Uint8Array) => mesh.sendPacket(type, destination, data),
+                this.registry,
+                mesh.getAddress,
+                true
+            );
         }, 1000);
     }
 
@@ -35,9 +40,15 @@ class DeviceTypeSynchronizer {
     }
 
     private handlePacket(packet: MeshPacket) {
-        handleRolePacket(mesh.sendPacket, mesh.getAddress, this.registry, packet, (updatedRegistry: RoleRegistry) => {
-            this.registry = updatedRegistry;
-        });
+        handleRolePacket(
+            (type: number, destination: P2PMacAddress, data: Uint8Array) => mesh.sendPacket(type, destination, data),
+            mesh.getAddress,
+            this.registry,
+            packet,
+            (updatedRegistry: RoleRegistry) => {
+                this.registry = updatedRegistry;
+            }
+        );
     }
 
 }
