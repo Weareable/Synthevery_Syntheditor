@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { mesh } from "@/lib/synthevery-core/connection/mesh";
+import { useSynthevery } from "@/contexts/SyntheveryContext";
 import { getAddressFromString, getAddressString } from "@/lib/synthevery-core/connection/util";
 import { P2PMacAddress } from "@/lib/synthevery-core/types/mesh";
 
 export default function useMesh() {
+    const { mesh } = useSynthevery();
     const [connectedDevices, setConnectedDevices] = useState<string[]>(() =>
         mesh.getConnectedDevices().map((device) => getAddressString(device))
     );

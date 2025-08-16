@@ -2,6 +2,7 @@
 import './globals.css';
 import { Metadata } from 'next';
 import { ThemeProvider } from '@/components/theme-provider';
+import { SyntheveryProvider } from '@/contexts/SyntheveryContext';
 import { Montserrat } from 'next/font/google';
 
 const montserrat = Montserrat({
@@ -31,7 +32,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
+            <SyntheveryProvider>
+              {children}
+            </SyntheveryProvider>
           </ThemeProvider>
         </body>
       </html>

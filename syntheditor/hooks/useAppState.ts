@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { mesh } from "@/lib/synthevery-core/connection/mesh";
+import { useSynthevery } from "@/contexts/SyntheveryContext";
 import { getAddressString } from "@/lib/synthevery-core/connection/util";
 import { P2PMacAddress } from "@/lib/synthevery-core/types/mesh";
-import { playerSyncStates } from "@/lib/synthevery-core/player/states";
 import { SyncState, ReadOnlySyncState } from "@/lib/synthevery-core/appstate/appstates";
 
 export function useAppState<T>(syncState: SyncState<T>): [T, (newValue: T) => void] {

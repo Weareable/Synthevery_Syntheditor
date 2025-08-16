@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { trackConfigManager } from '@/lib/synthevery-core/tracks/track-config-manager';
+import { useSynthevery } from '@/contexts/SyntheveryContext';
 import { TrackDetail, NoteBuilderConfig, GeneratorConfig } from '@/lib/synthevery-core/types/player';
 import { P2PMacAddress } from '@/lib/synthevery-core/types/mesh';
 import { getAddressString } from '@/lib/synthevery-core/connection/util';
@@ -9,6 +9,7 @@ import { getAddressString } from '@/lib/synthevery-core/connection/util';
  * trackConfigManagerのイベントをReact stateに変換
  */
 export function useTrackConfig() {
+    const { trackConfigManager } = useSynthevery();
     const [trackDetails, setTrackDetails] = useState<TrackDetail[]>([]);
     const [noteBuilderConfigs, setNoteBuilderConfigs] = useState<NoteBuilderConfig[]>([]);
     const [generatorConfigs, setGeneratorConfigs] = useState<GeneratorConfig[]>([]);
@@ -92,7 +93,7 @@ export function useTrackConfig() {
             trackConfigManager.off('configSyncCompleted', handleConfigSyncCompleted);
             trackConfigManager.off('deviceConfigChanged', handleDeviceConfigChanged);
         };
-    }, []); // 依存配列を空にする
+    }, []); // オブジェクトが不変なので空でOK！
 
     // 準備状態の監視
     useEffect(() => {

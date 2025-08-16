@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { deviceController } from "@/lib/synthevery-core/device/controller";
+import { useSynthevery } from "@/contexts/SyntheveryContext";
 import { useReadOnlyAppState } from "./useAppState";
-import { playerSyncStates } from "@/lib/synthevery-core/player/states";
 
 export default function useDeviceControl() {
+    const { deviceController, playerSyncStates } = useSynthevery();
     const tickClockState = useReadOnlyAppState(playerSyncStates.tickClockState);
 
     const playingState = tickClockState.playing;
@@ -11,15 +11,15 @@ export default function useDeviceControl() {
 
     const setPlayingState = useCallback((playing: boolean) => {
         deviceController.setPlayingState(playing ? "play" : "pause");
-    }, []);
+    }, []); // オブジェクトが不変なので空でOK！
 
     const setBpmState = useCallback((bpm: number) => {
         deviceController.setBpm(bpm);
-    }, []);
+    }, []); // オブジェクトが不変なので空でOK！
 
     const stop = useCallback(() => {
         deviceController.setPlayingState("stop");
-    }, []);
+    }, []); // オブジェクトが不変なので空でOK！
 
     return { playingState, bpmState, setPlayingState, setBpmState, stop };
 }
