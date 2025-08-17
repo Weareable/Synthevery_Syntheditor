@@ -5,6 +5,8 @@ export const BLE_MIDI_SERVICE_UUID = "03b80e5a-ede8-4b33-a751-6ce34ec4c700";
 export const MAC_ADDRESS_CHAR_UUID = "e8771894-9411-6d2e-ae0c-cb2eb5cb1c40";
 
 export const CONNECTED_DEVICES_CHAR_UUID = "befea93d-5f47-9a86-b6e1-720f19430641";
+export const DEVICE_ORDER_CHAR_UUID = "553161fa-6b5a-738b-512f-db1a5e57d53d";
+export const LEADER_MAC_ADDRESS_CHAR_UUID = "88e8f619-f352-ef3d-95cb-6493464d5f6c";
 export const MESH_PACKET_TX_CHAR_UUID = "eeb4f625-d307-efb1-779e-6d913d961982";
 export const MESH_PACKET_RX_CHAR_UUID = "eba308dc-e069-d268-a43f-2e341418fae9";
 export const BLE_MIDI_CHAR_UUID = "7772e5db-3868-4112-a1a9-f2669d106bf3";

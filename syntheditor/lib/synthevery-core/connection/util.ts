@@ -24,6 +24,22 @@ export function decodeConnectedDevices(data: Uint8Array): P2PMacAddress[] {
     return macAddresses;
 }
 
+export function decodeDeviceOrder(data: Uint8Array): P2PMacAddress[] {
+    const macAddresses = [];
+    for (let i = 0; i < data.length; i += 6) {
+        const macAddress = data.slice(i, i + 6);
+        macAddresses.push({ address: macAddress });
+    }
+    return macAddresses;
+}
+
+export function decodeLeaderMacAddress(data: Uint8Array): P2PMacAddress | null {
+    if (data.length !== 6) {
+        return null;
+    }
+    return { address: data };
+}
+
 export function encodeMeshPacket(packet: MeshPacket): Uint8Array {
     return new Uint8Array(encode([
         packet.type,
