@@ -21,6 +21,9 @@ Syntheveryは、専用デバイス（Synthevery）を制御するためのWebア
 - [ハードウェア仕様](./device/hardware.md)
 - [通信仕様](./device/communication.md)
 - [音声処理仕様](./device/audio.md)
+- [Position管理](./device/position-management.md)
+- [OldestNodeFinder](./device/oldest-node-finder.md)
+- [デバイス色管理](./device/device-color-manager.md)
 
 ### 3. アプリケーション仕様
 - [アーキテクチャ](./app/architecture.md)
@@ -33,6 +36,7 @@ Syntheveryは、専用デバイス（Synthevery）を制御するためのWebア
 
 ### 5. コンポーネント仕様
 - [楽器選択パネル](./app/components/instrument-select-panel.md)
+- [デバイスパネル](./app/components/device-panel.md)
 
 ### 6. 整合性チェック
 - [整合性チェック結果](./consistency-check.md)
