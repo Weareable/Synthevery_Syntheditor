@@ -31,9 +31,10 @@
 4. **ナビゲーション矢印**: 左右の矢印（トラックの切り替え）
 
 ### デバイスID割り当て
-- **接続順序**: `OldestNodeFinder`で決定されるデバイス接続順序に基づく
+- **接続順序**: `mesh.getDeviceOrder()`で取得されるデバイス接続順序に基づく
 - **アルファベット順**: 最初に接続されたデバイスがA、次がB、という順序
 - **最大数**: 26台まで（A-Z）
+- **実装済み**: リーダーデバイスの`deviceOrder`から接続順序を取得
 
 ### トラック情報表示
 - **トラック名**: `CurrentTracksState`から取得したトラック番号を`trackConfig`で検索
@@ -77,16 +78,16 @@
 
 ### 必要な状態
 1. **接続デバイス情報**: `mesh.getConnectedDevices()`
-2. **デバイス接続順序**: `OldestNodeFinder`（未実装）
+2. **デバイス接続順序**: `mesh.getDeviceOrder()`
 3. **トラック選択状態**: `CurrentTracksState`
 4. **デバイス装着位置**: `DevicePositionState`
 5. **トラック設定**: `trackConfig`（楽器名、アイコン等）
 
 ### 実装優先順位
-1. **OldestNodeFinder実装**: デバイス接続順序の取得機能
-2. **デバイス色取得**: デバイス本体色とLED色の取得機能
-3. **DeviceIconコンポーネント**: デバイスアイコンの作成
-4. **DevicePanelコンポーネント**: メインコンポーネントの実装
+1. **デバイス色取得**: デバイス本体色とLED色の取得機能
+2. **DeviceIconコンポーネント**: デバイスアイコンの作成
+3. **DevicePanelコンポーネント**: メインコンポーネントの実装
+4. **接続順序機能**: `mesh.getDeviceOrder()`の活用
 
 ## 技術的実装
 
@@ -102,7 +103,7 @@ DevicePanel
 ```
 
 ### 状態管理
-- **useDeviceOrder**: デバイス接続順序の管理
+- **useDeviceOrder**: デバイス接続順序の管理（`mesh.getDeviceOrder()`を使用）
 - **useDeviceColors**: デバイス色情報の管理
 - **useDevicePositions**: デバイス装着位置の管理
 
@@ -131,3 +132,4 @@ DevicePanel
 - **useTrackConfig**: トラック設定の取得パターン
 - **useAppState**: アプリケーション状態の管理パターン
 - **playerSyncStates**: プレイヤー状態の同期パターン
+- **useMesh**: メッシュ接続状態の管理パターン（`mesh.getDeviceOrder()`使用）
