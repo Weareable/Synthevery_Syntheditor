@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
@@ -79,12 +79,24 @@ export const BPMInput: React.FC<BPMInputProps> = ({
     const popupTimeoutRef = useRef<NodeJS.Timeout | null>(null); // ポップアップ遅延非表示用
     const POPUP_HIDE_DELAY = 400; // ms
 
+    // BPM変更時のコールバックをuseEffect内で処理
+    const [pendingBpmChange, setPendingBpmChange] = useState<number | null>(null);
+
+    // レンダリング後にonBpmChangeを実行
+    useEffect(() => {
+        if (pendingBpmChange !== null && onBpmChange) {
+            onBpmChange(pendingBpmChange);
+            setPendingBpmChange(null);
+        }
+    }, [pendingBpmChange, onBpmChange]);
+
     // BPM変更時のコールバック
     const updateBpm = (newBpm: number | ((prev: number) => number)) => {
         setBpm(prev => {
             const value = typeof newBpm === 'function' ? newBpm(prev) : newBpm;
             const clamped = Math.max(min, Math.min(max, value));
-            onBpmChange?.(clamped);
+            // レンダリング中のコールバック呼び出しを避け、useEffect内で処理
+            setPendingBpmChange(clamped);
             return clamped;
         });
     };
