@@ -14,6 +14,8 @@ class DeviceCommandClient implements CommandClientInterface {
     static readonly COMMAND_TYPE_REQUEST_NOTE_BUILDER_CONFIG = 0x10;
     static readonly COMMAND_TYPE_REQUEST_GENERATOR_CONFIG = 0x11;
     static readonly COMMAND_TYPE_REQUEST_TRACK_DETAIL = 0x12;
+    static readonly COMMAND_TYPE_REQUEST_BODY_COLOR_CONFIG = 0x13;
+    static readonly COMMAND_TYPE_REQUEST_LED_COLOR_CONFIG = 0x14;
 
     static readonly COMMAND_TYPE_PLAYING_STATE_SIZE = 1;
     static readonly COMMAND_TYPE_BPM_SIZE = 4;
@@ -31,6 +33,10 @@ class DeviceCommandClient implements CommandClientInterface {
             case DeviceCommandClient.COMMAND_TYPE_REQUEST_GENERATOR_CONFIG:
                 return new Uint8Array();
             case DeviceCommandClient.COMMAND_TYPE_REQUEST_TRACK_DETAIL:
+                return new Uint8Array();
+            case DeviceCommandClient.COMMAND_TYPE_REQUEST_BODY_COLOR_CONFIG:
+                return new Uint8Array();
+            case DeviceCommandClient.COMMAND_TYPE_REQUEST_LED_COLOR_CONFIG:
                 return new Uint8Array();
         }
 
@@ -145,6 +151,32 @@ class DeviceController {
         handler.pushCommand({
             client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
             type: DeviceCommandClient.COMMAND_TYPE_REQUEST_TRACK_DETAIL,
+        });
+    }
+
+    requestBodyColorConfig(peer: P2PMacAddress): void {
+        const handler = commandDispatcher.getCommandHandler(peer, false);
+        if (!handler) {
+            console.warn("requestBodyColorConfig() : handler unavailable");
+            return;
+        }
+
+        handler.pushCommand({
+            client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+            type: DeviceCommandClient.COMMAND_TYPE_REQUEST_BODY_COLOR_CONFIG,
+        });
+    }
+
+    requestLedColorConfig(peer: P2PMacAddress): void {
+        const handler = commandDispatcher.getCommandHandler(peer, false);
+        if (!handler) {
+            console.warn("requestLedColorConfig() : handler unavailable");
+            return;
+        }
+
+        handler.pushCommand({
+            client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+            type: DeviceCommandClient.COMMAND_TYPE_REQUEST_LED_COLOR_CONFIG,
         });
     }
 

@@ -1,8 +1,8 @@
 import { mesh } from "../connection/mesh";
 import { dataTransferController } from "../data-transfer/data-transfer-controller";
 import { P2PMacAddress } from "../types/mesh";
-import { NoteBuilderConfig, GeneratorConfig, TrackDetail } from "../types/player";
-import { NoteBuilderConfigReceiverPort, GeneratorConfigReceiverPort, TrackDetailReceiverPort } from "./config";
+import { NoteBuilderConfig, GeneratorConfig, TrackDetail, BodyColorConfig, LedColorConfig } from "../types/player";
+import { NoteBuilderConfigReceiverPort, GeneratorConfigReceiverPort, TrackDetailReceiverPort, BodyColorConfigReceiverPort, LedColorConfigReceiverPort } from "./config";
 import { getAddressString, getAddressFromString } from "../connection/util";
 import { EventEmitter } from "eventemitter3";
 import { deviceController } from "./controller";
@@ -11,6 +11,8 @@ interface DeviceConfigManagerEvents {
     noteBuilderConfigReceived: (device: P2PMacAddress, config: NoteBuilderConfig[]) => void;
     generatorConfigReceived: (device: P2PMacAddress, config: GeneratorConfig[]) => void;
     trackDetailReceived: (device: P2PMacAddress, trackDetails: TrackDetail[]) => void;
+    bodyColorConfigReceived: (device: P2PMacAddress, config: BodyColorConfig) => void;
+    ledColorConfigReceived: (device: P2PMacAddress, config: LedColorConfig) => void;
     deviceConnected: (device: P2PMacAddress) => void;
     deviceDisconnected: (device: P2PMacAddress) => void;
 }
@@ -19,15 +21,21 @@ class DeviceConfigManager {
     private deviceConfigs: Map<string, NoteBuilderConfig[]> = new Map();
     private generatorConfigs: Map<string, GeneratorConfig[]> = new Map();
     private trackDetails: Map<string, TrackDetail[]> = new Map();
+    private bodyColorConfigs: Map<string, BodyColorConfig> = new Map();
+    private ledColorConfigs: Map<string, LedColorConfig> = new Map();
     private noteBuilderConfigReceiverPort: NoteBuilderConfigReceiverPort;
     private generatorConfigReceiverPort: GeneratorConfigReceiverPort;
     private trackDetailReceiverPort: TrackDetailReceiverPort;
+    private bodyColorConfigReceiverPort: BodyColorConfigReceiverPort;
+    private ledColorConfigReceiverPort: LedColorConfigReceiverPort;
     readonly eventEmitter = new EventEmitter<DeviceConfigManagerEvents>();
 
     constructor() {
         this.noteBuilderConfigReceiverPort = new NoteBuilderConfigReceiverPort();
         this.generatorConfigReceiverPort = new GeneratorConfigReceiverPort();
         this.trackDetailReceiverPort = new TrackDetailReceiverPort();
+        this.bodyColorConfigReceiverPort = new BodyColorConfigReceiverPort();
+        this.ledColorConfigReceiverPort = new LedColorConfigReceiverPort();
         this.setupEventListeners();
         this.registerReceiverPort();
 
@@ -62,6 +70,20 @@ class DeviceConfigManager {
             this.saveReceivedTrackDetail(trackDetails, sender);
         });
 
+        // BodyColorConfig受信時の処理
+        this.bodyColorConfigReceiverPort.eventEmitter.on('received', (config: BodyColorConfig, sender: P2PMacAddress) => {
+            // 受信した本体色設定を保存
+            console.log('Received BodyColorConfig from:', getAddressString(sender), 'config:', config);
+            this.saveReceivedBodyColorConfig(config, sender);
+        });
+
+        // LedColorConfig受信時の処理
+        this.ledColorConfigReceiverPort.eventEmitter.on('received', (config: LedColorConfig, sender: P2PMacAddress) => {
+            // 受信したLED色設定を保存
+            console.log('Received LedColorConfig from:', getAddressString(sender), 'config:', config);
+            this.saveReceivedLedColorConfig(config, sender);
+        });
+
         // データ転送セッション開始時の処理（デバッグ用）
         dataTransferController.getEventEmitter().on('sessionStart', (peer: P2PMacAddress, sessionId: number, type: string) => {
             if (type === 'receiver') {
@@ -74,6 +96,8 @@ class DeviceConfigManager {
         dataTransferController.registerReceiverPort(this.noteBuilderConfigReceiverPort);
         dataTransferController.registerReceiverPort(this.generatorConfigReceiverPort);
         dataTransferController.registerReceiverPort(this.trackDetailReceiverPort);
+        dataTransferController.registerReceiverPort(this.bodyColorConfigReceiverPort);
+        dataTransferController.registerReceiverPort(this.ledColorConfigReceiverPort);
     }
 
     private handleDevicesChanged(devices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]): void {
@@ -83,6 +107,8 @@ class DeviceConfigManager {
             this.requestNoteBuilderConfig(device);
             this.requestGeneratorConfig(device);
             this.requestTrackDetail(device);
+            this.requestBodyColorConfig(device);
+            this.requestLedColorConfig(device);
             this.eventEmitter.emit('deviceConnected', device);
         });
 
@@ -92,6 +118,8 @@ class DeviceConfigManager {
             this.removeDeviceConfig(device);
             this.removeGeneratorConfig(device);
             this.removeTrackDetail(device);
+            this.removeBodyColorConfig(device);
+            this.removeLedColorConfig(device);
             this.eventEmitter.emit('deviceDisconnected', device);
         });
     }
@@ -135,6 +163,32 @@ class DeviceConfigManager {
         console.log('Requesting TrackDetail from device:', getAddressString(device));
     }
 
+    private requestBodyColorConfig(device: P2PMacAddress): void {
+        // webアプリ（自分自身）にはリクエストを送信しない
+        const myAddress = mesh.getAddress();
+        if (getAddressString(device) === getAddressString(myAddress)) {
+            console.log('Skipping BodyColorConfig request to self:', getAddressString(device));
+            return;
+        }
+
+        // BodyColorConfigのリクエストを送信
+        deviceController.requestBodyColorConfig(device);
+        console.log('Requesting BodyColorConfig from device:', getAddressString(device));
+    }
+
+    private requestLedColorConfig(device: P2PMacAddress): void {
+        // webアプリ（自分自身）にはリクエストを送信しない
+        const myAddress = mesh.getAddress();
+        if (getAddressString(device) === getAddressString(myAddress)) {
+            console.log('Skipping LedColorConfig request to self:', getAddressString(device));
+            return;
+        }
+
+        // LedColorConfigのリクエストを送信
+        deviceController.requestLedColorConfig(device);
+        console.log('Requesting LedColorConfig from device:', getAddressString(device));
+    }
+
     private removeDeviceConfig(device: P2PMacAddress): void {
         const deviceStr = getAddressString(device);
         this.deviceConfigs.delete(deviceStr);
@@ -151,6 +205,18 @@ class DeviceConfigManager {
         const deviceStr = getAddressString(device);
         this.trackDetails.delete(deviceStr);
         console.log('Removed track detail for device:', deviceStr);
+    }
+
+    private removeBodyColorConfig(device: P2PMacAddress): void {
+        const deviceStr = getAddressString(device);
+        this.bodyColorConfigs.delete(deviceStr);
+        console.log('Removed BodyColorConfig for device:', deviceStr);
+    }
+
+    private removeLedColorConfig(device: P2PMacAddress): void {
+        const deviceStr = getAddressString(device);
+        this.ledColorConfigs.delete(deviceStr);
+        console.log('Removed LedColorConfig for device:', deviceStr);
     }
 
     private saveReceivedConfig(config: NoteBuilderConfig[], sender: P2PMacAddress): void {
@@ -183,6 +249,20 @@ class DeviceConfigManager {
         this.eventEmitter.emit('trackDetailReceived', sender, trackDetails);
     }
 
+    private saveReceivedBodyColorConfig(config: BodyColorConfig, sender: P2PMacAddress): void {
+        const senderStr = getAddressString(sender);
+        this.bodyColorConfigs.set(senderStr, config);
+        console.log('Saved BodyColorConfig for device:', senderStr, 'config:', config);
+        this.eventEmitter.emit('bodyColorConfigReceived', sender, config);
+    }
+
+    private saveReceivedLedColorConfig(config: LedColorConfig, sender: P2PMacAddress): void {
+        const senderStr = getAddressString(sender);
+        this.ledColorConfigs.set(senderStr, config);
+        console.log('Saved LedColorConfig for device:', senderStr, 'config:', config);
+        this.eventEmitter.emit('ledColorConfigReceived', sender, config);
+    }
+
     private initializeExistingDevices(): void {
         // 初期化時に既存の接続デバイスに対してNoteBuilderConfigをリクエスト
         const existingDevices = mesh.getConnectedDevices();
@@ -194,6 +274,8 @@ class DeviceConfigManager {
                 this.requestNoteBuilderConfig(device);
                 this.requestGeneratorConfig(device);
                 this.requestTrackDetail(device);
+                this.requestBodyColorConfig(device);
+                this.requestLedColorConfig(device);
             }
         });
         console.log('Initialized with existing devices:', existingDevices.map(d => getAddressString(d)));
@@ -211,6 +293,14 @@ class DeviceConfigManager {
         return this.trackDetails.get(getAddressString(device));
     }
 
+    getBodyColorConfig(device: P2PMacAddress): BodyColorConfig | undefined {
+        return this.bodyColorConfigs.get(getAddressString(device));
+    }
+
+    getLedColorConfig(device: P2PMacAddress): LedColorConfig | undefined {
+        return this.ledColorConfigs.get(getAddressString(device));
+    }
+
     getAllConfigs(): Map<string, NoteBuilderConfig[]> {
         return new Map(this.deviceConfigs);
     }
@@ -221,6 +311,14 @@ class DeviceConfigManager {
 
     getAllTrackDetails(): Map<string, TrackDetail[]> {
         return new Map(this.trackDetails);
+    }
+
+    getAllBodyColorConfigs(): Map<string, BodyColorConfig> {
+        return new Map(this.bodyColorConfigs);
+    }
+
+    getAllLedColorConfigs(): Map<string, LedColorConfig> {
+        return new Map(this.ledColorConfigs);
     }
 }
 

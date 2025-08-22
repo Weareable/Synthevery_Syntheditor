@@ -142,3 +142,17 @@ export interface DynamicsConfig {
 export type MotionType =
     | 'tap' | 'swipe' | 'shake' | 'tilt'
     | 'rotation' | 'pressure' | 'proximity';
+
+/**
+ * 本体色設定
+ */
+export interface BodyColorConfig {
+    body_color: string;  // デフォルト値 "#FFFFFF"
+}
+
+/**
+ * LED色設定
+ */
+export interface LedColorConfig {
+    base_led_color: string;  // デフォルト値 "#FF0000"
+}

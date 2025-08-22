@@ -5,7 +5,7 @@ import { DataTypes, SessionID } from "../data-transfer/constants";
 import { P2PMacAddress } from "../types/mesh";
 import { JsonReceiverDataStore, JsonSenderDataStore } from "../data-transfer/json-store";
 import { EventEmitter } from "eventemitter3";
-import { NoteBuilderConfig, GeneratorConfig, TrackDetail } from "../types/player";
+import { NoteBuilderConfig, GeneratorConfig, TrackDetail, BodyColorConfig, LedColorConfig } from "../types/player";
 
 interface NoteBuilderConfigReceiverPortEvents {
     received: (json: any, sender: P2PMacAddress) => void;
@@ -125,6 +125,88 @@ export function sendGeneratorConfig(receiver: P2PMacAddress, config: GeneratorCo
 
 export function sendTrackDetail(receiver: P2PMacAddress, trackDetails: TrackDetail[]): boolean {
     const store = new JsonSenderDataStore(trackDetails, DataTypes.kTrackDetail, "");
+    const result = dataTransferController.sendRequest(receiver, store, []);
+    if (result === null) {
+        return false;
+    }
+    return true;
+}
+
+interface BodyColorConfigReceiverPortEvents {
+    received: (json: any, sender: P2PMacAddress) => void;
+}
+
+interface LedColorConfigReceiverPortEvents {
+    received: (json: any, sender: P2PMacAddress) => void;
+}
+
+export class BodyColorConfigReceiverPort implements ReceiverPortInterface {
+    readonly eventEmitter = new EventEmitter<BodyColorConfigReceiverPortEvents>();
+
+    getDataType(): DataType {
+        return DataTypes.kBodyColorConfig;
+    }
+
+    handleRequest(sender: P2PMacAddress, sessionId: SessionID, data: RequestData): { receiver: ReceiverDataStoreInterface, responseData: ResponseData } {
+        const receiver = new JsonReceiverDataStore(data.totalSize, sender);
+        receiver.eventEmitter.on('received', (json: any, sender: P2PMacAddress) => {
+            this.eventEmitter.emit('received', json, sender);
+        });
+        const responseData: ResponseData = {
+            isAccepted: true,
+            reason: 0
+        };
+        return { receiver, responseData };
+    }
+
+    onStart(session: ReceiverSessionInterface, id: SessionID): void {
+        console.warn("BodyColorConfigReceiverPort: onStart session: ", session, "id: ", id);
+    }
+
+    onFinish(session: ReceiverSessionInterface, id: SessionID): void {
+        console.warn("BodyColorConfigReceiverPort: onFinish session: ", session, "id: ", id);
+    }
+}
+
+export class LedColorConfigReceiverPort implements ReceiverPortInterface {
+    readonly eventEmitter = new EventEmitter<LedColorConfigReceiverPortEvents>();
+
+    getDataType(): DataType {
+        return DataTypes.kLedColorConfig;
+    }
+
+    handleRequest(sender: P2PMacAddress, sessionId: SessionID, data: RequestData): { receiver: ReceiverDataStoreInterface, responseData: ResponseData } {
+        const receiver = new JsonReceiverDataStore(data.totalSize, sender);
+        receiver.eventEmitter.on('received', (json: any, sender: P2PMacAddress) => {
+            this.eventEmitter.emit('received', json, sender);
+        });
+        const responseData: ResponseData = {
+            isAccepted: true,
+            reason: 0
+        };
+        return { receiver, responseData };
+    }
+
+    onStart(session: ReceiverSessionInterface, id: SessionID): void {
+        console.warn("LedColorConfigReceiverPort: onStart session: ", session, "id: ", id);
+    }
+
+    onFinish(session: ReceiverSessionInterface, id: SessionID): void {
+        console.warn("LedColorConfigReceiverPort: onFinish session: ", session, "id: ", id);
+    }
+}
+
+export function sendBodyColorConfig(receiver: P2PMacAddress, config: BodyColorConfig): boolean {
+    const store = new JsonSenderDataStore(config, DataTypes.kBodyColorConfig, "");
+    const result = dataTransferController.sendRequest(receiver, store, []);
+    if (result === null) {
+        return false;
+    }
+    return true;
+}
+
+export function sendLedColorConfig(receiver: P2PMacAddress, config: LedColorConfig): boolean {
+    const store = new JsonSenderDataStore(config, DataTypes.kLedColorConfig, "");
     const result = dataTransferController.sendRequest(receiver, store, []);
     if (result === null) {
         return false;
