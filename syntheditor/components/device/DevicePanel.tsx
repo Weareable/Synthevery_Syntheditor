@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { cn } from '@/lib/utils';
+import { cn, getDeviceAlphabetId } from '@/lib/utils';
 import { Panel } from '@/components/ui/panel';
 import { DeviceCard } from './DeviceCard';
 import { HumanBodyDisplay } from './HumanBodyDisplay';
-import { useDeviceOrder } from '@/hooks/useDeviceOrder';
 import { useDevicePositions } from '@/hooks/useDevicePositions';
 import { useDeviceColors } from '@/hooks/useDeviceColors';
 import { useTrackConfig } from '@/hooks/useTrackConfig';
@@ -43,14 +42,9 @@ export const DevicePanel: React.FC<DevicePanelProps> = ({
     // 変更: useMeshフックを使用してデバイス接続と順序を取得
     const {
         connectedDevices: meshDevices,
-        deviceOrder: meshDeviceOrder
+        deviceOrder: meshDeviceOrder,
+        isReady: isMeshReady
     } = useMesh();
-
-    // 既存のuseDeviceOrderはアルファベットID生成のみに使用
-    const {
-        getDeviceAlphabetId,
-        isOrderReady: isHookOrderReady
-    } = useDeviceOrder();
 
     const {
         getDevicePosition,
@@ -107,7 +101,7 @@ export const DevicePanel: React.FC<DevicePanelProps> = ({
     // 装着可能デバイスの取得（人体アイコン用）
     const wearableDevices = getWearableDevices().map(wearableDevice => ({
         ...wearableDevice,
-        alphabetId: getDeviceAlphabetId(wearableDevice.address),
+        alphabetId: getDeviceAlphabetId(meshDeviceOrder, getAddressString(wearableDevice.address)),
         bodyColor: getDeviceBodyColor(wearableDevice.address)
     }));
 
@@ -123,7 +117,19 @@ export const DevicePanel: React.FC<DevicePanelProps> = ({
     );
 
     // 準備状態のチェック
-    const isReady = isHookOrderReady && isPositionsReady && isTrackConfigReady;
+    const isReady = isPositionsReady && isTrackConfigReady && isMeshReady;
+
+    // デバッグ用：現在の状態をログ出力
+    useEffect(() => {
+        console.log('DevicePanel Debug:', {
+            isPositionsReady,
+            isTrackConfigReady,
+            isMeshReady,
+            meshDeviceOrderLength: meshDeviceOrder.length,
+            finalDeviceOrderLength: finalDeviceOrder.length,
+            connectedDevicesLength: connectedDevices.length
+        });
+    }, [isPositionsReady, isTrackConfigReady, isMeshReady, meshDeviceOrder.length, finalDeviceOrder.length, connectedDevices.length]);
 
     // ローディング表示
     if (!isReady) {
@@ -165,17 +171,15 @@ export const DevicePanel: React.FC<DevicePanelProps> = ({
                 <div className="flex-1 min-w-0">
                     <div className={deviceGridClasses}>
                         {finalDeviceOrder.length > 0 ? finalDeviceOrder.map((deviceAddr) => {
-                            const alphabetId = getDeviceAlphabetId(deviceAddr);
+                            const alphabetId = getDeviceAlphabetId(meshDeviceOrder, getAddressString(deviceAddr));
                             const trackInfo = getDeviceTrackInfo(deviceAddr);
                             const bodyColor = getDeviceBodyColor(deviceAddr);
                             const ledColor = getDeviceLedColor(deviceAddr);
                             const ledStatus = getDeviceLedStatus(deviceAddr);
 
-                            // デバイス色はDeviceConfigManagerから直接取得
-
                             return (
                                 <DeviceCard
-                                    key={getAddressString(deviceAddr)}
+                                    key={`device-${alphabetId}`}
                                     deviceAddress={deviceAddr}
                                     alphabetId={alphabetId}
                                     currentTrack={trackInfo}
@@ -184,25 +188,14 @@ export const DevicePanel: React.FC<DevicePanelProps> = ({
                                     ledStatus={ledStatus}
                                 />
                             );
-                        }) : connectedDevices.map((deviceAddr) => {
-                            const alphabetId = getDeviceAlphabetId(deviceAddr);
-                            const trackInfo = getDeviceTrackInfo(deviceAddr);
-                            const bodyColor = getDeviceBodyColor(deviceAddr);
-                            const ledColor = getDeviceLedColor(deviceAddr);
-                            const ledStatus = getDeviceLedStatus(deviceAddr);
-
-                            return (
-                                <DeviceCard
-                                    key={getAddressString(deviceAddr)}
-                                    deviceAddress={deviceAddr}
-                                    alphabetId={alphabetId}
-                                    currentTrack={trackInfo}
-                                    bodyColor={bodyColor}
-                                    ledColor={ledColor}
-                                    ledStatus={ledStatus}
-                                />
-                            );
-                        })}
+                        }) : (
+                            <div className="col-span-full text-center py-8">
+                                <div className="text-gray-400">
+                                    <p>デバイス順序の読み込み中...</p>
+                                    <p className="text-sm mt-2">接続されたデバイスの順序情報を待機中です</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
