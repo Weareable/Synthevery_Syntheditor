@@ -9,7 +9,7 @@ import { PlayingToggleButton } from '@/components/ui/playing-toggle-button'
 import { StopIcon, RecordIcon } from '@/components/icons/media'
 import { UndoIcon, RedoIcon } from '@/components/icons/control'
 import BPMInput from './ui/bpm-input'
-import { useAppState } from '@/hooks/useAppState'
+import { useAppState, useReadOnlyAppState } from '@/hooks/useAppState'
 import useDeviceControl from '@/hooks/useDeviceControl'
 import { playerSyncStates } from '@/lib/synthevery-core/player/states'
 
@@ -20,15 +20,20 @@ export function MediaControlBar() {
     const [isRecording, setIsRecording] = useAppState(playerSyncStates.recorderState);
 
     // プレイヤーコントロール
-    const { playingState, bpmState, setPlayingState, setBpmState, stop } = useDeviceControl();
+    const { setPlayingState, setBpmState, stop } = useDeviceControl();
 
-    // BPMInput用のローカル状態
-    const [localBpm, setLocalBpm] = useState(bpmState);
+    // AppStateからBPM値とPlaying状態を読み取り
+    const tickClockState = useReadOnlyAppState(playerSyncStates.tickClockState);
+    const appStateBpm = tickClockState.bpm;
+    const appStatePlaying = tickClockState.playing;
+
+    // BPMInput用のローカル状態（UI応答性のため）
+    const [localBpm, setLocalBpm] = useState(appStateBpm);
 
     // AppStateのBPMが変更されたらローカル状態を更新
     useEffect(() => {
-        setLocalBpm(bpmState);
-    }, [bpmState]);
+        setLocalBpm(appStateBpm);
+    }, [appStateBpm]);
 
     // デバウンス用タイマー
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -45,6 +50,7 @@ export function MediaControlBar() {
 
         // 新しいタイマーを設定（500ms待機）
         debounceTimerRef.current = setTimeout(() => {
+            // PlayerControllerを通してBPMを設定（デバイス間同期）
             setBpmState(newBpm);
         }, 500);
     }, [setBpmState]);
@@ -73,7 +79,7 @@ export function MediaControlBar() {
             </div>
             <VerticalDivider variant="background" size="lg" />
             <div className="flex gap-2 items-center">
-                <PlayingToggleButton isPlaying={playingState} onChange={setPlayingState} />
+                <PlayingToggleButton isPlaying={appStatePlaying} onChange={setPlayingState} />
                 <OneshotButton
                     variant="default"
                     size="default"
