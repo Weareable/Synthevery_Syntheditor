@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useRef } from "react";
 import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
@@ -56,7 +56,8 @@ export const BPMInput: React.FC<BPMInputProps> = ({
     size = "default",
     ...props
 }) => {
-    const [bpm, setBpm] = useState<number>(value ?? DEFAULT_BPM);
+    const bpm = value ?? DEFAULT_BPM;
+
     // ボタン長押し用interval/timeoutを左右で分離
     const leftIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const rightIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -75,30 +76,16 @@ export const BPMInput: React.FC<BPMInputProps> = ({
     const TOUCH_RELEASE_DELAY = 500; // ms
     let touchReleaseTimeout: NodeJS.Timeout | null = null;
 
-    const [isDraggingState, setIsDraggingState] = useState(false); // ポップアップ用
+    const [isDraggingState, setIsDraggingState] = React.useState(false); // ポップアップ用
     const popupTimeoutRef = useRef<NodeJS.Timeout | null>(null); // ポップアップ遅延非表示用
     const POPUP_HIDE_DELAY = 400; // ms
 
-    // BPM変更時のコールバックをuseEffect内で処理
-    const [pendingBpmChange, setPendingBpmChange] = useState<number | null>(null);
-
-    // レンダリング後にonBpmChangeを実行
-    useEffect(() => {
-        if (pendingBpmChange !== null && onBpmChange) {
-            onBpmChange(pendingBpmChange);
-            setPendingBpmChange(null);
-        }
-    }, [pendingBpmChange, onBpmChange]);
-
     // BPM変更時のコールバック
     const updateBpm = (newBpm: number | ((prev: number) => number)) => {
-        setBpm(prev => {
-            const value = typeof newBpm === 'function' ? newBpm(prev) : newBpm;
-            const clamped = Math.max(min, Math.min(max, value));
-            // レンダリング中のコールバック呼び出しを避け、useEffect内で処理
-            setPendingBpmChange(clamped);
-            return clamped;
-        });
+        if (!onBpmChange) return;
+        const value = typeof newBpm === 'function' ? newBpm(bpm) : newBpm;
+        const clamped = Math.max(min, Math.min(max, value));
+        onBpmChange(clamped);
     };
 
     // ボタン長押し（左: -1, 右: +1）
@@ -175,7 +162,8 @@ export const BPMInput: React.FC<BPMInputProps> = ({
         if (!isDragging.current) return;
         const dx = e.clientX - dragStartX.current;
         const newBpm = dragStartBpm.current + dx * 0.2;
-        updateBpm(Math.round(newBpm));
+        const clampedBpm = Math.round(Math.max(min, Math.min(max, newBpm)));
+        updateBpm(clampedBpm);
     };
     const handleDragEnd = () => {
         isDragging.current = false;
@@ -200,7 +188,8 @@ export const BPMInput: React.FC<BPMInputProps> = ({
         if (e.touches.length === 1) {
             const dx = e.touches[0].clientX - dragStartX.current;
             const newBpm = dragStartBpm.current + dx * 0.2;
-            updateBpm(Math.round(newBpm));
+            const clampedBpm = Math.round(Math.max(min, Math.min(max, newBpm)));
+            updateBpm(clampedBpm);
         }
     };
     const handleTouchEnd = () => {
