@@ -247,11 +247,16 @@ export interface MeshEvents {
     disconnected: (address: P2PMacAddress) => void;
     peerConnected: (address: P2PMacAddress) => void;
     peerDisconnected: (address: P2PMacAddress) => void;
+    deviceOrderChanged: (deviceOrder: P2PMacAddress[]) => void;
+    leaderMacAddressChanged: (leader: P2PMacAddress | null) => void;
 }
 
 class Mesh {
     meshDevices: Map<string, BLEMeshDevice> = new Map();
     private prevConnectedDevices: P2PMacAddress[] = [];
+    // 新規追加: 前回のデータを保持して変更検知
+    private prevDeviceOrder: P2PMacAddress[] = [];
+    private prevLeaderMacAddress: P2PMacAddress | null = null;
 
     private meshPacketCallbacks: Map<number, (packet: MeshPacket) => void> = new Map();
 
@@ -311,6 +316,8 @@ class Mesh {
             this.recalculateConnectedDevices();
         });
 
+        // 新規追加: BLEMeshDeviceのイベントをmeshレベルで中継
+        this.setupBLEMeshDeviceEventHandlers(meshDevice);
 
         await device.connect(SyntheveryDeviceFilter);
         await meshDevice.initialize(device, this.receivePacket.bind(this));
@@ -442,6 +449,82 @@ class Mesh {
 
     removeCallback(type: number): void {
         this.meshPacketCallbacks.delete(type);
+    }
+
+    // 新規追加: BLEMeshDeviceのイベントをmeshレベルで中継するメソッド
+    private setupBLEMeshDeviceEventHandlers(meshDevice: BLEMeshDevice): void {
+        // デバイス順序変更の監視
+        meshDevice.eventEmitter.on('bleDeviceOrderChanged', () => {
+            this.handleDeviceOrderChanged();
+        });
+
+        // リーダーMACアドレス変更の監視
+        meshDevice.eventEmitter.on('bleLeaderMacAddressChanged', () => {
+            this.handleLeaderMacAddressChanged();
+        });
+    }
+
+    // 新規追加: デバイス順序変更の処理（変更検知付き）
+    private handleDeviceOrderChanged(): void {
+        const currentDeviceOrder = this.getDeviceOrder();
+
+        console.log('=== Mesh: Device Order Change Detected ===');
+        console.log('Current device order:', currentDeviceOrder.map(getAddressString));
+        console.log('Previous device order:', this.prevDeviceOrder.map(getAddressString));
+        console.log('Has changed:', this.hasDeviceOrderChanged(currentDeviceOrder));
+
+        // 前回のデータと比較して変更があった場合のみイベント発火
+        if (this.hasDeviceOrderChanged(currentDeviceOrder)) {
+            this.prevDeviceOrder = [...currentDeviceOrder];
+            this.eventEmitter.emit('deviceOrderChanged', currentDeviceOrder);
+            console.log('Device order changed, emitting event:', currentDeviceOrder.map(getAddressString));
+        } else {
+            console.log('Device order unchanged, no event emitted');
+        }
+    }
+
+    // 新規追加: リーダーMACアドレス変更の処理（変更検知付き）
+    private handleLeaderMacAddressChanged(): void {
+        const currentLeader = this.getLeaderMacAddress();
+
+        console.log('=== Mesh: Leader MAC Address Change Detected ===');
+        console.log('Current leader:', currentLeader ? getAddressString(currentLeader) : 'null');
+        console.log('Previous leader:', this.prevLeaderMacAddress ? getAddressString(this.prevLeaderMacAddress) : 'null');
+        console.log('Has changed:', this.hasLeaderMacAddressChanged(currentLeader));
+
+        // 前回のデータと比較して変更があった場合のみイベント発火
+        if (this.hasLeaderMacAddressChanged(currentLeader)) {
+            this.prevLeaderMacAddress = currentLeader;
+            this.eventEmitter.emit('leaderMacAddressChanged', currentLeader);
+            console.log('Leader MAC address changed, emitting event:', currentLeader ? getAddressString(currentLeader) : 'null');
+        } else {
+            console.log('Leader MAC address unchanged, no event emitted');
+        }
+    }
+
+    // 新規追加: デバイス順序の変更検知
+    private hasDeviceOrderChanged(currentOrder: P2PMacAddress[]): boolean {
+        if (this.prevDeviceOrder.length !== currentOrder.length) {
+            return true;
+        }
+
+        return currentOrder.some((device, index) => {
+            const prevDevice = this.prevDeviceOrder[index];
+            return !prevDevice || !equalsAddress(prevDevice, device);
+        });
+    }
+
+    // 新規追加: リーダーMACアドレスの変更検知
+    private hasLeaderMacAddressChanged(currentLeader: P2PMacAddress | null): boolean {
+        if (!this.prevLeaderMacAddress && !currentLeader) {
+            return false; // 両方ともnullの場合は変更なし
+        }
+
+        if (!this.prevLeaderMacAddress || !currentLeader) {
+            return true; // どちらか一方がnullの場合は変更あり
+        }
+
+        return !equalsAddress(this.prevLeaderMacAddress, currentLeader);
     }
 
     getAddress(): P2PMacAddress {

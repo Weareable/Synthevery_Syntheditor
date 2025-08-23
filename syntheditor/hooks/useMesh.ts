@@ -11,6 +11,14 @@ export default function useMesh() {
     const [connectedPeers, setConnectedPeers] = useState<string[]>(() =>
         mesh.getConnectedPeers().map((device) => getAddressString(device))
     );
+    // 新規追加: デバイス順序とリーダーMACアドレス
+    const [deviceOrder, setDeviceOrder] = useState<string[]>(() =>
+        mesh.getDeviceOrder().map((device) => getAddressString(device))
+    );
+    const [leaderMacAddress, setLeaderMacAddress] = useState<string | null>(() => {
+        const leader = mesh.getLeaderMacAddress();
+        return leader ? getAddressString(leader) : null;
+    });
 
     useEffect(() => {
         const handleConnectedDevicesChanged = (devices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
@@ -45,6 +53,34 @@ export default function useMesh() {
         };
     }, []);
 
+    // 新規追加: デバイス順序変更の監視
+    useEffect(() => {
+        const handleDeviceOrderChanged = (deviceOrder: P2PMacAddress[]) => {
+            console.log('=== useMesh: Device Order Changed ===');
+            console.log('New device order:', deviceOrder.map(getAddressString));
+            setDeviceOrder(deviceOrder.map((device) => getAddressString(device)));
+        };
+        mesh.eventEmitter.on("deviceOrderChanged", handleDeviceOrderChanged);
+
+        return () => {
+            mesh.eventEmitter.off("deviceOrderChanged", handleDeviceOrderChanged);
+        };
+    }, []);
+
+    // 新規追加: リーダーMACアドレス変更の監視
+    useEffect(() => {
+        const handleLeaderMacAddressChanged = (leader: P2PMacAddress | null) => {
+            console.log('=== useMesh: Leader MAC Address Changed ===');
+            console.log('New leader:', leader ? getAddressString(leader) : 'null');
+            setLeaderMacAddress(leader ? getAddressString(leader) : null);
+        };
+        mesh.eventEmitter.on("leaderMacAddressChanged", handleLeaderMacAddressChanged);
+
+        return () => {
+            mesh.eventEmitter.off("leaderMacAddressChanged", handleLeaderMacAddressChanged);
+        };
+    }, []);
+
     const connectDevice = useCallback(async () => {
         await mesh.connectDevice();
     }, []);
@@ -56,6 +92,8 @@ export default function useMesh() {
     return {
         connectedDevices,
         connectedPeers,
+        deviceOrder,        // 新規追加
+        leaderMacAddress,   // 新規追加
         connectDevice,
         disconnectDevice,
     };
