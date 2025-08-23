@@ -6,6 +6,7 @@ import { getAddressFromString, getAddressString } from '@/lib/synthevery-core/co
 
 import { sendGeneratorConfig, sendNoteBuilderConfig } from '@/lib/synthevery-core/device/config';
 import { deviceConfigManager } from '@/lib/synthevery-core/device/device-config-manager';
+import { deviceController } from '@/lib/synthevery-core/device/controller';
 
 
 
@@ -20,18 +21,25 @@ const DataTransferExample: React.FC = () => {
 
     const updatePeerDevices = () => {
         console.log('updatePeerDevices');
-        setPeerDevices(mesh.getConnectedPeers().map(device => getAddressString(device)));
+        const connectedDevices = mesh.getConnectedDevices();
+        const deviceStrings = connectedDevices.map(device => getAddressString(device));
+        console.log('Connected devices:', deviceStrings);
+        console.log('DeviceConfigManager configs:', Array.from(deviceConfigManager.getAllConfigs().keys()));
+        console.log('DeviceConfigManager generator configs:', Array.from(deviceConfigManager.getAllGeneratorConfigs().keys()));
+        setPeerDevices(deviceStrings);
     }
 
     useEffect(() => {
         // deviceConfigManagerのイベントリスナーを設定
         deviceConfigManager.eventEmitter.on('noteBuilderConfigReceived', (device, config) => {
             console.log('DeviceConfigManager: Received config from:', getAddressString(device), 'config:', config);
+            console.log('All configs after update:', Array.from(deviceConfigManager.getAllConfigs().keys()));
             setDeviceConfigs(new Map(deviceConfigManager.getAllConfigs()));
         });
 
         deviceConfigManager.eventEmitter.on('generatorConfigReceived', (device, config) => {
             console.log('DeviceConfigManager: Received generator config from:', getAddressString(device), 'config:', config);
+            console.log('All generator configs after update:', Array.from(deviceConfigManager.getAllGeneratorConfigs().keys()));
             setGeneratorConfigs(new Map(deviceConfigManager.getAllGeneratorConfigs()));
         });
 
@@ -61,21 +69,96 @@ const DataTransferExample: React.FC = () => {
     }, []);
 
     const retrieveConfig = useCallback((peer: string) => {
-        const peerAddress = getAddressFromString(peer);
-        const config = deviceConfigManager.getConfig(peerAddress);
+        console.log('Retrieving config for peer string:', peer);
+        console.log('All available configs:', Array.from(deviceConfigManager.getAllConfigs().keys()));
+
+        // 文字列のアドレスを直接使用して検索
+        const config = deviceConfigManager.getAllConfigs().get(peer);
         console.log('Retrieved config for', peer, ':', config);
+
+        if (!config) {
+            console.log('No config found for peer:', peer);
+            console.log('Available peers:', Array.from(deviceConfigManager.getAllConfigs().keys()));
+
+            // 設定が存在しない場合、そのデバイスに設定をリクエスト
+            console.log('Requesting config from peer:', peer);
+            const peerAddress = getAddressFromString(peer);
+            if (peerAddress) {
+                // deviceControllerを使って設定をリクエスト
+                console.log('Requesting NoteBuilderConfig from device:', peer);
+                deviceController.requestNoteBuilderConfig(peerAddress);
+            }
+        }
     }, []);
 
     const retrieveGeneratorConfig = useCallback((peer: string) => {
-        const peerAddress = getAddressFromString(peer);
-        const config = deviceConfigManager.getGeneratorConfig(peerAddress);
+        console.log('Retrieving generator config for peer string:', peer);
+        console.log('All available generator configs:', Array.from(deviceConfigManager.getAllGeneratorConfigs().keys()));
+
+        // 文字列のアドレスを直接使用して検索
+        const config = deviceConfigManager.getAllGeneratorConfigs().get(peer);
         console.log('Retrieved generator config for', peer, ':', config);
+
+        if (!config) {
+            console.log('No generator config found for peer:', peer);
+            console.log('Available peers:', Array.from(deviceConfigManager.getAllGeneratorConfigs().keys()));
+
+            // 設定が存在しない場合、そのデバイスに設定をリクエスト
+            console.log('Requesting generator config from peer:', peer);
+            const peerAddress = getAddressFromString(peer);
+            console.log('Requesting GeneratorConfig from device:', peer);
+            deviceController.requestGeneratorConfig(peerAddress);
+        }
     }, []);
 
     return (
         <div>
             <div>
                 <button onClick={() => connectDevice()}>Connect</button>
+                <button onClick={updatePeerDevices} style={{ marginLeft: '10px' }}>Refresh Device List</button>
+                <button
+                    onClick={() => {
+                        peerDevices.forEach(peer => {
+                            if (!deviceConfigs.has(peer)) {
+                                const peerAddress = getAddressFromString(peer);
+                                if (peerAddress) {
+                                    console.log('Auto-requesting NoteBuilderConfig from:', peer);
+                                    deviceController.requestNoteBuilderConfig(peerAddress);
+                                }
+                            }
+                            if (!generatorConfigs.has(peer)) {
+                                const peerAddress = getAddressFromString(peer);
+                                if (peerAddress) {
+                                    console.log('Auto-requesting GeneratorConfig from:', peer);
+                                    deviceController.requestGeneratorConfig(peerAddress);
+                                }
+                            }
+                        });
+                    }}
+                    style={{ marginLeft: '10px' }}
+                >
+                    Request All Missing Configs
+                </button>
+            </div>
+
+            <div style={{ margin: '20px 0', padding: '10px', backgroundColor: '#f0f0f0' }}>
+                <h4>Debug Info:</h4>
+                <div>Connected Devices: {peerDevices.join(', ')}</div>
+                <div>Device Configs: {Array.from(deviceConfigs.keys()).join(', ')}</div>
+                <div>Generator Configs: {Array.from(generatorConfigs.keys()).join(', ')}</div>
+                <div style={{ marginTop: '10px' }}>
+                    <strong>Missing Configs:</strong>
+                    {peerDevices.filter(device => !deviceConfigs.has(device)).map(device => (
+                        <div key={device} style={{ color: 'red', marginLeft: '10px' }}>
+                            {device} - No NoteBuilder config
+                        </div>
+                    ))}
+                    {peerDevices.filter(device => !generatorConfigs.has(device)).map(device => (
+                        <div key={device} style={{ color: 'red', marginLeft: '10px' }}>
+                            {device} - No Generator config
+                        </div>
+                    ))}
+                </div>
             </div>
 
             <div>
