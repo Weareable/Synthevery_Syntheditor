@@ -71,6 +71,10 @@ export class SenderSession implements SenderSessionInterface { // implements を
     alive(): boolean {
         const now = Date.now();
         if (this.status === SessionStatus.kStatusTransferring) {
+            // Transferring 中もアイドルタイムアウトで死活判定
+            if (now - this.lastAliveCheckTime > 10000) {
+                return false;
+            }
             return true;
         }
         if (this.status === SessionStatus.kStatusPending && now - this.lastAliveCheckTime > 10000) {
@@ -212,6 +216,8 @@ export class ReceiverSession implements ReceiverSessionInterface { // implements
             // パケットが壊れている
             return;
         }
+
+        this.lastAliveCheckTime = Date.now();
 
         this.store.write(packet.data.data, packet.data.position);
         this.position = Math.min(this.position + packet.data.data.length, this.store.size());
