@@ -6,15 +6,15 @@ export default function useDeviceControl() {
 
     const setPlayingState = useCallback((playing: boolean) => {
         deviceController.setPlayingState(playing ? "play" : "pause");
-    }, []); // オブジェクトが不変なので空でOK！
+    }, [deviceController]);
 
     const setBpmState = useCallback((bpm: number) => {
         deviceController.setBpm(bpm);
-    }, []); // オブジェクトが不変なので空でOK！
+    }, [deviceController]);
 
     const stop = useCallback(() => {
         deviceController.setPlayingState("stop");
-    }, []); // オブジェクトが不変なので空でOK！
+    }, [deviceController]);
 
     return { setPlayingState, setBpmState, stop };
 }

@@ -1,7 +1,6 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useSynthevery } from '@/contexts/SyntheveryContext';
 import { P2PMacAddress } from '@/lib/synthevery-core/types/mesh';
-import { getAddressString } from '@/lib/synthevery-core/connection/util';
 
 export interface UseDeviceColorsReturn {
     /**
@@ -74,7 +73,7 @@ export function useDeviceColors(): UseDeviceColorsReturn {
         }
 
         return DEFAULT_BODY_COLOR;
-    }, [deviceConfigManager, colorUpdateTrigger]); // colorUpdateTriggerを依存配列に追加
+    }, [deviceConfigManager]);
 
     // デバイスLED色を取得
     const getDeviceLedColor = useCallback((deviceAddr: P2PMacAddress): string => {
@@ -90,7 +89,7 @@ export function useDeviceColors(): UseDeviceColorsReturn {
         // LED設定がない場合は本体色を使用
         const bodyColor = getDeviceBodyColor(deviceAddr);
         return bodyColor;
-    }, [deviceConfigManager, getDeviceBodyColor, colorUpdateTrigger]); // colorUpdateTriggerを依存配列に追加
+    }, [deviceConfigManager, getDeviceBodyColor]);
 
     // デバイスLED状態を取得
     const getDeviceLedStatus = useCallback((deviceAddr: P2PMacAddress): 'on' | 'off' | 'blink' => {
