@@ -16,6 +16,7 @@ class DeviceCommandClient implements CommandClientInterface {
     static readonly COMMAND_TYPE_REQUEST_TRACK_DETAIL = 0x12;
     static readonly COMMAND_TYPE_REQUEST_BODY_COLOR_CONFIG = 0x13;
     static readonly COMMAND_TYPE_REQUEST_LED_COLOR_CONFIG = 0x14;
+    static readonly COMMAND_TYPE_REQUEST_SETTINGS_CONFIG = 0x15;
 
     static readonly COMMAND_TYPE_PLAYING_STATE_SIZE = 1;
     static readonly COMMAND_TYPE_BPM_SIZE = 4;
@@ -38,13 +39,35 @@ class DeviceCommandClient implements CommandClientInterface {
                 return new Uint8Array();
             case DeviceCommandClient.COMMAND_TYPE_REQUEST_LED_COLOR_CONFIG:
                 return new Uint8Array();
+            case DeviceCommandClient.COMMAND_TYPE_REQUEST_SETTINGS_CONFIG:
+                return new Uint8Array();
         }
 
         return new Uint8Array();
     }
 
     handleData(commandId: CommandID, data: Uint8Array): [boolean, Uint8Array] {
-        return [true, new Uint8Array()];
+        switch (commandId.type) {
+            case DeviceCommandClient.COMMAND_TYPE_PLAYING_STATE:
+                return [true, new Uint8Array()];
+            case DeviceCommandClient.COMMAND_TYPE_BPM:
+                return [true, new Uint8Array()];
+            case DeviceCommandClient.COMMAND_TYPE_STOP:
+                return [true, new Uint8Array()];
+            case DeviceCommandClient.COMMAND_TYPE_REQUEST_NOTE_BUILDER_CONFIG:
+                return [true, new Uint8Array()];
+            case DeviceCommandClient.COMMAND_TYPE_REQUEST_GENERATOR_CONFIG:
+                return [true, new Uint8Array()];
+            case DeviceCommandClient.COMMAND_TYPE_REQUEST_TRACK_DETAIL:
+                return [true, new Uint8Array()];
+            case DeviceCommandClient.COMMAND_TYPE_REQUEST_BODY_COLOR_CONFIG:
+                return [true, new Uint8Array()];
+            case DeviceCommandClient.COMMAND_TYPE_REQUEST_LED_COLOR_CONFIG:
+                return [true, new Uint8Array()];
+            case DeviceCommandClient.COMMAND_TYPE_REQUEST_SETTINGS_CONFIG:
+                return [true, new Uint8Array()];
+        }
+        return [false, new Uint8Array()];
     }
 
     handleAck(commandId: CommandID, data: Uint8Array): boolean {
@@ -177,6 +200,20 @@ class DeviceController {
         handler.pushCommand({
             client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
             type: DeviceCommandClient.COMMAND_TYPE_REQUEST_LED_COLOR_CONFIG,
+        });
+    }
+
+    requestSettingsConfig(peer: P2PMacAddress, namespaces: string[]): void {
+        const handler = commandDispatcher.getCommandHandler(peer, false);
+        if (!handler) {
+            console.warn("requestSettingsConfig() : handler unavailable");
+            return;
+        }
+
+        // 設定要求コマンドを送信（ネームスペース情報を含む）
+        handler.pushCommand({
+            client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+            type: DeviceCommandClient.COMMAND_TYPE_REQUEST_SETTINGS_CONFIG,
         });
     }
 

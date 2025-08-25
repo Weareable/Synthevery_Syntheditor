@@ -140,6 +140,10 @@ interface LedColorConfigReceiverPortEvents {
     received: (json: any, sender: P2PMacAddress) => void;
 }
 
+interface SettingsConfigReceiverPortEvents {
+    received: (json: any, sender: P2PMacAddress, metadata: string) => void;
+}
+
 export class BodyColorConfigReceiverPort implements ReceiverPortInterface {
     readonly eventEmitter = new EventEmitter<BodyColorConfigReceiverPortEvents>();
 
@@ -193,6 +197,35 @@ export class LedColorConfigReceiverPort implements ReceiverPortInterface {
 
     onFinish(session: ReceiverSessionInterface, id: SessionID): void {
         console.warn("LedColorConfigReceiverPort: onFinish session: ", session, "id: ", id);
+    }
+}
+
+export class SettingsConfigReceiverPort implements ReceiverPortInterface {
+    readonly eventEmitter = new EventEmitter<SettingsConfigReceiverPortEvents>();
+
+    getDataType(): DataType {
+        return DataTypes.kSettingsConfig;
+    }
+
+    handleRequest(sender: P2PMacAddress, sessionId: SessionID, data: RequestData): { receiver: ReceiverDataStoreInterface, responseData: ResponseData } {
+        const receiver = new JsonReceiverDataStore(data.totalSize, sender);
+        receiver.eventEmitter.on('received', (json: any, sender: P2PMacAddress) => {
+            // metadataには階層的パスが含まれている（例: "settings_core.player"）
+            this.eventEmitter.emit('received', json, sender, data.metadata);
+        });
+        const responseData: ResponseData = {
+            isAccepted: true,
+            reason: 0
+        };
+        return { receiver, responseData };
+    }
+
+    onStart(session: ReceiverSessionInterface, id: SessionID): void {
+        console.log("SettingsConfigReceiverPort: onStart session: ", session, "id: ", id);
+    }
+
+    onFinish(session: ReceiverSessionInterface, id: SessionID): void {
+        console.log("SettingsConfigReceiverPort: onFinish session: ", session, "id: ", id);
     }
 }
 

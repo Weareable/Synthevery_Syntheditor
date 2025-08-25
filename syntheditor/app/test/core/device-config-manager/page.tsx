@@ -7,6 +7,7 @@ import { deviceConfigManager } from '@/lib/synthevery-core/device/device-config-
 import { sendNoteBuilderConfig, sendGeneratorConfig, sendTrackDetail, sendBodyColorConfig, sendLedColorConfig } from '@/lib/synthevery-core/device/config';
 import { NoteBuilderConfig, GeneratorConfig, TrackDetail, BodyColorConfig, LedColorConfig } from '@/lib/synthevery-core/types/player';
 import { P2PMacAddress } from '@/lib/synthevery-core/types/mesh';
+import { deviceController } from '@/lib/synthevery-core/device/controller';
 
 interface EventLog {
     timestamp: Date;
@@ -22,8 +23,10 @@ const DeviceConfigManagerTestPage: React.FC = () => {
     const [trackDetails, setTrackDetails] = useState<Map<string, TrackDetail[]>>(new Map());
     const [bodyColorConfigs, setBodyColorConfigs] = useState<Map<string, BodyColorConfig>>(new Map());
     const [ledColorConfigs, setLedColorConfigs] = useState<Map<string, LedColorConfig>>(new Map());
+    const [settingsConfigs, setSettingsConfigs] = useState<Map<string, any>>(new Map());
     const [eventLogs, setEventLogs] = useState<EventLog[]>([]);
     const [selectedDevice, setSelectedDevice] = useState<string>('');
+    const [selectedNamespaces, setSelectedNamespaces] = useState<string[]>(['core', 'player']);
 
     // イベントログを追加する関数
     const addEventLog = useCallback((type: string, message: string, data?: any) => {
@@ -60,6 +63,7 @@ const DeviceConfigManagerTestPage: React.FC = () => {
         setTrackDetails(new Map(deviceConfigManager.getAllTrackDetails()));
         setBodyColorConfigs(new Map(deviceConfigManager.getAllBodyColorConfigs()));
         setLedColorConfigs(new Map(deviceConfigManager.getAllLedColorConfigs()));
+        setSettingsConfigs(new Map(deviceConfigManager.getAllSettingsConfigs()));
     }, []);
 
     // 設定を送信
@@ -186,6 +190,29 @@ const DeviceConfigManagerTestPage: React.FC = () => {
         addEventLog('ACTION', 'イベントログをクリアしました');
     }, [addEventLog]);
 
+    // 設定を要求
+    const requestSettingsConfig = useCallback((peer: string, namespaces: string[]) => {
+        const peerAddress = getAddressFromString(peer);
+        if (peerAddress) {
+            deviceController.requestSettingsConfig(peerAddress, namespaces);
+            addEventLog('REQUEST', `${peer}に設定要求を送信しました (namespaces: ${namespaces.join('.')})`);
+        }
+    }, []);
+
+    // ネームスペース入力処理
+    const handleNamespaceInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const inputValue = e.target.value;
+        // 入力値を一時的に保存（リクエストは送信しない）
+        setSelectedNamespaces(inputValue.split('.').filter(s => s.trim()));
+    }, []);
+
+    // ネームスペース入力完了時の処理
+    const handleNamespaceInputComplete = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.currentTarget.blur(); // フォーカスを外す
+        }
+    }, []);
+
     useEffect(() => {
         // deviceConfigManagerのイベントリスナーを設定
         const handleNoteBuilderConfigReceived = (device: P2PMacAddress, config: NoteBuilderConfig[]) => {
@@ -218,6 +245,12 @@ const DeviceConfigManagerTestPage: React.FC = () => {
             updateConfigs();
         };
 
+        const handleSettingsConfigReceived = (device: P2PMacAddress, config: any) => {
+            const deviceStr = getAddressString(device);
+            addEventLog('RECEIVE', `${deviceStr}からSettingsConfigを受信しました`, config);
+            setSettingsConfigs(prev => new Map(prev).set(deviceStr, config));
+        };
+
         const handleDeviceConnected = (device: P2PMacAddress) => {
             const deviceStr = getAddressString(device);
             addEventLog('CONNECT', `${deviceStr}が接続されました`);
@@ -237,6 +270,7 @@ const DeviceConfigManagerTestPage: React.FC = () => {
         deviceConfigManager.eventEmitter.on('trackDetailReceived', handleTrackDetailReceived);
         deviceConfigManager.eventEmitter.on('bodyColorConfigReceived', handleBodyColorConfigReceived);
         deviceConfigManager.eventEmitter.on('ledColorConfigReceived', handleLedColorConfigReceived);
+        deviceConfigManager.eventEmitter.on('settingsConfigReceived', handleSettingsConfigReceived);
         deviceConfigManager.eventEmitter.on('deviceConnected', handleDeviceConnected);
         deviceConfigManager.eventEmitter.on('deviceDisconnected', handleDeviceDisconnected);
 
@@ -256,6 +290,7 @@ const DeviceConfigManagerTestPage: React.FC = () => {
             deviceConfigManager.eventEmitter.off('trackDetailReceived', handleTrackDetailReceived);
             deviceConfigManager.eventEmitter.off('bodyColorConfigReceived', handleBodyColorConfigReceived);
             deviceConfigManager.eventEmitter.off('ledColorConfigReceived', handleLedColorConfigReceived);
+            deviceConfigManager.eventEmitter.off('settingsConfigReceived', handleSettingsConfigReceived);
             deviceConfigManager.eventEmitter.off('deviceConnected', handleDeviceConnected);
             deviceConfigManager.eventEmitter.off('deviceDisconnected', handleDeviceDisconnected);
 
@@ -314,6 +349,36 @@ const DeviceConfigManagerTestPage: React.FC = () => {
 
                 <div style={{ marginTop: '10px' }}>
                     <strong>メッシュネットワーク全体のデバイス数: {peerDevices.length}</strong>
+                </div>
+            </div>
+
+            {/* 設定要求セクション */}
+            <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e0f2f7', borderRadius: '8px' }}>
+                <h3>設定要求</h3>
+                <div style={{ marginBottom: '10px', fontSize: '0.9em', color: '#666' }}>
+                    ネームスペースを入力してから、デバイスに設定要求を送信してください（例: core.player.metronome）
+                </div>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                    <label style={{ fontSize: '0.9em', color: '#555' }}>ネームスペース:</label>
+                    <input
+                        type="text"
+                        value={selectedNamespaces.join('.')}
+                        onChange={handleNamespaceInputChange}
+                        onKeyDown={handleNamespaceInputComplete}
+                        placeholder="core.player.metronome"
+                        style={{ padding: '8px 12px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '0.9em' }}
+                    />
+                </div>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {peerDevices.map(peer => (
+                        <button
+                            key={peer}
+                            onClick={() => requestSettingsConfig(peer, selectedNamespaces)}
+                            style={{ padding: '8px 16px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9em' }}
+                        >
+                            {peer}に設定要求
+                        </button>
+                    ))}
                 </div>
             </div>
 

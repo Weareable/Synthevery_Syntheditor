@@ -1,20 +1,32 @@
 import { mesh } from "../connection/mesh";
 import { dataTransferController } from "../data-transfer/data-transfer-controller";
+import { ReceiverPortInterface, ReceiverSessionInterface, ReceiverDataStoreInterface } from "../data-transfer/interfaces";
+import { DataType, RequestData, ResponseData } from "../types/data-transfer";
+import { DataTypes, SessionID } from "../data-transfer/constants";
 import { P2PMacAddress } from "../types/mesh";
-import { NoteBuilderConfig, GeneratorConfig, TrackDetail, BodyColorConfig, LedColorConfig } from "../types/player";
-import { NoteBuilderConfigReceiverPort, GeneratorConfigReceiverPort, TrackDetailReceiverPort, BodyColorConfigReceiverPort, LedColorConfigReceiverPort } from "./config";
-import { getAddressString, getAddressFromString } from "../connection/util";
+import { JsonReceiverDataStore, JsonSenderDataStore } from "../data-transfer/json-store";
 import { EventEmitter } from "eventemitter3";
+import { NoteBuilderConfig, GeneratorConfig, TrackDetail, BodyColorConfig, LedColorConfig } from "../types/player";
+import {
+    NoteBuilderConfigReceiverPort,
+    GeneratorConfigReceiverPort,
+    TrackDetailReceiverPort,
+    BodyColorConfigReceiverPort,
+    LedColorConfigReceiverPort,
+    SettingsConfigReceiverPort
+} from "./config";
 import { deviceController } from "./controller";
+import { getAddressString } from "../connection/util";
 
 interface DeviceConfigManagerEvents {
-    noteBuilderConfigReceived: (device: P2PMacAddress, config: NoteBuilderConfig[]) => void;
-    generatorConfigReceived: (device: P2PMacAddress, config: GeneratorConfig[]) => void;
-    trackDetailReceived: (device: P2PMacAddress, trackDetails: TrackDetail[]) => void;
-    bodyColorConfigReceived: (device: P2PMacAddress, config: BodyColorConfig) => void;
-    ledColorConfigReceived: (device: P2PMacAddress, config: LedColorConfig) => void;
     deviceConnected: (device: P2PMacAddress) => void;
     deviceDisconnected: (device: P2PMacAddress) => void;
+    noteBuilderConfigReceived: (device: P2PMacAddress, config: NoteBuilderConfig[]) => void;
+    generatorConfigReceived: (device: P2PMacAddress, config: GeneratorConfig[]) => void;
+    trackDetailReceived: (device: P2PMacAddress, config: TrackDetail[]) => void;
+    bodyColorConfigReceived: (device: P2PMacAddress, config: BodyColorConfig) => void;
+    ledColorConfigReceived: (device: P2PMacAddress, config: LedColorConfig) => void;
+    settingsConfigReceived: (device: P2PMacAddress, config: any) => void;
 }
 
 class DeviceConfigManager {
@@ -23,11 +35,14 @@ class DeviceConfigManager {
     private trackDetails: Map<string, TrackDetail[]> = new Map();
     private bodyColorConfigs: Map<string, BodyColorConfig> = new Map();
     private ledColorConfigs: Map<string, LedColorConfig> = new Map();
+    private settingsConfigs: Map<string, any> = new Map();
+
     private noteBuilderConfigReceiverPort: NoteBuilderConfigReceiverPort;
     private generatorConfigReceiverPort: GeneratorConfigReceiverPort;
     private trackDetailReceiverPort: TrackDetailReceiverPort;
     private bodyColorConfigReceiverPort: BodyColorConfigReceiverPort;
     private ledColorConfigReceiverPort: LedColorConfigReceiverPort;
+    private settingsConfigReceiverPort: SettingsConfigReceiverPort;
     readonly eventEmitter = new EventEmitter<DeviceConfigManagerEvents>();
 
     constructor() {
@@ -36,6 +51,8 @@ class DeviceConfigManager {
         this.trackDetailReceiverPort = new TrackDetailReceiverPort();
         this.bodyColorConfigReceiverPort = new BodyColorConfigReceiverPort();
         this.ledColorConfigReceiverPort = new LedColorConfigReceiverPort();
+        this.settingsConfigReceiverPort = new SettingsConfigReceiverPort();
+
         this.setupEventListeners();
         this.registerReceiverPort();
 
@@ -84,6 +101,13 @@ class DeviceConfigManager {
             this.saveReceivedLedColorConfig(config, sender);
         });
 
+        // SettingsConfig受信時の処理
+        this.settingsConfigReceiverPort.eventEmitter.on('received', (config: any, sender: P2PMacAddress) => {
+            // 受信した設定を保存
+            console.log('Received SettingsConfig from:', getAddressString(sender), 'config:', config);
+            this.saveReceivedSettingsConfig(config, sender);
+        });
+
         // データ転送セッション開始時の処理（デバッグ用）
         dataTransferController.getEventEmitter().on('sessionStart', (peer: P2PMacAddress, sessionId: number, type: string) => {
             if (type === 'receiver') {
@@ -98,6 +122,7 @@ class DeviceConfigManager {
         dataTransferController.registerReceiverPort(this.trackDetailReceiverPort);
         dataTransferController.registerReceiverPort(this.bodyColorConfigReceiverPort);
         dataTransferController.registerReceiverPort(this.ledColorConfigReceiverPort);
+        dataTransferController.registerReceiverPort(this.settingsConfigReceiverPort);
     }
 
     private handleDevicesChanged(devices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]): void {
@@ -109,6 +134,7 @@ class DeviceConfigManager {
             this.requestTrackDetail(device);
             this.requestBodyColorConfig(device);
             this.requestLedColorConfig(device);
+            this.requestSettingsConfig(device, ['player']); // 新規接続時は設定をリクエスト
             this.eventEmitter.emit('deviceConnected', device);
         });
 
@@ -120,6 +146,7 @@ class DeviceConfigManager {
             this.removeTrackDetail(device);
             this.removeBodyColorConfig(device);
             this.removeLedColorConfig(device);
+            this.removeSettingsConfig(device); // 切断時も設定を削除
             this.eventEmitter.emit('deviceDisconnected', device);
         });
     }
@@ -189,6 +216,19 @@ class DeviceConfigManager {
         console.log('Requesting LedColorConfig from device:', getAddressString(device));
     }
 
+    private requestSettingsConfig(device: P2PMacAddress, namespaces: string[]): void {
+        // webアプリ（自分自身）にはリクエストを送信しない
+        const myAddress = mesh.getAddress();
+        if (getAddressString(device) === getAddressString(myAddress)) {
+            console.log('Skipping SettingsConfig request to self:', getAddressString(device));
+            return;
+        }
+
+        // SettingsConfigのリクエストを送信
+        deviceController.requestSettingsConfig(device, namespaces);
+        console.log('Requesting SettingsConfig from device:', getAddressString(device), 'namespaces:', namespaces);
+    }
+
     private removeDeviceConfig(device: P2PMacAddress): void {
         const deviceStr = getAddressString(device);
         this.deviceConfigs.delete(deviceStr);
@@ -217,6 +257,12 @@ class DeviceConfigManager {
         const deviceStr = getAddressString(device);
         this.ledColorConfigs.delete(deviceStr);
         console.log('Removed LedColorConfig for device:', deviceStr);
+    }
+
+    private removeSettingsConfig(device: P2PMacAddress): void {
+        const deviceStr = getAddressString(device);
+        this.settingsConfigs.delete(deviceStr);
+        console.log('Removed SettingsConfig for device:', deviceStr);
     }
 
     private saveReceivedConfig(config: NoteBuilderConfig[], sender: P2PMacAddress): void {
@@ -263,6 +309,13 @@ class DeviceConfigManager {
         this.eventEmitter.emit('ledColorConfigReceived', sender, config);
     }
 
+    private saveReceivedSettingsConfig(config: any, sender: P2PMacAddress): void {
+        const senderStr = getAddressString(sender);
+        this.settingsConfigs.set(senderStr, config);
+        console.log('Saved SettingsConfig for device:', senderStr, 'config:', config);
+        this.eventEmitter.emit('settingsConfigReceived', sender, config);
+    }
+
     private initializeExistingDevices(): void {
         // 初期化時に既存の接続デバイスに対してNoteBuilderConfigをリクエスト
         const existingDevices = mesh.getConnectedDevices();
@@ -276,6 +329,7 @@ class DeviceConfigManager {
                 this.requestTrackDetail(device);
                 this.requestBodyColorConfig(device);
                 this.requestLedColorConfig(device);
+                this.requestSettingsConfig(device, ['player']); // 既存接続時も設定をリクエスト
             }
         });
         console.log('Initialized with existing devices:', existingDevices.map(d => getAddressString(d)));
@@ -319,6 +373,14 @@ class DeviceConfigManager {
 
     getAllLedColorConfigs(): Map<string, LedColorConfig> {
         return new Map(this.ledColorConfigs);
+    }
+
+    getAllSettingsConfigs(): Map<string, any> {
+        return new Map(this.settingsConfigs);
+    }
+
+    getSettingsConfig(device: string): any | undefined {
+        return this.settingsConfigs.get(device);
     }
 }
 
