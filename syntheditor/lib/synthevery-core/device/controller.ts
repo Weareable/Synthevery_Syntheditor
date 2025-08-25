@@ -1,11 +1,13 @@
 import { CommandClientInterface } from "../command/handler";
 import { CommandID } from "../types/command";
-import { COMMAND_CLIENT_ID_DEVICE_CONTROL } from "../command/constants";
+import { COMMAND_CLIENT_ID_DEVICE_CONTROL, COMMAND_CLIENT_ID_EDITOR_SETTINGS_CONFIG } from "../command/constants";
 import { playerSyncStates } from "../player/states";
 import { mesh } from "../connection/mesh";
 import { P2PMacAddress } from "../types/mesh";
 import { commandDispatcher } from "../command/dispatcher";
 import { serializeBoolean, serializeFloat32 } from "../appstate/appstates";
+import { PayloadCommandClient } from "../command/payload-command-client";
+import { getAddressString } from "../connection/util";
 
 class DeviceCommandClient implements CommandClientInterface {
     static readonly COMMAND_TYPE_PLAYING_STATE = 0x00;
@@ -88,6 +90,7 @@ class DeviceCommandClient implements CommandClientInterface {
 }
 
 class DeviceController {
+    private settingsClients: Map<string, PayloadCommandClient> = new Map();
     constructor() {
         mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
             // 新規追加されたデバイスのみ初期化
@@ -210,11 +213,30 @@ class DeviceController {
             return;
         }
 
-        // 設定要求コマンドを送信（ネームスペース情報を含む）
-        handler.pushCommand({
-            client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
-            type: DeviceCommandClient.COMMAND_TYPE_REQUEST_SETTINGS_CONFIG,
-        });
+        const peerKey = getAddressString(peer.address);
+        let client = this.settingsClients.get(peerKey);
+        if (!client) {
+            // Ensure client is registered if initializeNode wasn't called yet for some reason
+            const createHandler = commandDispatcher.getCommandHandler(peer, true);
+            if (!createHandler) {
+                console.warn("requestSettingsConfig() : could not create handler");
+                return;
+            }
+            client = new PayloadCommandClient(COMMAND_CLIENT_ID_EDITOR_SETTINGS_CONFIG);
+            createHandler.setClientInterface(client);
+            this.settingsClients.set(peerKey, client);
+        }
+
+        const encoder = new TextEncoder();
+        const path = namespaces.join('.');
+        const payload = encoder.encode(path);
+        const out: CommandID = { client_id: client.getClientID(), type: 0 };
+        const ok = client.allocateAndPrepare(out, payload);
+        if (!ok) {
+            console.warn("requestSettingsConfig() : allocate failed");
+            return;
+        }
+        handler.pushCommand(out);
     }
 
     private initializeNode(address: P2PMacAddress): void {
@@ -224,12 +246,17 @@ class DeviceController {
             return;
         }
 
-        if (handler.hasClientInterface(COMMAND_CLIENT_ID_DEVICE_CONTROL)) {
-            console.warn("initializeNode() : client interface already exists");
-            return;
+        if (!handler.hasClientInterface(COMMAND_CLIENT_ID_DEVICE_CONTROL)) {
+            handler.setClientInterface(new DeviceCommandClient());
+        } else {
+            console.warn("initializeNode() : device control client already exists");
         }
 
-        handler.setClientInterface(new DeviceCommandClient());
+        if (!handler.hasClientInterface(COMMAND_CLIENT_ID_EDITOR_SETTINGS_CONFIG)) {
+            const client = new PayloadCommandClient(COMMAND_CLIENT_ID_EDITOR_SETTINGS_CONFIG);
+            handler.setClientInterface(client);
+            this.settingsClients.set(getAddressString(address.address), client);
+        }
     }
 
     sendCommand(commandId: CommandID): void {
