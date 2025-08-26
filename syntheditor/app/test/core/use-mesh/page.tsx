@@ -19,7 +19,7 @@ const MultiConnectExample: React.FC = () => {
 
 
     return (
-        <div>
+        <div className="light min-h-screen bg-white text-black p-6">
             <button onClick={() => connectDevice()}>Connect</button>
             <div>
                 <h2>Connected Peers (Directly Connected)</h2>
