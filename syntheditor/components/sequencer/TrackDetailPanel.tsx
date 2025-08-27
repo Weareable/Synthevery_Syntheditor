@@ -44,15 +44,15 @@ export function TrackDetailPanel({ trackName, className }: TrackDetailPanelProps
                     </div>
 
                     {/* ループ長選択 */}
-                    <div className="content-stretch flex gap-1 h-24 items-center justify-start overflow-visible relative shrink-0 w-full">
-                        <div className="content-stretch flex flex-col gap-2.5 h-full items-start justify-center overflow-visible relative shrink-0">
+                    <div className="content-stretch flex gap-2 h-24 items-center justify-start overflow-visible relative shrink-0 w-full">
+                        <div className="content-stretch flex flex-col gap-4 h-full items-start justify-center overflow-visible relative shrink-0">
                             <div className="flex flex-col font-normal justify-center leading-[normal] relative shrink-0 text-xs text-[rgba(255,255,255,0.4)] text-nowrap whitespace-pre">
                                 <p className="mb-0">LOOP</p>
                                 <p className="">LENGTH</p>
                             </div>
 
                             {/* DraggableNumberInput コンポーネント */}
-                            <div className="h-12 relative rounded shrink-0 w-20">
+                            <div className="h-10 relative rounded shrink-0 w-15">
                                 <DraggableNumberInput
                                     min={1}
                                     max={256}
@@ -63,7 +63,7 @@ export function TrackDetailPanel({ trackName, className }: TrackDetailPanelProps
                                     dragSensitivity={0.5}
                                     showPopup={true}
                                     popupLabel="LOOP LENGTH"
-                                    className="h-12 w-20 bg-transparent border-white/20 text-white"
+                                    className="h-10 w-15 bg-transparent border-white/20 text-white"
                                     size="sm"
                                 />
                             </div>
