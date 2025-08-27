@@ -275,7 +275,10 @@ export const DraggableNumberInput: React.FC<DraggableNumberInputProps> = ({
                     </span>
                 )}
                 <span
-                    className="flex-1 text-primary text-sm font-normal text-right select-none"
+                    className={cn(
+                        "text-primary text-sm font-normal select-none",
+                        label ? "flex-1 text-right" : "flex-1 text-center"
+                    )}
                 >
                     {currentValue}{unit && <span className="text-xs text-muted-foreground ml-1">{unit}</span>}
                 </span>
