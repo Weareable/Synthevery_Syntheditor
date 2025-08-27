@@ -247,3 +247,15 @@ export function sendLedColorConfig(receiver: P2PMacAddress, config: LedColorConf
     return true;
 }
 
+// Web -> Device 設定更新（任意JSON + ドット区切りメタデータ）
+export function sendSettingsConfigUpdate(receiver: P2PMacAddress, namespaces: string[], json: any): boolean {
+    const path = namespaces.join('.');
+    // 要求に従い、送信DataTypeは kSettingsConfig を使用する
+    const store = new JsonSenderDataStore(json, DataTypes.kSettingsConfig, path);
+    const result = dataTransferController.sendRequest(receiver, store, []);
+    if (result === null) {
+        return false;
+    }
+    return true;
+}
+

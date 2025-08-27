@@ -11,7 +11,8 @@ const AppStateExample: React.FC = () => {
     const [quantizerState, updateQuantizerState] = useAppState(playerSyncStates.quantizerState);
     const [metronomeState, updateMetronomeState] = useAppState(playerSyncStates.metronomeState);
     const [recorderState, updateRecorderState] = useAppState(playerSyncStates.recorderState);
-    const { playingState, bpmState, setPlayingState, setBpmState, stop } = useDeviceControl();
+    const { setPlayingState, setBpmState, stop } = useDeviceControl();
+    const tickClockState = useReadOnlyAppState(playerSyncStates.tickClockState);
 
     const [trackStates, updateTrackStates] = useAppState(playerSyncStates.trackStates);
     const [currentTracks, updateCurrentTracks] = useAppState(playerSyncStates.currentTracksState);
@@ -48,15 +49,15 @@ const AppStateExample: React.FC = () => {
 
             <div>
                 <h2>Playing</h2>
-                Playing: {playingState ? 'On' : 'Off'}
-                <button onClick={() => setPlayingState(!playingState)}>Toggle</button>
+                Playing: {tickClockState.playing ? 'On' : 'Off'}
+                <button onClick={() => setPlayingState(!tickClockState.playing)}>Toggle</button>
             </div>
 
             <div>
                 <h2>BPM</h2>
-                BPM: {bpmState}
-                <button onClick={() => setBpmState(bpmState + 1)}>Increase</button>
-                <button onClick={() => setBpmState(bpmState - 1)}>Decrease</button>
+                BPM: {tickClockState.bpm}
+                <button onClick={() => setBpmState(tickClockState.bpm + 1)}>Increase</button>
+                <button onClick={() => setBpmState(tickClockState.bpm - 1)}>Decrease</button>
             </div>
 
             <div>

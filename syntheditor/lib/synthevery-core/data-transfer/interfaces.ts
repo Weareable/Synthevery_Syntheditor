@@ -7,6 +7,7 @@ import { SessionID, CommandType, SessionStatusType } from './constants';
 export interface TransferCommandInterface {
     getRequest(sender: P2PMacAddress, sessionId: SessionID): { success: boolean, requestData?: RequestData };
     getResponse(receiver: P2PMacAddress, sessionId: SessionID): { success: boolean, responseData?: ResponseData };
+    getResult(sender: P2PMacAddress, sessionId: SessionID): { success: boolean, resultData?: ResultData };
 
     onRequest(sender: P2PMacAddress, sessionId: SessionID, data: RequestData): CommandAck['statusCode'];
     onResponse(receiver: P2PMacAddress, sessionId: SessionID, data: ResponseData): CommandAck['statusCode'];

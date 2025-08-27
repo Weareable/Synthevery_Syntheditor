@@ -46,7 +46,11 @@ export class DataTransferCommandClient implements CommandClientInterface {
 
         switch (commandType) {
             case SessionCommandID.kResult: {
-                return serializeResultData({ result: 0 }); //仮
+                const result = this.commands.getResult(this.peerAddress, sessionId);
+                if (!result.success || !result.resultData) {
+                    return new Uint8Array();
+                }
+                return serializeResultData(result.resultData);
             }
             case SessionCommandID.kRequest: { // 追加
                 const result = this.commands.getRequest(this.peerAddress, sessionId);

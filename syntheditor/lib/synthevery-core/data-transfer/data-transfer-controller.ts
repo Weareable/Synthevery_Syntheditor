@@ -205,7 +205,17 @@ class DataTransferController implements TransferCommandInterface {
                 //送受信のSession開始を通知
                 this.eventEmitter.emit("sessionStart", sender, sessionId, "receiver");
                 session.onRequest(data);
-
+                // 完了時に結果送信とポート終了通知
+                let resultSent = false;
+                const maybeSendResult = () => {
+                    if (!resultSent && session.getStatus() === SessionStatus.kStatusCompleted) {
+                        resultSent = true;
+                        this.sendCommand(sender, SessionCommandID.kResult, sessionId);
+                        this.receiverPorts.get(data.type)!.onFinish(session, sessionId);
+                    }
+                };
+                session.getEventEmitter().on('statusChanged', () => maybeSendResult());
+                session.getEventEmitter().on('completed', () => maybeSendResult());
                 this.receiverPorts.get(data.type)!.onStart(session, sessionId);
             }
             this.sendCommand(sender, SessionCommandID.kResponse, sessionId);

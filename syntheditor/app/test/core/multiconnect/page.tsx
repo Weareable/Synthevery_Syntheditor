@@ -61,7 +61,7 @@ const MultiConnectExample: React.FC = () => {
     }, []);
 
     return (
-        <div>
+        <div className="light min-h-screen bg-white text-black">
             <button onClick={() => connectDevice()}>Connect</button>
             <div>
                 {peerDevices.map(device => <DevicePanel key={device} address={device} />)}
