@@ -10,7 +10,8 @@ const navigationItems = [
     { href: '/player/synthesizer', icon: '🎹', label: 'シンセサイザー' },
     { href: '/player/drums', icon: '🥁', label: 'ドラムス' },
     { href: '/player/bass', icon: '🎸', label: 'ベース' },
-    { href: '/player/sampler', icon: '🎵', label: 'サンプラー' }
+    { href: '/player/sampler', icon: '🎵', label: 'サンプラー' },
+    { href: '/player/sequencer', icon: '🎯', label: 'シーケンサー' }
 ]
 
 export function VerticalNavigationBar() {
