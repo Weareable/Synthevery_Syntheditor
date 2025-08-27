@@ -20,20 +20,20 @@ export function SequencerCard({
     return (
         <div
             className={cn(
-                "box-border content-stretch flex flex-col gap-2.5 items-center justify-start p-[5px] relative size-full cursor-pointer",
+                "box-border content-stretch flex flex-col items-center justify-start relative size-full cursor-pointer",
                 className
             )}
             onClick={onClick}
         >
-            <div className="basis-0 grow min-h-px min-w-px relative rounded-[5px] shrink-0 w-full">
-                <div className="box-border content-stretch flex flex-col gap-[5px] items-end justify-start overflow-clip p-[10px] relative size-full">
-                    <div className="flex flex-col font-normal justify-center leading-[0] relative shrink-0 text-[12px] text-center text-white w-full">
+            <div className="basis-0 grow min-h-px min-w-px relative rounded shrink-0 w-full">
+                <div className="box-border content-stretch flex flex-col gap-1 items-end justify-start overflow-visible p-2 relative size-full">
+                    <div className="flex flex-col font-normal justify-center leading-[0] relative shrink-0 text-xs text-center text-white w-full">
                         <p className="leading-[normal]">{trackNumber}: {instrumentName}</p>
                     </div>
                     <div className="basis-0 grow min-h-px min-w-px relative shrink-0 w-full">
                         {/* ピアノアイコン */}
-                        <div className="absolute bottom-[19.15%] overflow-clip top-[18.09%] translate-x-[-50%] w-[91px]" style={{ left: "calc(50% - 1px)" }}>
-                            <div className="absolute aspect-[32/32] left-[24.14%] overflow-clip right-[24.83%] translate-y-[-50%]" style={{ top: "calc(50% + 0.186px)" }}>
+                        <div className="absolute bottom-[19.15%] overflow-visible top-[18.09%] translate-x-[-50%] w-[91px]" style={{ left: "calc(50% - 1px)" }}>
+                            <div className="absolute aspect-[32/32] left-[24.14%] overflow-visible right-[24.83%] translate-y-[-50%]" style={{ top: "calc(50% + 0.186px)" }}>
                                 <div className="absolute contents inset-[9.38%_6.25%]">
                                     {/* ピアノの鍵盤を表現するSVG要素 */}
                                     <div className="absolute bottom-[9.38%] left-3/4 right-[6.25%] top-[9.38%]">
@@ -82,7 +82,7 @@ export function SequencerCard({
                 <div
                     aria-hidden="true"
                     className={cn(
-                        "absolute border border-solid inset-0 pointer-events-none rounded-[5px]",
+                        "absolute border border-white/20 border-solid inset-0 pointer-events-none rounded",
                         isSelected
                             ? "border-2 border-white"
                             : "border border-[rgba(255,255,255,0.16)]"

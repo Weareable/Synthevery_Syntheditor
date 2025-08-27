@@ -230,10 +230,9 @@ export const DraggableNumberInput: React.FC<DraggableNumberInputProps> = ({
                     className={
                         `w-40 absolute left-1/2 -translate-x-1/2 bottom-full mb-2
                         bg-background/90 border border-border rounded-lg px-8 py-4 shadow-lg flex flex-col items-center
-                        transition-opacity duration-300
-                        ${isDraggingState ? 'opacity-100 pointer-events-none' : 'opacity-0 pointer-events-none'}`
+                        transition-opacity duration-300 z-50
+                        ${isDraggingState ? 'opacity-100' : 'opacity-0'}`
                     }
-                    style={{ pointerEvents: 'none' }}
                 >
                     <span className="text-5xl font-bold text-primary drop-shadow-lg select-none">{currentValue}</span>
                     {popupLabel && (

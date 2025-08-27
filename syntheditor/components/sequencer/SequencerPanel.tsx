@@ -32,13 +32,13 @@ export function SequencerPanel() {
     const selectedTrackData = tracks.find(track => track.id === selectedTrack)
 
     return (
-        <div className="bg-[#303030] content-stretch flex items-start justify-start relative rounded-[5px] size-full">
+        <div className="bg-[#303030] content-stretch flex items-start justify-start relative rounded w-full h-full">
             {/* トラックパネル（左側） */}
-            <div className="basis-0 box-border gap-2.5 grid grid-cols-[repeat(4,_minmax(0px,_1fr))] grid-rows-[repeat(2,_minmax(0px,_1fr))] grow h-[318px] min-h-px min-w-px overflow-clip p-[10px] relative rounded-[5px] shrink-0">
+            <div className="p-2 basis-0 box-border grid grid-cols-[repeat(4,_minmax(0px,_1fr))] grid-rows-[repeat(2,_minmax(0px,_1fr))] gap-2 grow-[2] h-full min-h-px min-w-px overflow-visible relative rounded shrink-0">
                 {tracks.map((track) => (
                     <div
                         key={track.id}
-                        className="[grid-area:1_/_1] box-border content-stretch flex flex-col gap-2.5 items-center justify-start overflow-clip p-[5px] relative shrink-0"
+                        className="[grid-area:1_/_1] box-border content-stretch flex flex-col items-center justify-start overflow-visible relative shrink-0"
                         style={{
                             gridArea: track.id <= 4
                                 ? `1 / ${track.id}`
@@ -58,6 +58,7 @@ export function SequencerPanel() {
             {/* トラック詳細パネル（右側） */}
             <TrackDetailPanel
                 trackName={selectedTrackData ? selectedTrackData.name : "No Track Selected"}
+                className="grow-[1]"
             />
         </div>
     )
