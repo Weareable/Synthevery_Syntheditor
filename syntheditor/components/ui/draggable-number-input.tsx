@@ -104,6 +104,7 @@ export const DraggableNumberInput: React.FC<DraggableNumberInputProps> = ({
 
     // ボタン長押し（左: -step, 右: +step）
     const handlePressStart = (delta: number, isTouch = false) => {
+        console.debug('🔘 Button Press Start:', { delta, isTouch, isDragging: isDragging.current });
         if (isDragging.current) return; // ドラッグ中は無効
         if (!isTouch && isTouching.current) return; // タッチ中はマウスイベント無視
         if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current); // 非表示タイマー解除
@@ -111,6 +112,7 @@ export const DraggableNumberInput: React.FC<DraggableNumberInputProps> = ({
         if (delta === -1) {
             leftPressing.current = true;
             updateValue(currentValue - step); // まず1回だけ即時
+            console.debug('⬅️ Left button pressed, value updated to:', currentValue - step);
             leftTimeoutRef.current = setTimeout(() => {
                 if (leftPressing.current) {
                     leftIntervalRef.current = setInterval(() => {
@@ -121,6 +123,7 @@ export const DraggableNumberInput: React.FC<DraggableNumberInputProps> = ({
         } else if (delta === 1) {
             rightPressing.current = true;
             updateValue(currentValue + step); // まず1回だけ即時
+            console.debug('➡️ Right button pressed, value updated to:', currentValue + step);
             rightTimeoutRef.current = setTimeout(() => {
                 if (rightPressing.current) {
                     rightIntervalRef.current = setInterval(() => {
@@ -132,6 +135,7 @@ export const DraggableNumberInput: React.FC<DraggableNumberInputProps> = ({
     };
 
     const handlePressEnd = (delta: number) => {
+        console.debug('🔘 Button Press End:', { delta });
         if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current);
         popupTimeoutRef.current = setTimeout(() => setIsDraggingState(false), POPUP_HIDE_DELAY);
         if (delta === -1) {
@@ -161,6 +165,7 @@ export const DraggableNumberInput: React.FC<DraggableNumberInputProps> = ({
 
     // スライド操作
     const handleDragStart = (clientX: number, isTouch = false) => {
+        console.debug('🖱️ Drag Start:', { clientX, isTouch, target: 'main container' });
         if (!isTouch && isTouching.current) return; // タッチ中はマウスイベント無視
         if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current); // 非表示タイマー解除
         clearAllPress(); // ボタン長押し中なら解除
@@ -168,6 +173,7 @@ export const DraggableNumberInput: React.FC<DraggableNumberInputProps> = ({
         setIsDraggingState(true); // ポップアップ表示
         dragStartX.current = clientX;
         dragStartValue.current = currentValue;
+        console.debug('✅ Drag started successfully');
         window.addEventListener("mousemove", handleDragMove);
         window.addEventListener("mouseup", handleDragEnd);
         window.addEventListener("touchmove", handleTouchMove, { passive: false });
@@ -180,10 +186,12 @@ export const DraggableNumberInput: React.FC<DraggableNumberInputProps> = ({
         const dx = e.clientX - dragStartX.current;
         const newValue = dragStartValue.current + dx * dragSensitivity;
         const clampedValue = Math.round(Math.max(min, Math.min(max, newValue)));
+        console.debug('🔄 Drag Move:', { dx, newValue, clampedValue, currentValue });
         updateValue(clampedValue);
     };
 
     const handleDragEnd = () => {
+        console.debug('🛑 Drag End');
         isDragging.current = false;
         if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current);
         popupTimeoutRef.current = setTimeout(() => setIsDraggingState(false), POPUP_HIDE_DELAY);
@@ -244,13 +252,44 @@ export const DraggableNumberInput: React.FC<DraggableNumberInputProps> = ({
             )}
             <div
                 className={cn(draggableNumberInputVariants({ color, rounded, size }), className)}
-                onMouseDown={e => handleDragStart(e.clientX)}
-                onTouchStart={handleTouchStart}
+                onMouseDown={e => {
+                    console.debug('🖱️ Main container mouseDown:', {
+                        target: e.target,
+                        isButton: !!(e.target as Element)?.closest('button'),
+                        clientX: e.clientX
+                    });
+                    // ボタン以外の領域でのドラッグ開始
+                    if (!e.target || !(e.target as Element).closest('button')) {
+                        console.debug('✅ Starting drag from main container');
+                        handleDragStart(e.clientX);
+                    } else {
+                        console.debug('❌ Clicked on button, not starting drag');
+                    }
+                }}
+                onTouchStart={e => {
+                    console.debug('👆 Main container touchStart:', {
+                        target: e.target,
+                        isButton: !!(e.target as Element)?.closest('button'),
+                        touches: e.touches.length
+                    });
+                    // ボタン以外の領域でのタッチドラッグ開始
+                    const target = e.target as Element;
+                    const isButton = target?.tagName === 'BUTTON' || target?.closest('button');
+
+                    if (!isButton) {
+                        console.debug('✅ Starting touch drag from main container');
+                        handleTouchStart(e);
+                    } else {
+                        console.debug('❌ Touched button, not starting drag');
+                        // ボタンタッチの場合はイベントを停止
+                        e.stopPropagation();
+                    }
+                }}
                 {...props}
             >
                 <button
                     type="button"
-                    className="bg-transparent border-none text-muted-foreground text-[0.5rem] cursor-pointer px-1 py-0.5 select-none"
+                    className="bg-transparent text-muted-foreground text-[0.5rem] cursor-pointer px-0 py-0 select-none w-3 h-3 flex items-center justify-center"
                     onMouseDown={e => {
                         e.stopPropagation();
                         handlePressStart(-1);
@@ -259,12 +298,19 @@ export const DraggableNumberInput: React.FC<DraggableNumberInputProps> = ({
                     onMouseLeave={e => handlePressEnd(-1)}
                     onTouchStart={e => {
                         e.stopPropagation();
+                        // タッチ操作ではボタン処理のみ
                         isTouching.current = true;
                         if (touchReleaseTimeout) clearTimeout(touchReleaseTimeout);
                         handlePressStart(-1, true);
                     }}
-                    onTouchEnd={e => handlePressEnd(-1)}
-                    onTouchCancel={e => handlePressEnd(-1)}
+                    onTouchEnd={e => {
+                        e.stopPropagation();
+                        handlePressEnd(-1);
+                    }}
+                    onTouchCancel={e => {
+                        e.stopPropagation();
+                        handlePressEnd(-1);
+                    }}
                     aria-label={`Decrease ${label || 'value'}`}
                 >
                     &#x25C0;
@@ -284,7 +330,7 @@ export const DraggableNumberInput: React.FC<DraggableNumberInputProps> = ({
                 </span>
                 <button
                     type="button"
-                    className="bg-transparent border-none text-muted-foreground text-[0.5rem] cursor-pointer px-1 py-0.5 select-none"
+                    className="bg-transparent text-muted-foreground text-[0.5rem] cursor-pointer px-0 py-0 select-none w-3 h-3 flex items-center justify-center"
                     onMouseDown={e => {
                         e.stopPropagation();
                         handlePressStart(1);
@@ -293,12 +339,19 @@ export const DraggableNumberInput: React.FC<DraggableNumberInputProps> = ({
                     onMouseLeave={e => handlePressEnd(1)}
                     onTouchStart={e => {
                         e.stopPropagation();
+                        // タッチ操作ではボタン処理のみ
                         isTouching.current = true;
                         if (touchReleaseTimeout) clearTimeout(touchReleaseTimeout);
                         handlePressStart(1, true);
                     }}
-                    onTouchEnd={e => handlePressEnd(1)}
-                    onTouchCancel={e => handlePressEnd(1)}
+                    onTouchEnd={e => {
+                        e.stopPropagation();
+                        handlePressEnd(1);
+                    }}
+                    onTouchCancel={e => {
+                        e.stopPropagation();
+                        handlePressEnd(1);
+                    }}
                     aria-label={`Increase ${label || 'value'}`}
                 >
                     &#x25B6;
