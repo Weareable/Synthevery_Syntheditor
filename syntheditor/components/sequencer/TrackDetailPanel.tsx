@@ -33,12 +33,12 @@ export function TrackDetailPanel({ trackName, className }: TrackDetailPanelProps
                 <div className="box-border content-stretch flex flex-col gap-5 items-center justify-center overflow-visible p-2 relative size-full">
                     {/* トラック名 */}
                     <div className="content-stretch flex flex-col gap-1 items-center justify-center relative shrink-0 w-full">
-                        <div className="flex flex-col font-normal justify-center leading-[0] relative shrink-0 text-xs text-center text-nowrap text-white">
+                        <div className="flex flex-col font-normal justify-center leading-[0] relative shrink-0 text-xs text-center text-nowrap text-foreground">
                             <p className="leading-[normal] whitespace-pre">{trackName}</p>
                         </div>
                         <div className="h-0 relative shrink-0 w-full">
                             <div className="absolute bottom-0 left-0 right-0 top-0">
-                                <div className="w-full h-px bg-white/40"></div>
+                                <div className="w-full h-px bg-border"></div>
                             </div>
                         </div>
                     </div>
@@ -46,7 +46,7 @@ export function TrackDetailPanel({ trackName, className }: TrackDetailPanelProps
                     {/* ループ長選択 */}
                     <div className="content-stretch flex gap-2 h-24 items-center justify-start overflow-visible relative shrink-0 w-full">
                         <div className="content-stretch flex flex-col gap-4 h-full items-start justify-center overflow-visible relative shrink-0">
-                            <div className="flex flex-col font-normal justify-center leading-[normal] relative shrink-0 text-xs text-[rgba(255,255,255,0.4)] text-nowrap whitespace-pre">
+                            <div className="flex flex-col font-normal justify-center leading-[normal] relative shrink-0 text-xs text-muted-foreground text-nowrap whitespace-pre">
                                 <p className="mb-0">LOOP</p>
                                 <p className="">LENGTH</p>
                             </div>
@@ -63,7 +63,7 @@ export function TrackDetailPanel({ trackName, className }: TrackDetailPanelProps
                                     dragSensitivity={0.5}
                                     showPopup={true}
                                     popupLabel="LOOP LENGTH"
-                                    className="h-10 w-15 bg-transparent border-white/20 text-white"
+                                    className="h-10 w-15 bg-transparent border-border text-foreground"
                                     size="sm"
                                 />
                             </div>
@@ -78,13 +78,13 @@ export function TrackDetailPanel({ trackName, className }: TrackDetailPanelProps
                                     className={cn(
                                         "box-border content-stretch flex flex-col gap-2.5 items-center justify-center overflow-visible p-2 relative shrink-0 transition-colors",
                                         selectedStep === step
-                                            ? "bg-white/20"
-                                            : "hover:bg-white/10"
+                                            ? "bg-accent"
+                                            : "hover:bg-accent/50"
                                     )}
                                 >
                                     <div className={cn(
                                         "flex flex-col font-normal justify-center leading-[0] relative shrink-0 text-xs text-nowrap text-right",
-                                        selectedStep === step ? "text-white" : "text-[rgba(255,255,255,0.4)]"
+                                        selectedStep === step ? "text-foreground" : "text-muted-foreground"
                                     )}>
                                         <p className="leading-[normal] whitespace-pre">
                                             <span className="text-xs">{step}</span>
@@ -98,7 +98,7 @@ export function TrackDetailPanel({ trackName, className }: TrackDetailPanelProps
                     {/* シーケンス編集ボタン */}
                     <div className="content-stretch flex gap-2.5 items-start justify-start overflow-visible relative shrink-0 w-full">
                         <div className="basis-0 content-stretch flex flex-col gap-2.5 grow items-start justify-center min-h-px min-w-px overflow-visible relative self-stretch shrink-0">
-                            <div className="flex flex-col font-normal justify-center relative shrink-0 text-xs text-[rgba(255,255,255,0.4)] text-nowrap whitespace-pre">
+                            <div className="flex flex-col font-normal justify-center relative shrink-0 text-xs text-muted-foreground text-nowrap whitespace-pre">
                                 <p className="mb-0">SEQ</p>
                                 <p className="mt-0">EDIT</p>
                             </div>
@@ -106,20 +106,20 @@ export function TrackDetailPanel({ trackName, className }: TrackDetailPanelProps
                         <Button
                             variant="outline"
                             size="sm"
-                            className="h-12 w-16 bg-transparent border-white/20 text-[#958538] hover:bg-white/10 hover:text-[#958538]"
+                            className="h-12 w-16 bg-transparent border-border text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground"
                         >
                             ERASER
                         </Button>
                         <Button
                             variant="outline"
                             size="sm"
-                            className="h-12 w-16 bg-transparent border-white/20 text-[#953838] hover:bg-white/10 hover:text-[#953838]"
+                            className="h-12 w-16 bg-transparent border-border text-destructive hover:bg-accent/50 hover:text-destructive"
                         >
                             CLEAR<br />ALL
                         </Button>
                     </div>
                 </div>
-                <div aria-hidden="true" className="absolute border border-white/20 border-solid inset-0 pointer-events-none rounded" />
+                <div aria-hidden="true" className="absolute border border-border border-solid inset-0 pointer-events-none rounded" />
             </div>
         </div>
     )

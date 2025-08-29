@@ -52,7 +52,7 @@ export function SequencerCard({
         >
             <div className="basis-0 grow min-h-px min-w-px relative rounded shrink-0 w-full h-full">
                 <div className="box-border content-stretch flex flex-col gap-1 items-end justify-start overflow-hidden p-2 relative size-full">
-                    <div className="flex flex-col font-normal justify-center leading-[0] relative shrink-0 text-xs text-center text-white w-full">
+                    <div className="flex flex-col font-normal justify-center leading-[0] relative shrink-0 text-xs text-center text-foreground w-full">
                         <p className="leading-[normal]">{trackNumber}: {instrumentName}</p>
                         {/* トラック状態表示 */}
                         <div className="flex items-center justify-center gap-1 mt-1">
@@ -63,11 +63,11 @@ export function SequencerCard({
                                 }}
                                 className={cn(
                                     "w-2 h-2 rounded-full text-xs",
-                                    currentTrackState.mute ? "bg-red-500" : "bg-green-500"
+                                    currentTrackState.mute ? "bg-destructive" : "bg-accent"
                                 )}
                                 title={currentTrackState.mute ? "Unmute" : "Mute"}
                             />
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-muted-foreground">
                                 Vol: {currentTrackState.volume}
                             </span>
                         </div>
@@ -91,10 +91,10 @@ export function SequencerCard({
                 <div
                     aria-hidden="true"
                     className={cn(
-                        "absolute border border-white/20 border-solid inset-0 pointer-events-none rounded",
+                        "absolute border border-border border-solid inset-0 pointer-events-none rounded",
                         isSelected
-                            ? "border-2 border-white"
-                            : "border border-[rgba(255,255,255,0.16)]"
+                            ? "border-2 border-primary"
+                            : "border border-border"
                     )}
                 />
             </div>

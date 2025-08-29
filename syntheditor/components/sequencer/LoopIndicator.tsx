@@ -84,8 +84,8 @@ export function LoopIndicator({
                     cx={center}
                     cy={center}
                     r={radius}
-                    fill="rgba(255,255,255,0.12)"
-                    stroke="rgba(255,255,255,0.4)"
+                    fill="var(--muted)"
+                    stroke="var(--border)"
                     strokeWidth={1.5}
                 />
 
@@ -96,7 +96,7 @@ export function LoopIndicator({
                         cy={center}
                         r={radius}
                         fill="transparent"
-                        stroke="rgba(255,255,255,0.6)"
+                        stroke="var(--primary)"
                         strokeWidth={1.5}
                         strokeLinecap="round"
                         initial={{ pathLength: 0 }}
@@ -113,8 +113,8 @@ export function LoopIndicator({
                     cx={dotX}
                     cy={dotY}
                     r={dotRadius}
-                    fill="rgba(255,255,255,0.75)"
-                    stroke="rgba(255,255,255,0.85)"
+                    fill="var(--foreground)"
+                    stroke="var(--foreground)"
                     strokeWidth={0.5}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 />
@@ -123,7 +123,7 @@ export function LoopIndicator({
             {/* 再生中の視覚効果 */}
             {isPlaying && (
                 <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-white/30"
+                    className="absolute inset-0 rounded-full border-2 border-border"
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 />

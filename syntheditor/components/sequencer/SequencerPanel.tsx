@@ -32,7 +32,7 @@ export function SequencerPanel() {
     const selectedTrackData = tracks.find(track => track.id === selectedTrack)
 
     return (
-        <div className="bg-[#303030] content-stretch flex items-start justify-start relative rounded w-full h-full">
+        <div className="bg-card content-stretch flex items-start justify-start relative rounded w-full h-full">
             {/* トラックパネル（左側） */}
             <div className="p-2 basis-0 box-border grid grid-cols-[repeat(4,_minmax(0px,_1fr))] grid-rows-[repeat(2,_minmax(0px,_1fr))] gap-2 grow-[2] h-full min-h-px min-w-px overflow-visible relative rounded shrink-0">
                 {tracks.map((track) => (
