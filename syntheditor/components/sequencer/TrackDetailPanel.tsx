@@ -3,13 +3,23 @@ import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DraggableNumberInput } from '@/components/ui/draggable-number-input'
+import { SoloButton } from './SoloButton'
 
 interface TrackDetailPanelProps {
+    tracks: Track[]
+    selectedTrack: number | null
+    onTrackSelect: (trackId: number) => void
     trackName: string
     className?: string
 }
 
-export function TrackDetailPanel({ trackName, className }: TrackDetailPanelProps) {
+interface Track {
+    id: number
+    name: string
+    instrument: string
+}
+
+export function TrackDetailPanel({ tracks, selectedTrack, onTrackSelect, trackName, className }: TrackDetailPanelProps) {
     const [loopLength, setLoopLength] = useState(16)
     const [selectedStep, setSelectedStep] = useState(16)
 
@@ -24,6 +34,12 @@ export function TrackDetailPanel({ trackName, className }: TrackDetailPanelProps
         setLoopLength(step)
     }
 
+    // ソロボタンのハンドラー（将来的にSequencerCardGroupと連携）
+    const handleSoloClick = () => {
+        console.log('Solo button clicked for track:', trackName)
+        // TODO: SequencerCardGroupとの連携を実装
+    }
+
     return (
         <div className={cn(
             "basis-0 box-border content-stretch flex flex-col gap-2.5 grow h-full items-start justify-start overflow-visible p-2 relative rounded min-h-px min-w-px",
@@ -33,11 +49,43 @@ export function TrackDetailPanel({ trackName, className }: TrackDetailPanelProps
                 <div className="box-border content-stretch flex flex-col gap-5 items-center justify-center overflow-visible p-2 relative size-full">
                     {/* トラック名 */}
                     <div className="content-stretch flex flex-col gap-1 items-center justify-center relative shrink-0 w-full">
-                        <div className="flex flex-col font-normal justify-center leading-[0] relative shrink-0 text-xs text-center text-nowrap text-foreground">
-                            <p className="leading-[normal] whitespace-pre">{trackName}</p>
+                        <div className="content-stretch flex gap-[5px] items-center justify-center relative shrink-0">
+                            <button
+                                onClick={() => {
+                                    const currentIndex = tracks.findIndex(t => t.id === selectedTrack)
+                                    const prevIndex = currentIndex > 0 ? currentIndex - 1 : tracks.length - 1
+                                    onTrackSelect(tracks[prevIndex].id)
+                                }}
+                                className="relative shrink-0 size-6 cursor-pointer hover:opacity-80 transition-opacity"
+                                aria-label="Previous track"
+                            >
+                                <div className="absolute inset-[29.17%_41.67%_29.17%_37.5%]">
+                                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                        <path d="M6.5 2.5L3.5 5L6.5 7.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </div>
+                            </button>
+                            <div className="flex flex-col font-normal justify-center leading-[0] relative shrink-0 text-[12px] text-center text-nowrap text-white">
+                                <p className="leading-[normal] whitespace-pre">{trackName}</p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const currentIndex = tracks.findIndex(t => t.id === selectedTrack)
+                                    const nextIndex = currentIndex < tracks.length - 1 ? currentIndex + 1 : 0
+                                    onTrackSelect(tracks[nextIndex].id)
+                                }}
+                                className="relative shrink-0 size-6 cursor-pointer hover:opacity-80 transition-opacity"
+                                aria-label="Next track"
+                            >
+                                <div className="absolute inset-[29.17%_37.5%_29.17%_41.67%]">
+                                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                        <path d="M3.5 2.5L6.5 5L3.5 7.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </div>
+                            </button>
                         </div>
                         <div className="h-0 relative shrink-0 w-full">
-                            <div className="absolute bottom-0 left-0 right-0 top-0">
+                            <div className="absolute bottom-0 left-0 right-0 top-[-1px]">
                                 <div className="w-full h-px bg-border"></div>
                             </div>
                         </div>
@@ -103,20 +151,28 @@ export function TrackDetailPanel({ trackName, className }: TrackDetailPanelProps
                                 <p className="mt-0">EDIT</p>
                             </div>
                         </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-12 w-16 bg-transparent border-border text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground"
-                        >
-                            ERASER
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-12 w-16 bg-transparent border-border text-destructive hover:bg-accent/50 hover:text-destructive"
-                        >
-                            CLEAR<br />ALL
-                        </Button>
+                        <div className="flex flex-col gap-2.5">
+                            <SoloButton
+                                trackId={1} // TODO: 実際のトラックIDを取得
+                                isActive={false} // TODO: 実際のソロ状態を取得
+                                onClick={handleSoloClick}
+                                className="h-12 w-16"
+                            />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-12 w-16 bg-transparent border-border text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                            >
+                                ERASER
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-12 w-16 bg-transparent border-border text-destructive hover:bg-accent/50 hover:text-destructive"
+                            >
+                                CLEAR<br />ALL
+                            </Button>
+                        </div>
                     </div>
                 </div>
                 <div aria-hidden="true" className="absolute border border-border border-solid inset-0 pointer-events-none rounded" />
