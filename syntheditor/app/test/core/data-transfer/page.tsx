@@ -112,10 +112,20 @@ const DataTransferExample: React.FC = () => {
     }, []);
 
     return (
-        <div>
-            <div>
-                <button onClick={() => connectDevice()}>Connect</button>
-                <button onClick={updatePeerDevices} style={{ marginLeft: '10px' }}>Refresh Device List</button>
+        <div className="light min-h-screen bg-background text-foreground p-6">
+            <div className="mb-6">
+                <button
+                    onClick={() => connectDevice()}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                >
+                    Connect
+                </button>
+                <button
+                    onClick={updatePeerDevices}
+                    className="ml-3 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
+                >
+                    Refresh Device List
+                </button>
                 <button
                     onClick={() => {
                         peerDevices.forEach(peer => {
@@ -135,52 +145,77 @@ const DataTransferExample: React.FC = () => {
                             }
                         });
                     }}
-                    style={{ marginLeft: '10px' }}
+                    className="ml-3 px-4 py-2 bg-accent text-accent-foreground rounded-md hover:bg-accent/80 transition-colors"
                 >
                     Request All Missing Configs
                 </button>
             </div>
 
-            <div style={{ margin: '20px 0', padding: '10px', backgroundColor: '#f0f0f0' }}>
-                <h4>Debug Info:</h4>
-                <div>Connected Devices: {peerDevices.join(', ')}</div>
-                <div>Device Configs: {Array.from(deviceConfigs.keys()).join(', ')}</div>
-                <div>Generator Configs: {Array.from(generatorConfigs.keys()).join(', ')}</div>
-                <div style={{ marginTop: '10px' }}>
-                    <strong>Missing Configs:</strong>
-                    {peerDevices.filter(device => !deviceConfigs.has(device)).map(device => (
-                        <div key={device} style={{ color: 'red', marginLeft: '10px' }}>
-                            {device} - No NoteBuilder config
-                        </div>
-                    ))}
-                    {peerDevices.filter(device => !generatorConfigs.has(device)).map(device => (
-                        <div key={device} style={{ color: 'red', marginLeft: '10px' }}>
-                            {device} - No Generator config
-                        </div>
-                    ))}
+            <div className="mb-6 p-4 bg-card text-card-foreground rounded-lg border">
+                <h4 className="text-lg font-semibold mb-3">Debug Info:</h4>
+                <div className="space-y-2">
+                    <div>Connected Devices: {peerDevices.join(', ')}</div>
+                    <div>Device Configs: {Array.from(deviceConfigs.keys()).join(', ')}</div>
+                    <div>Generator Configs: {Array.from(generatorConfigs.keys()).join(', ')}</div>
+                    <div className="mt-3">
+                        <strong>Missing Configs:</strong>
+                        {peerDevices.filter(device => !deviceConfigs.has(device)).map(device => (
+                            <div key={device} className="text-destructive ml-3">
+                                {device} - No NoteBuilder config
+                            </div>
+                        ))}
+                        {peerDevices.filter(device => !generatorConfigs.has(device)).map(device => (
+                            <div key={device} className="text-destructive ml-3">
+                                {device} - No Generator config
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
 
             <div>
-                <h3>Connected Devices:</h3>
-                {peerDevices.map(device => <div key={device} style={{ marginBottom: '20px', padding: '10px', border: '1px solid #ccc' }}>
-                    <strong>{device}</strong>
-                    <div style={{ margin: '10px 0' }}>
-                        <button onClick={() => sendConfig(device)} style={{ marginRight: '10px' }}>Send Config</button>
-                        <button onClick={() => retrieveConfig(device)} style={{ marginRight: '10px' }}>Get NoteBuilder Config</button>
-                        <button onClick={() => retrieveGeneratorConfig(device)}>Get Generator Config</button>
+                <h3 className="text-xl font-semibold mb-4">Connected Devices:</h3>
+                {peerDevices.map(device => (
+                    <div key={device} className="mb-6 p-4 border border-border rounded-lg bg-card">
+                        <strong className="text-lg">{device}</strong>
+                        <div className="mt-3 space-x-3">
+                            <button
+                                onClick={() => sendConfig(device)}
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                            >
+                                Send Config
+                            </button>
+                            <button
+                                onClick={() => retrieveConfig(device)}
+                                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
+                            >
+                                Get NoteBuilder Config
+                            </button>
+                            <button
+                                onClick={() => retrieveGeneratorConfig(device)}
+                                className="px-4 py-2 bg-accent text-accent-foreground rounded-md hover:bg-accent/80 transition-colors"
+                            >
+                                Get Generator Config
+                            </button>
+                        </div>
+                        {deviceConfigs.has(device) && (
+                            <div className="mt-3 ml-5 text-sm">
+                                <strong>NoteBuilder Config:</strong>
+                                <pre className="mt-1 p-2 bg-muted rounded border text-xs overflow-x-auto">
+                                    {JSON.stringify(deviceConfigs.get(device), null, 2)}
+                                </pre>
+                            </div>
+                        )}
+                        {generatorConfigs.has(device) && (
+                            <div className="mt-3 ml-5 text-sm">
+                                <strong>Generator Config:</strong>
+                                <pre className="mt-1 p-2 bg-muted rounded border text-xs overflow-x-auto">
+                                    {JSON.stringify(generatorConfigs.get(device), null, 2)}
+                                </pre>
+                            </div>
+                        )}
                     </div>
-                    {deviceConfigs.has(device) && (
-                        <div style={{ marginLeft: '20px', fontSize: '0.9em', marginBottom: '10px' }}>
-                            <strong>NoteBuilder Config:</strong> {JSON.stringify(deviceConfigs.get(device))}
-                        </div>
-                    )}
-                    {generatorConfigs.has(device) && (
-                        <div style={{ marginLeft: '20px', fontSize: '0.9em' }}>
-                            <strong>Generator Config:</strong> {JSON.stringify(generatorConfigs.get(device))}
-                        </div>
-                    )}
-                </div>)}
+                ))}
             </div>
         </div>
     );

@@ -106,30 +106,29 @@ export default function OldestNodeFinderTestPage() {
     }
 
     return (
-        <div className="light container mx-auto p-6 max-w-4xl bg-white text-black">
+        <div className="light min-h-screen bg-background text-foreground p-6 max-w-4xl mx-auto">
             <h1 className="text-3xl font-bold mb-6">Mesh テスト</h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* テスト操作パネル */}
-                <div className="bg-gray-100 p-4 rounded-lg">
+                <div className="bg-card text-card-foreground p-4 rounded-lg border">
                     <h2 className="text-xl font-semibold mb-4">テスト操作</h2>
 
                     <div className="space-y-4">
-
                         <div className="flex space-x-2">
                             <button
                                 onClick={connectToDevice}
                                 disabled={isConnecting}
-                                className={`px-4 py-2 rounded text-white ${isConnecting
-                                    ? 'bg-gray-400 cursor-not-allowed'
-                                    : 'bg-blue-500 hover:bg-blue-600'
+                                className={`px-4 py-2 rounded text-white transition-colors ${isConnecting
+                                    ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                                    : 'bg-primary hover:bg-primary/90'
                                     }`}
                             >
                                 {isConnecting ? '接続中...' : 'BLEデバイス接続'}
                             </button>
                             <button
                                 onClick={disconnectAll}
-                                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                                className="bg-destructive text-destructive-foreground px-4 py-2 rounded hover:bg-destructive/90 transition-colors"
                             >
                                 全切断
                             </button>
@@ -138,7 +137,7 @@ export default function OldestNodeFinderTestPage() {
                         <div className="flex space-x-2">
                             <button
                                 onClick={updateDisplay}
-                                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                                className="bg-secondary text-secondary-foreground px-4 py-2 rounded hover:bg-secondary/80 transition-colors"
                             >
                                 更新
                             </button>
@@ -147,7 +146,7 @@ export default function OldestNodeFinderTestPage() {
                 </div>
 
                 {/* 状態表示パネル */}
-                <div className="bg-gray-100 p-4 rounded-lg">
+                <div className="bg-card text-card-foreground p-4 rounded-lg border">
                     <h2 className="text-xl font-semibold mb-4">現在の状態</h2>
 
                     <div className="space-y-4">
@@ -177,18 +176,18 @@ export default function OldestNodeFinderTestPage() {
             </div>
 
             {/* デバイス順序リスト */}
-            <div className="mt-6 bg-gray-100 p-4 rounded-lg">
+            <div className="mt-6 bg-card text-card-foreground p-4 rounded-lg border">
                 <h2 className="text-xl font-semibold mb-4">デバイス接続順序 (Mesh)</h2>
 
                 {deviceOrders.length === 0 ? (
-                    <p className="text-gray-500">接続中のデバイスがありません</p>
+                    <p className="text-muted-foreground">接続中のデバイスがありません</p>
                 ) : (
                     <div className="space-y-2">
                         {deviceOrders.map((deviceId, index) => (
-                            <div key={deviceId} className="flex items-center space-x-4 p-2 bg-white rounded">
+                            <div key={deviceId} className="flex items-center space-x-4 p-2 bg-background rounded border">
                                 <span className="font-bold text-lg w-8">{String.fromCharCode(65 + index)}</span>
                                 <span className="font-mono">{deviceId}</span>
-                                <span className="text-sm text-gray-500">
+                                <span className="text-sm text-muted-foreground">
                                     順序: {index}
                                 </span>
                             </div>
@@ -198,7 +197,7 @@ export default function OldestNodeFinderTestPage() {
             </div>
 
             {/* デバッグ情報 */}
-            <div className="mt-6 bg-gray-100 p-4 rounded-lg">
+            <div className="mt-6 bg-card text-card-foreground p-4 rounded-lg border">
                 <h2 className="text-xl font-semibold mb-4">デバッグ情報</h2>
 
                 <div className="space-y-2 text-sm">

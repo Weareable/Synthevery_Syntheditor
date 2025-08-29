@@ -29,12 +29,18 @@ const DevicePanel: React.FC<{ address: string }> = ({ address }) => {
 
     }, [device]);
 
-    return <div>
-        <h2>{address}</h2>
-        <ul>
-            {connectedDevices.map(device => <li key={device}>{device}</li>)}
-        </ul>
-    </div>;
+    return (
+        <div className="p-4 bg-card text-card-foreground rounded-lg border mb-4">
+            <h2 className="text-lg font-semibold mb-3">{address}</h2>
+            <ul className="space-y-2">
+                {connectedDevices.map(device => (
+                    <li key={device} className="p-2 bg-background rounded border">
+                        {device}
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
 }
 
 const MultiConnectExample: React.FC = () => {
@@ -61,8 +67,13 @@ const MultiConnectExample: React.FC = () => {
     }, []);
 
     return (
-        <div className="light min-h-screen bg-white text-black">
-            <button onClick={() => connectDevice()}>Connect</button>
+        <div className="light min-h-screen bg-background text-foreground p-6">
+            <button
+                onClick={() => connectDevice()}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors mb-6"
+            >
+                Connect
+            </button>
             <div>
                 {peerDevices.map(device => <DevicePanel key={device} address={device} />)}
             </div>

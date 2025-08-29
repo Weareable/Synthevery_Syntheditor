@@ -304,9 +304,9 @@ const DeviceConfigManagerTestPage: React.FC = () => {
         if (!data) return null;
 
         return (
-            <div className="config-display" style={{ margin: '10px 0', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                <strong>{title}:</strong>
-                <pre style={{ fontSize: '0.8em', margin: '5px 0', whiteSpace: 'pre-wrap' }}>
+            <div className="mt-3 p-3 bg-muted rounded-md">
+                <strong className="text-foreground">{title}:</strong>
+                <pre className="text-xs mt-2 whitespace-pre-wrap bg-background p-2 rounded border">
                     {JSON.stringify(data, null, 2)}
                 </pre>
             </div>
@@ -314,67 +314,67 @@ const DeviceConfigManagerTestPage: React.FC = () => {
     };
 
     return (
-        <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-            <h1 style={{ color: '#333', marginBottom: '20px' }}>DeviceConfigManager テストページ</h1>
+        <div className="light min-h-screen bg-background text-foreground p-6 max-w-7xl mx-auto">
+            <h1 className="text-3xl font-bold mb-6">DeviceConfigManager テストページ</h1>
 
             {/* コントロールパネル */}
-            <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f0f8ff', borderRadius: '8px' }}>
-                <h3>コントロールパネル</h3>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+            <div className="mb-6 p-4 bg-card text-card-foreground rounded-lg border">
+                <h3 className="text-lg font-semibold mb-3">コントロールパネル</h3>
+                <div className="flex gap-3 flex-wrap mb-3">
                     <button
                         onClick={connectDevice}
-                        style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                     >
                         デバイス接続
                     </button>
                     <button
                         onClick={updatePeerDevices}
-                        style={{ padding: '8px 16px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
                     >
                         デバイス一覧更新
                     </button>
                     <button
                         onClick={clearAllConfigs}
-                        style={{ padding: '8px 16px', backgroundColor: '#FF9800', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors"
                     >
                         設定クリア
                     </button>
                     <button
                         onClick={clearEventLogs}
-                        style={{ padding: '8px 16px', backgroundColor: '#9C27B0', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors"
                     >
                         ログクリア
                     </button>
                 </div>
 
-                <div style={{ marginTop: '10px' }}>
-                    <strong>メッシュネットワーク全体のデバイス数: {peerDevices.length}</strong>
+                <div className="font-semibold">
+                    メッシュネットワーク全体のデバイス数: {peerDevices.length}
                 </div>
             </div>
 
             {/* 設定要求セクション */}
-            <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e0f2f7', borderRadius: '8px' }}>
-                <h3>設定要求</h3>
-                <div style={{ marginBottom: '10px', fontSize: '0.9em', color: '#666' }}>
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg border">
+                <h3 className="text-lg font-semibold mb-3">設定要求</h3>
+                <div className="mb-3 text-sm text-muted-foreground">
                     ネームスペースを入力してから、デバイスに設定要求を送信してください（例: core.player.metronome）
                 </div>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                    <label style={{ fontSize: '0.9em', color: '#555' }}>ネームスペース:</label>
+                <div className="flex gap-3 flex-wrap mb-3">
+                    <label className="text-sm text-foreground">ネームスペース:</label>
                     <input
                         type="text"
                         value={selectedNamespaces.join('.')}
                         onChange={handleNamespaceInputChange}
                         onKeyDown={handleNamespaceInputComplete}
                         placeholder="core.player.metronome"
-                        style={{ padding: '8px 12px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '0.9em' }}
+                        className="px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                 </div>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <div className="flex gap-3 flex-wrap">
                     {peerDevices.map(peer => (
                         <button
                             key={peer}
                             onClick={() => requestSettingsConfig(peer, selectedNamespaces)}
-                            style={{ padding: '8px 16px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9em' }}
+                            className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors text-sm"
                         >
                             {peer}に設定要求
                         </button>
@@ -383,22 +383,22 @@ const DeviceConfigManagerTestPage: React.FC = () => {
             </div>
 
             {/* メインコンテンツ */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* 左側: デバイス一覧と設定表示 */}
                 <div>
-                    <h3>メッシュネットワーク全体のデバイス一覧と設定</h3>
+                    <h3 className="text-xl font-bold mb-3">メッシュネットワーク全体のデバイス一覧と設定</h3>
                     {peerDevices.length === 0 ? (
-                        <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                        <div className="p-6 text-center text-muted-foreground">
                             メッシュネットワークに接続されているデバイスがありません
                         </div>
                     ) : (
                         peerDevices.map(device => (
-                            <div key={device} style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: 'white' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                    <strong style={{ fontSize: '1.1em' }}>{device}</strong>
+                            <div key={device} className="mb-6 p-4 border border-border rounded-lg bg-white">
+                                <div className="flex justify-between items-center mb-3">
+                                    <strong className="text-lg">{device}</strong>
                                     <button
                                         onClick={() => setSelectedDevice(selectedDevice === device ? '' : device)}
-                                        style={{ padding: '4px 8px', backgroundColor: '#607D8B', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                        className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
                                     >
                                         {selectedDevice === device ? '折りたたむ' : '展開'}
                                     </button>
@@ -407,14 +407,14 @@ const DeviceConfigManagerTestPage: React.FC = () => {
                                 {selectedDevice === device && (
                                     <>
                                         {/* 設定送信ボタン */}
-                                        <div style={{ marginBottom: '15px' }}>
-                                            <h4>設定送信</h4>
-                                            <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                        <div className="mb-4">
+                                            <h4 className="text-md font-semibold mb-2">設定送信</h4>
+                                            <div className="flex gap-2 flex-wrap">
                                                 {['noteBuilder', 'generator', 'trackDetail', 'bodyColor', 'ledColor'].map(configType => (
                                                     <button
                                                         key={configType}
                                                         onClick={() => sendConfig(device, configType)}
-                                                        style={{ padding: '6px 12px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9em' }}
+                                                        className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm"
                                                     >
                                                         {configType}
                                                     </button>
@@ -423,14 +423,14 @@ const DeviceConfigManagerTestPage: React.FC = () => {
                                         </div>
 
                                         {/* 設定取得ボタン */}
-                                        <div style={{ marginBottom: '15px' }}>
-                                            <h4>設定取得</h4>
-                                            <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                        <div className="mb-4">
+                                            <h4 className="text-md font-semibold mb-2">設定取得</h4>
+                                            <div className="flex gap-2 flex-wrap">
                                                 {['noteBuilder', 'generator', 'trackDetail', 'bodyColor', 'ledColor'].map(configType => (
                                                     <button
                                                         key={configType}
                                                         onClick={() => retrieveConfig(device, configType)}
-                                                        style={{ padding: '6px 12px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9em' }}
+                                                        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
                                                     >
                                                         {configType}
                                                     </button>
@@ -440,7 +440,7 @@ const DeviceConfigManagerTestPage: React.FC = () => {
 
                                         {/* 設定表示 */}
                                         <div>
-                                            <h4>受信済み設定</h4>
+                                            <h4 className="text-md font-semibold mb-2">受信済み設定</h4>
                                             <ConfigDisplay title="NoteBuilderConfig" data={deviceConfigs.get(device)} device={device} />
                                             <ConfigDisplay title="GeneratorConfig" data={generatorConfigs.get(device)} device={device} />
                                             <ConfigDisplay title="TrackDetail" data={trackDetails.get(device)} device={device} />
@@ -456,46 +456,33 @@ const DeviceConfigManagerTestPage: React.FC = () => {
 
                 {/* 右側: イベントログ */}
                 <div>
-                    <h3>イベントログ</h3>
-                    <div style={{ maxHeight: '600px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: 'white' }}>
+                    <h3 className="text-xl font-bold mb-3">イベントログ</h3>
+                    <div className="max-h-full overflow-y-auto border border-border rounded-lg bg-white">
                         {eventLogs.length === 0 ? (
-                            <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                            <div className="p-6 text-center text-muted-foreground">
                                 イベントログがありません
                             </div>
                         ) : (
                             eventLogs.map((log, index) => (
-                                <div key={index} style={{
-                                    padding: '10px',
-                                    borderBottom: '1px solid #eee',
-                                    backgroundColor: log.type === 'ERROR' ? '#ffebee' :
-                                        log.type === 'RECEIVE' ? '#e8f5e8' :
-                                            log.type === 'SEND' ? '#e3f2fd' :
-                                                log.type === 'CONNECT' ? '#fff3e0' :
-                                                    log.type === 'DISCONNECT' ? '#fce4ec' : '#fafafa'
-                                }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                        <span style={{
-                                            padding: '2px 6px',
-                                            borderRadius: '3px',
-                                            fontSize: '0.8em',
-                                            backgroundColor: log.type === 'ERROR' ? '#f44336' :
-                                                log.type === 'RECEIVE' ? '#4caf50' :
-                                                    log.type === 'SEND' ? '#2196f3' :
-                                                        log.type === 'CONNECT' ? '#ff9800' :
-                                                            log.type === 'DISCONNECT' ? '#e91e63' : '#9e9e9e',
-                                            color: 'white'
-                                        }}>
+                                <div key={index} className="p-3 border-b border-border">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className={`px-2 py-1 rounded-md text-xs ${log.type === 'ERROR' ? 'bg-red-500 text-white' :
+                                                log.type === 'RECEIVE' ? 'bg-green-500 text-white' :
+                                                    log.type === 'SEND' ? 'bg-blue-500 text-white' :
+                                                        log.type === 'CONNECT' ? 'bg-yellow-500 text-white' :
+                                                            log.type === 'DISCONNECT' ? 'bg-purple-500 text-white' : 'bg-gray-500 text-white'
+                                            }`}>
                                             {log.type}
                                         </span>
-                                        <span style={{ fontSize: '0.8em', color: '#666' }}>
+                                        <span className="text-xs text-muted-foreground">
                                             {log.timestamp.toLocaleTimeString()}
                                         </span>
                                     </div>
-                                    <div style={{ fontSize: '0.9em' }}>{log.message}</div>
+                                    <div className="text-sm">{log.message}</div>
                                     {log.data && (
-                                        <details style={{ marginTop: '5px' }}>
-                                            <summary style={{ cursor: 'pointer', fontSize: '0.8em', color: '#666' }}>詳細データ</summary>
-                                            <pre style={{ fontSize: '0.8em', margin: '5px 0', whiteSpace: 'pre-wrap', backgroundColor: '#f5f5f5', padding: '5px', borderRadius: '3px' }}>
+                                        <details className="mt-2">
+                                            <summary className="cursor-pointer text-xs text-muted-foreground">詳細データ</summary>
+                                            <pre className="text-xs mt-1 whitespace-pre-wrap bg-background p-2 rounded border">
                                                 {JSON.stringify(log.data, null, 2)}
                                             </pre>
                                         </details>
@@ -508,23 +495,23 @@ const DeviceConfigManagerTestPage: React.FC = () => {
             </div>
 
             {/* 統計情報 */}
-            <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-                <h3>統計情報</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-                    <div style={{ textAlign: 'center', padding: '10px', backgroundColor: 'white', borderRadius: '4px' }}>
-                        <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: '#4CAF50' }}>{peerDevices.length}</div>
+            <div className="mt-6 p-4 bg-gray-100 rounded-lg border">
+                <h3 className="text-lg font-semibold mb-3">統計情報</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-3 bg-white rounded-md">
+                        <div className="text-3xl font-bold text-green-500">{peerDevices.length}</div>
                         <div>メッシュネットワーク全体のデバイス</div>
                     </div>
-                    <div style={{ textAlign: 'center', padding: '10px', backgroundColor: 'white', borderRadius: '4px' }}>
-                        <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: '#2196F3' }}>{deviceConfigs.size}</div>
+                    <div className="text-center p-3 bg-white rounded-md">
+                        <div className="text-3xl font-bold text-blue-500">{deviceConfigs.size}</div>
                         <div>NoteBuilder設定</div>
                     </div>
-                    <div style={{ textAlign: 'center', padding: '10px', backgroundColor: 'white', borderRadius: '4px' }}>
-                        <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: '#FF9800' }}>{generatorConfigs.size}</div>
+                    <div className="text-center p-3 bg-white rounded-md">
+                        <div className="text-3xl font-bold text-orange-500">{generatorConfigs.size}</div>
                         <div>Generator設定</div>
                     </div>
-                    <div style={{ textAlign: 'center', padding: '10px', backgroundColor: 'white', borderRadius: '4px' }}>
-                        <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: '#9C27B0' }}>{eventLogs.length}</div>
+                    <div className="text-center p-3 bg-white rounded-md">
+                        <div className="text-3xl font-bold text-purple-500">{eventLogs.length}</div>
                         <div>イベントログ</div>
                     </div>
                 </div>

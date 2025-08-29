@@ -124,50 +124,112 @@ const DeviceSettingsTestPage: React.FC = () => {
     }, [addEventLog, updatePeerDevices, updateSettings]);
 
     return (
-        <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-            <h1 style={{ color: '#333', marginBottom: '16px' }}>Device Settings テストページ</h1>
+        <div className="light min-h-screen bg-background text-foreground p-6 max-w-7xl mx-auto">
+            <h1 className="text-3xl font-bold text-foreground mb-6">Device Settings テストページ</h1>
 
-            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f0f8ff', borderRadius: 8 }}>
-                <h3>コントロール</h3>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-                    <button onClick={connectDevice} style={{ padding: '8px 16px', background: '#4CAF50', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>デバイス接続</button>
-                    <button onClick={updatePeerDevices} style={{ padding: '8px 16px', background: '#2196F3', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>デバイス一覧更新</button>
+            <div className="mb-6 p-4 bg-card text-card-foreground rounded-lg border">
+                <h3 className="text-lg font-semibold mb-3">コントロール</h3>
+                <div className="flex gap-2 flex-wrap mt-2">
+                    <button
+                        onClick={connectDevice}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                    >
+                        デバイス接続
+                    </button>
+                    <button
+                        onClick={updatePeerDevices}
+                        className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
+                    >
+                        デバイス一覧更新
+                    </button>
                 </div>
-                <div style={{ marginTop: 12 }}>
-                    <div style={{ marginBottom: 6 }}><strong>ネームスペース</strong></div>
-                    <input value={namespaceInput} onChange={e => setNamespaceInput(e.target.value)} placeholder="core.player.metronome" style={{ width: '100%', padding: '8px 12px', border: '1px solid #ccc', borderRadius: 4 }} />
+                <div className="mt-3">
+                    <div className="mb-2 font-semibold">ネームスペース</div>
+                    <input
+                        value={namespaceInput}
+                        onChange={e => setNamespaceInput(e.target.value)}
+                        placeholder="core.player.metronome"
+                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
                 </div>
-                <div style={{ marginTop: 12 }}>
-                    <div style={{ marginBottom: 6 }}><strong>JSON</strong></div>
-                    <textarea value={jsonInput} onChange={e => setJsonInput(e.target.value)} rows={8} placeholder={`{\n  "enabled": true\n}`} style={{ width: '100%', padding: 12, border: '1px solid #ccc', borderRadius: 4, fontFamily: 'monospace', fontSize: 14 }} />
+                <div className="mt-3">
+                    <div className="mb-2 font-semibold">JSON</div>
+                    <textarea
+                        value={jsonInput}
+                        onChange={e => setJsonInput(e.target.value)}
+                        rows={8}
+                        placeholder={`{\n  "enabled": true\n}`}
+                        className="w-full p-3 border border-border rounded-md bg-background text-foreground font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-vertical"
+                    />
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                    <button onClick={sendAll} disabled={namespaces.length === 0} style={{ padding: '8px 16px', background: namespaces.length === 0 ? '#A5D6A7' : '#4CAF50', color: '#fff', border: 'none', borderRadius: 4, cursor: namespaces.length === 0 ? 'not-allowed' : 'pointer' }}>全デバイスへ送信</button>
-                    <button onClick={requestAll} disabled={namespaces.length === 0} style={{ padding: '8px 16px', background: namespaces.length === 0 ? '#B0BEC5' : '#607D8B', color: '#fff', border: 'none', borderRadius: 4, cursor: namespaces.length === 0 ? 'not-allowed' : 'pointer' }}>全デバイスから取得</button>
+                <div className="flex gap-2 flex-wrap mt-3">
+                    <button
+                        onClick={sendAll}
+                        disabled={namespaces.length === 0}
+                        className={`px-4 py-2 rounded-md transition-colors ${namespaces.length === 0
+                            ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                            : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            }`}
+                    >
+                        全デバイスへ送信
+                    </button>
+                    <button
+                        onClick={requestAll}
+                        disabled={namespaces.length === 0}
+                        className={`px-4 py-2 rounded-md transition-colors ${namespaces.length === 0
+                            ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                            }`}
+                    >
+                        全デバイスから取得
+                    </button>
                 </div>
-                <div style={{ marginTop: 10 }}><strong>接続デバイス数: {peerDevices.length}</strong></div>
+                <div className="mt-3 font-semibold">接続デバイス数: {peerDevices.length}</div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
-                    <h3>デバイス一覧と設定</h3>
+                    <h3 className="text-lg font-semibold mb-3">デバイス一覧と設定</h3>
                     {peerDevices.length === 0 ? (
-                        <div style={{ padding: 20, textAlign: 'center', color: '#666' }}>接続中のデバイスがありません</div>
+                        <div className="p-5 text-center text-muted-foreground">接続中のデバイスがありません</div>
                     ) : (
                         peerDevices.map(device => (
-                            <div key={device} style={{ marginBottom: 16, padding: 12, border: '1px solid #ddd', borderRadius: 8, background: '#fff' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <strong>{device}</strong>
-                                    <div style={{ display: 'flex', gap: 8 }}>
-                                        <button onClick={() => sendUpdate(device)} disabled={namespaces.length === 0} style={{ padding: '6px 12px', background: namespaces.length === 0 ? '#A5D6A7' : '#4CAF50', color: '#fff', border: 'none', borderRadius: 4, cursor: namespaces.length === 0 ? 'not-allowed' : 'pointer' }}>送信</button>
-                                        <button onClick={() => requestCurrent(device)} disabled={namespaces.length === 0} style={{ padding: '6px 12px', background: namespaces.length === 0 ? '#90CAF9' : '#2196F3', color: '#fff', border: 'none', borderRadius: 4, cursor: namespaces.length === 0 ? 'not-allowed' : 'pointer' }}>取得</button>
-                                        <button onClick={() => setExpandedDevice(expandedDevice === device ? '' : device)} style={{ padding: '6px 12px', background: '#607D8B', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>{expandedDevice === device ? '折りたたむ' : '展開'}</button>
+                            <div key={device} className="mb-4 p-3 border border-border rounded-lg bg-card">
+                                <div className="flex justify-between items-center">
+                                    <strong className="text-foreground">{device}</strong>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => sendUpdate(device)}
+                                            disabled={namespaces.length === 0}
+                                            className={`px-3 py-1 rounded text-sm transition-colors ${namespaces.length === 0
+                                                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                                                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                                                }`}
+                                        >
+                                            送信
+                                        </button>
+                                        <button
+                                            onClick={() => requestCurrent(device)}
+                                            disabled={namespaces.length === 0}
+                                            className={`px-3 py-1 rounded text-sm transition-colors ${namespaces.length === 0
+                                                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                                                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                                                }`}
+                                        >
+                                            取得
+                                        </button>
+                                        <button
+                                            onClick={() => setExpandedDevice(expandedDevice === device ? '' : device)}
+                                            className="px-3 py-1 rounded text-sm bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+                                        >
+                                            {expandedDevice === device ? '折りたたむ' : '展開'}
+                                        </button>
                                     </div>
                                 </div>
                                 {expandedDevice === device && (
-                                    <div style={{ marginTop: 10 }}>
-                                        <div style={{ fontSize: '0.9em', marginBottom: 6 }}><strong>受信済み設定</strong></div>
-                                        <pre style={{ fontSize: '0.85em', whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: 8, borderRadius: 4 }}>
+                                    <div className="mt-3">
+                                        <div className="text-sm font-semibold mb-2">受信済み設定</div>
+                                        <pre className="text-xs whitespace-pre-wrap bg-muted p-2 rounded border">
                                             {settingsConfigs.has(device) ? JSON.stringify(settingsConfigs.get(device), null, 2) : '—'}
                                         </pre>
                                     </div>
@@ -178,22 +240,41 @@ const DeviceSettingsTestPage: React.FC = () => {
                 </div>
 
                 <div>
-                    <h3>イベントログ</h3>
-                    <div style={{ maxHeight: 600, overflowY: 'auto', border: '1px solid #ddd', borderRadius: 8, background: '#fff' }}>
+                    <h3 className="text-lg font-semibold mb-3">イベントログ</h3>
+                    <div className="max-h-96 overflow-y-auto border border-border rounded-lg bg-card">
                         {eventLogs.length === 0 ? (
-                            <div style={{ padding: 20, textAlign: 'center', color: '#666' }}>イベントログがありません</div>
+                            <div className="p-5 text-center text-muted-foreground">イベントログがありません</div>
                         ) : (
                             eventLogs.map((log, idx) => (
-                                <div key={idx} style={{ padding: 10, borderBottom: '1px solid #eee', background: log.type === 'ERROR' ? '#ffebee' : log.type === 'RECEIVE' ? '#e8f5e8' : log.type === 'SEND' ? '#e3f2fd' : log.type === 'CONNECT' ? '#fff3e0' : log.type === 'DISCONNECT' ? '#fce4ec' : '#fafafa' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                                        <span style={{ padding: '2px 6px', borderRadius: 3, fontSize: '0.8em', background: log.type === 'ERROR' ? '#f44336' : log.type === 'RECEIVE' ? '#4caf50' : log.type === 'SEND' ? '#2196f3' : log.type === 'CONNECT' ? '#ff9800' : log.type === 'DISCONNECT' ? '#e91e63' : '#9e9e9e', color: '#fff' }}>{log.type}</span>
-                                        <span style={{ fontSize: '0.8em', color: '#666' }}>{log.timestamp.toLocaleTimeString()}</span>
+                                <div
+                                    key={idx}
+                                    className={`p-3 border-b border-border ${log.type === 'ERROR' ? 'bg-destructive/10' :
+                                        log.type === 'RECEIVE' ? 'bg-green-50' :
+                                            log.type === 'SEND' ? 'bg-blue-50' :
+                                                log.type === 'CONNECT' ? 'bg-orange-50' :
+                                                    log.type === 'DISCONNECT' ? 'bg-pink-50' :
+                                                        'bg-muted/50'
+                                        }`}
+                                >
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className={`px-2 py-1 rounded text-xs font-medium ${log.type === 'ERROR' ? 'bg-destructive text-destructive-foreground' :
+                                            log.type === 'RECEIVE' ? 'bg-green-600 text-white' :
+                                                log.type === 'SEND' ? 'bg-blue-600 text-white' :
+                                                    log.type === 'CONNECT' ? 'bg-orange-600 text-white' :
+                                                        log.type === 'DISCONNECT' ? 'bg-pink-600 text-white' :
+                                                            'bg-muted text-muted-foreground'
+                                            }`}>
+                                            {log.type}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">{log.timestamp.toLocaleTimeString()}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.9em' }}>{log.message}</div>
+                                    <div className="text-sm">{log.message}</div>
                                     {log.data && (
-                                        <details style={{ marginTop: 5 }}>
-                                            <summary style={{ cursor: 'pointer', fontSize: '0.8em', color: '#666' }}>詳細データ</summary>
-                                            <pre style={{ fontSize: '0.8em', margin: '5px 0', whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: 5, borderRadius: 3 }}>{JSON.stringify(log.data, null, 2)}</pre>
+                                        <details className="mt-2">
+                                            <summary className="cursor-pointer text-xs text-muted-foreground">詳細データ</summary>
+                                            <pre className="text-xs mt-2 whitespace-pre-wrap bg-muted p-2 rounded border">
+                                                {JSON.stringify(log.data, null, 2)}
+                                            </pre>
                                         </details>
                                     )}
                                 </div>
