@@ -467,10 +467,10 @@ const DeviceConfigManagerTestPage: React.FC = () => {
                                 <div key={index} className="p-3 border-b border-border">
                                     <div className="flex justify-between items-center mb-2">
                                         <span className={`px-2 py-1 rounded-md text-xs ${log.type === 'ERROR' ? 'bg-red-500 text-white' :
-                                                log.type === 'RECEIVE' ? 'bg-green-500 text-white' :
-                                                    log.type === 'SEND' ? 'bg-blue-500 text-white' :
-                                                        log.type === 'CONNECT' ? 'bg-yellow-500 text-white' :
-                                                            log.type === 'DISCONNECT' ? 'bg-purple-500 text-white' : 'bg-gray-500 text-white'
+                                            log.type === 'RECEIVE' ? 'bg-green-500 text-white' :
+                                                log.type === 'SEND' ? 'bg-blue-500 text-white' :
+                                                    log.type === 'CONNECT' ? 'bg-yellow-500 text-white' :
+                                                        log.type === 'DISCONNECT' ? 'bg-purple-500 text-white' : 'bg-gray-500 text-white'
                                             }`}>
                                             {log.type}
                                         </span>
