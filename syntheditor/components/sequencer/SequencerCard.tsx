@@ -13,6 +13,7 @@ interface SequencerCardProps {
     isSoloTrack?: boolean
     className?: string
     onMuteToggle?: () => void
+    onSoloToggle?: () => void
 }
 
 export function SequencerCard({
@@ -22,7 +23,8 @@ export function SequencerCard({
     isSoloMode = false,
     isSoloTrack = false,
     className,
-    onMuteToggle
+    onMuteToggle,
+    onSoloToggle
 }: SequencerCardProps) {
     const { playerSyncStates } = useSynthevery()
     const [trackStates, updateTrackStates] = useAppState(playerSyncStates.trackStates)
@@ -35,6 +37,10 @@ export function SequencerCard({
     const currentStep = tickClockState.playing ? Math.floor((Date.now() % 8000) / (8000 / 32)) : 0
     const totalSteps = 32 // 固定値、後でtrackStateから取得可能
 
+    // 表示上のミュート判定は isActive を優先して同期させる
+    const isMutedDisplay = !isActive
+    const isSoloActive = isSoloMode && isSoloTrack
+
     // トラックのミュート状態を切り替え（親コンポーネントから制御）
     const handleMuteToggle = () => {
         if (onMuteToggle) {
@@ -44,9 +50,10 @@ export function SequencerCard({
 
     return (
         <div
+            key={`${trackNumber}-${String(isActive)}-${String(isMutedDisplay)}`}
             className={cn(
-                "box-border content-stretch flex flex-col items-center justify-start relative size-full cursor-pointer transition-all",
-                currentTrackState.mute && "opacity-50",
+                "box-border content-stretch flex flex-col items-center justify-start relative size-full cursor-pointer transition-all p-1.5 shadow-md",
+                isMutedDisplay && "opacity-50",
                 className
             )}
             onClick={() => {
@@ -54,15 +61,17 @@ export function SequencerCard({
                 handleMuteToggle()
             }}
         >
-            <div className="basis-0 grow min-h-px min-w-px relative rounded-[5px] shrink-0 w-full h-full">
-                <div className="box-border content-stretch flex flex-col gap-1 items-end justify-start overflow-hidden p-2 relative size-full">
-                    <div className="flex flex-col font-normal justify-center leading-[0] relative shrink-0 text-xs text-center text-foreground w-full">
+            <div key={`${trackNumber}-${String(isActive)}-${String(isMutedDisplay)}`} className="basis-0 grow min-h-px min-w-px relative rounded-md shrink-0 w-full h-full bg-card">
+                <div className="box-border content-stretch flex flex-col gap-1 items-center justify-center overflow-hidden p-2.5 relative size-full">
+                    <div className="flex flex-col font-normal justify-center leading-none relative shrink-0 text-xs text-center text-foreground w-full">
                         <div className="flex items-center justify-between w-full">
-                            <p className="leading-[normal]">{trackNumber}: {instrumentName}</p>
-                            {/* アクティブインジケータ */}
-                            {isActive && (
-                                <div className="w-3 h-3 rounded-full bg-primary border border-primary-foreground" />
-                            )}
+                            <p className="leading-normal">{trackNumber}: {instrumentName}</p>
+                            {/* 右上インジケータ: アクティブ時は塗りつぶし、ミュート時は中抜き */}
+                            {isActive ? (
+                                <div className="w-3 h-3 rounded-full bg-foreground border border-foreground" />
+                            ) : isMutedDisplay ? (
+                                <div className="w-3 h-3 rounded-full border border-muted-foreground" />
+                            ) : null}
                         </div>
                         {/* トラック状態表示 */}
                         <div className="flex items-center justify-center gap-1 mt-1">
@@ -86,11 +95,41 @@ export function SequencerCard({
                             </div>
                         </div>
                     </div>
+                    {/* SOLO バー（クリックでソロ切替） */}
+                    <div className="h-6 relative rounded-md w-full">
+                        <button
+                            type="button"
+                            aria-pressed={isSoloActive}
+                            className="box-border flex flex-col gap-1 h-6 items-center justify-center overflow-hidden px-2.5 w-full"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                if (onSoloToggle) onSoloToggle()
+                            }}
+                        >
+                            <p className={cn("text-xs leading-none", isSoloActive ? "text-foreground" : "text-muted-foreground")}>SOLO</p>
+                        </button>
+                        <div
+                            aria-hidden="true"
+                            className={cn(
+                                "absolute inset-0 pointer-events-none rounded-md border border-b-2",
+                                isSoloActive ? "border-foreground" : "border-muted-foreground"
+                            )}
+                        />
+                    </div>
                 </div>
-                <div
-                    aria-hidden="true"
-                    className="absolute border border-border border-solid inset-0 pointer-events-none rounded-[5px]"
-                />
+                {isMutedDisplay ? (
+                    <div
+                        key={`muted-${String(isActive)}`}
+                        aria-hidden="true"
+                        className="absolute inset-0 pointer-events-none rounded-md border border-muted-foreground border-b-4"
+                    />
+                ) : (
+                    <div
+                        key={`unmuted-${String(isActive)}`}
+                        aria-hidden="true"
+                        className="absolute inset-0 pointer-events-none rounded-md border border-foreground border-t-4"
+                    />
+                )}
             </div>
         </div>
     )
