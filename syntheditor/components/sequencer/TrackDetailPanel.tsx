@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DraggableNumberInput } from '@/components/ui/draggable-number-input'
 import { SoloButton } from './SoloButton'
+import useDeviceControl from '@/hooks/useDeviceControl'
 
 interface TrackDetailPanelProps {
     tracks: Track[]
@@ -22,6 +23,7 @@ interface Track {
 export function TrackDetailPanel({ tracks, selectedTrack, onTrackSelect, trackName, className }: TrackDetailPanelProps) {
     const [loopLength, setLoopLength] = useState(16)
     const [selectedStep, setSelectedStep] = useState(16)
+    const { resetTrack } = useDeviceControl()
 
     const loopLengthOptions = [1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 24, 32, 48, 64, 128, 256]
 
@@ -169,6 +171,11 @@ export function TrackDetailPanel({ tracks, selectedTrack, onTrackSelect, trackNa
                                 variant="outline"
                                 size="sm"
                                 className="h-12 w-16 bg-transparent border-border text-destructive hover:bg-accent/50 hover:text-destructive"
+                                onClick={() => {
+                                    if (selectedTrack != null) {
+                                        resetTrack(selectedTrack)
+                                    }
+                                }}
                             >
                                 CLEAR<br />ALL
                             </Button>

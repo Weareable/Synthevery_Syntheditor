@@ -19,6 +19,7 @@ class DeviceCommandClient implements CommandClientInterface {
     static readonly COMMAND_TYPE_REQUEST_BODY_COLOR_CONFIG = 0x13;
     static readonly COMMAND_TYPE_REQUEST_LED_COLOR_CONFIG = 0x14;
     static readonly COMMAND_TYPE_REQUEST_SETTINGS_CONFIG = 0x15;
+    static readonly COMMAND_TYPE_RESET_TRACK_BASE = 0x20; // 0x20 - 0x27 (track 0-7)
 
     static readonly COMMAND_TYPE_PLAYING_STATE_SIZE = 1;
     static readonly COMMAND_TYPE_BPM_SIZE = 4;
@@ -45,6 +46,14 @@ class DeviceCommandClient implements CommandClientInterface {
                 return new Uint8Array();
         }
 
+        // RESET_TRACK (0x20 - 0x27): empty payload
+        if (
+            commandId.type >= DeviceCommandClient.COMMAND_TYPE_RESET_TRACK_BASE &&
+            commandId.type <= DeviceCommandClient.COMMAND_TYPE_RESET_TRACK_BASE + 7
+        ) {
+            return new Uint8Array();
+        }
+
         return new Uint8Array();
     }
 
@@ -68,6 +77,13 @@ class DeviceCommandClient implements CommandClientInterface {
                 return [true, new Uint8Array()];
             case DeviceCommandClient.COMMAND_TYPE_REQUEST_SETTINGS_CONFIG:
                 return [true, new Uint8Array()];
+        }
+        // RESET_TRACK (0x20 - 0x27)
+        if (
+            commandId.type >= DeviceCommandClient.COMMAND_TYPE_RESET_TRACK_BASE &&
+            commandId.type <= DeviceCommandClient.COMMAND_TYPE_RESET_TRACK_BASE + 7
+        ) {
+            return [true, new Uint8Array()];
         }
         return [false, new Uint8Array()];
     }
@@ -138,6 +154,17 @@ class DeviceController {
         this.sendCommand({
             client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
             type: DeviceCommandClient.COMMAND_TYPE_BPM,
+        });
+    }
+
+    resetTrack(trackIndexZeroBased: number): void {
+        if (trackIndexZeroBased < 0 || trackIndexZeroBased > 7) {
+            console.warn("resetTrack() : invalid track index, must be 0-7");
+            return;
+        }
+        this.sendCommand({
+            client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+            type: DeviceCommandClient.COMMAND_TYPE_RESET_TRACK_BASE + trackIndexZeroBased,
         });
     }
 

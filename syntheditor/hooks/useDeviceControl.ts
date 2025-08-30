@@ -16,5 +16,10 @@ export default function useDeviceControl() {
         deviceController.setPlayingState("stop");
     }, [deviceController]);
 
-    return { setPlayingState, setBpmState, stop };
+    const resetTrack = useCallback((trackIdOneBased: number) => {
+        const index = trackIdOneBased - 1;
+        deviceController.resetTrack(index);
+    }, [deviceController]);
+
+    return { setPlayingState, setBpmState, stop, resetTrack };
 }

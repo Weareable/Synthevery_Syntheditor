@@ -77,7 +77,7 @@ export function SequencerCardGroup({
 
     return (
         <div className={cn(
-            "p-2 basis-0 box-border grid grid-cols-[repeat(4,_minmax(0px,_1fr))] grid-rows-[repeat(2,_minmax(0px,_1fr))] gap-2 grow-[2] h-full min-h-px min-w-px overflow-visible relative rounded shrink-0",
+            "p-2 basis-0 box-border grid grid-cols-4 auto-rows-fr gap-2 grow-[2] h-full min-h-px min-w-px overflow-visible relative rounded shrink-0",
             className
         )}>
             {tracks.map((track) => {
@@ -86,12 +86,7 @@ export function SequencerCardGroup({
                 return (
                     <div
                         key={`${track.id}-${String(active)}-${String(muted)}`}
-                        className="[grid-area:1_/_1] box-border content-stretch flex flex-col gap-[5px] items-center justify-start overflow-visible relative shrink-0"
-                        style={{
-                            gridArea: track.id <= 4
-                                ? `1 / ${track.id}`
-                                : `2 / ${track.id - 4}`
-                        }}
+                        className="box-border content-stretch flex flex-col gap-[5px] items-center justify-start overflow-visible relative shrink-0"
                     >
                         <SequencerCard
                             trackNumber={track.id}

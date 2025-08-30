@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { LoopIndicator } from './LoopIndicator'
 import { useSynthevery } from '@/contexts/SyntheveryContext'
 import { useAppState, useReadOnlyAppState } from '@/hooks/useAppState'
+import { useTrackConfig } from '@/hooks/useTrackConfig'
 
 interface SequencerCardProps {
     trackNumber: number
@@ -29,6 +30,7 @@ export function SequencerCard({
     const { playerSyncStates } = useSynthevery()
     const [trackStates, updateTrackStates] = useAppState(playerSyncStates.trackStates)
     const tickClockState = useReadOnlyAppState(playerSyncStates.tickClockState)
+    const { trackDetails, isReady } = useTrackConfig()
 
     // 現在のトラックの状態を取得
     const currentTrackState = trackStates[trackNumber - 1] || { loopLengthTick: 1920, mute: false, volume: 100 }
@@ -65,7 +67,7 @@ export function SequencerCard({
                 <div className="box-border content-stretch flex flex-col gap-1 items-center justify-center overflow-hidden p-2.5 relative size-full">
                     <div className="flex flex-col font-normal justify-center leading-none relative shrink-0 text-xs text-center text-foreground w-full">
                         <div className="flex items-center justify-between w-full">
-                            <p className="leading-normal">{trackNumber}: {instrumentName}</p>
+                            <p className="leading-normal">{trackNumber}: {isReady && trackDetails[trackNumber - 1]?.displayName ? trackDetails[trackNumber - 1]?.displayName : instrumentName}</p>
                             {/* 右上インジケータ: アクティブ時は塗りつぶし、ミュート時は中抜き */}
                             {isActive ? (
                                 <div className="w-3 h-3 rounded-full bg-foreground border border-foreground" />
