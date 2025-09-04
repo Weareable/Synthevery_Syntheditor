@@ -237,7 +237,7 @@ class BLEMeshDevice {
 
         const now = new Date();
         await this.bleDevice.writeCharacteristic(this.meshPacketTxCharacteristic, data);
-        console.log("SENT", new Date().getTime() - now.getTime(), meshPacket.type, meshPacket.data);
+        console.debug("SENT", new Date().getTime() - now.getTime(), meshPacket.type, meshPacket.data);
     }
 }
 
