@@ -10,6 +10,7 @@ import { playerSyncStates } from '@/lib/synthevery-core/player/states'
 import { appStateSyncConnector } from '@/lib/synthevery-core/appstate/sync'
 import { deviceTypeSynchronizer } from '@/lib/synthevery-core/devicetype/devicetype'
 import { srarqSessionsController } from '@/lib/synthevery-core/connection/srarq/session'
+import { timeSyncService } from '@/lib/synthevery-core/time/time-sync-service'
 
 interface SyntheveryContextType {
     mesh: typeof mesh
@@ -22,6 +23,7 @@ interface SyntheveryContextType {
     appStateSyncConnector: typeof appStateSyncConnector
     deviceTypeSynchronizer: typeof deviceTypeSynchronizer
     srarqSessionsController: typeof srarqSessionsController
+    timeSyncService: typeof timeSyncService
 }
 
 const SyntheveryContext = createContext<SyntheveryContextType | undefined>(undefined)
@@ -38,6 +40,7 @@ const syntheveryValue: SyntheveryContextType = {
     appStateSyncConnector,
     deviceTypeSynchronizer,
     srarqSessionsController,
+    timeSyncService,
 }
 
 export function SyntheveryProvider({ children }: { children: ReactNode }) {
