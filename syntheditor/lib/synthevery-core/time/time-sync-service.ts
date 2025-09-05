@@ -25,26 +25,72 @@ export class TimeSyncService {
     private _lastOffsetUs: number | null = null
     private _lastBaseOffsetUs: number | null = null
     private _lastSamples: ReturnType<typeof this.node.getSamples> = []
+    private _syncTimer: NodeJS.Timeout | null = null
+    private _isAutoSyncEnabled = true
 
     constructor() {
         // 自動開始: デバイス順序が更新されたら先頭と同期
         mesh.eventEmitter.on('deviceOrderChanged', () => {
             this.tryStartOldest()
         })
+
+        // 5秒ごとの自動同期タイマーを開始
+        this.startAutoSync()
     }
 
     private tryStartOldest(): void {
         const order = mesh.getDeviceOrder()
-        if (order.length === 0) return
-        if (this._isSyncing) return
+        if (order.length === 0) {
+            console.log('[TimeSync] No devices available for synchronization')
+            return
+        }
+        if (this._isSyncing) {
+            console.log('[TimeSync] Synchronization already in progress, skipping')
+            return
+        }
         const oldest = order[0]
+        console.log('[TimeSync] Attempting to sync with oldest device:', getAddressString(oldest))
         this.start(oldest)
+    }
+
+    private startAutoSync(): void {
+        this.stopAutoSync() // 既存のタイマーをクリア
+        if (!this._isAutoSyncEnabled) return
+
+        console.log('[TimeSync] Starting auto-sync timer (5 second interval)')
+        this._syncTimer = setInterval(() => {
+            console.log('[TimeSync] Auto-sync triggered')
+            this.tryStartOldest()
+        }, 5000) // 5秒ごとに実行
+    }
+
+    private stopAutoSync(): void {
+        if (this._syncTimer) {
+            console.log('[TimeSync] Stopping auto-sync timer')
+            clearInterval(this._syncTimer)
+            this._syncTimer = null
+        }
+    }
+
+    enableAutoSync(): void {
+        console.log('[TimeSync] Enabling auto-sync')
+        this._isAutoSyncEnabled = true
+        this.startAutoSync()
+    }
+
+    disableAutoSync(): void {
+        console.log('[TimeSync] Disabling auto-sync')
+        this._isAutoSyncEnabled = false
+        this.stopAutoSync()
     }
 
     start(target: P2PMacAddress): boolean {
         if (!mesh.isAvailable(target)) {
+            console.log('[TimeSync] Failed to start sync: target not available', getAddressString(target))
             return false
         }
+
+        console.log('[TimeSync] Starting synchronization with', getAddressString(target))
         this._isSyncing = true
         this._lastTarget = target
         this._lastOffsetUs = null
@@ -52,11 +98,20 @@ export class TimeSyncService {
         this._lastSamples = []
         this.eventEmitter.emit('started', target)
         this.eventEmitter.emit('updated')
+
         this.node.startSynchronize(target, (t, finalOffsetUs) => {
             this._isSyncing = false
             this._lastOffsetUs = finalOffsetUs >>> 0
             this._lastBaseOffsetUs = this.node.getLastBaseOffsetUs()
             this._lastSamples = this.node.getCompletedSamples()
+
+            console.log('[TimeSync] Synchronization completed:', {
+                target: getAddressString(t),
+                offsetUs: this._lastOffsetUs,
+                baseOffsetUs: this._lastBaseOffsetUs,
+                samplesCount: this._lastSamples.length
+            })
+
             this.eventEmitter.emit('completed', t, this._lastOffsetUs)
             this.eventEmitter.emit('updated')
         })
@@ -69,6 +124,12 @@ export class TimeSyncService {
     get lastOffsetUs(): number | null { return this._lastOffsetUs }
     get lastBaseOffsetUs(): number | null { return this._lastBaseOffsetUs }
     get lastSamples(): ReturnType<typeof this.node.getSamples> { return this._lastSamples }
+    get isAutoSyncEnabled(): boolean { return this._isAutoSyncEnabled }
+
+    destroy(): void {
+        this.stopAutoSync()
+        this.eventEmitter.removeAllListeners()
+    }
 }
 
 export const timeSyncService = new TimeSyncService()
