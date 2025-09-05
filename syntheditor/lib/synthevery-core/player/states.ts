@@ -18,7 +18,7 @@ class PlayerSyncStates {
             false, serializeBoolean, deserializeBoolean
         ));
         this.tickClockState = new ReadOnlySyncState(APPSTATE_ID_PLAYER_TICK_CLOCK, new AppStateStore(
-            { playing: false, bpm: 120 }, serializeTickClockState, deserializeTickClockState
+            { playing: false, bpm: 120, originTimeUs: 0 }, serializeTickClockState, deserializeTickClockState
         ));
         this.recorderState = new SyncState(APPSTATE_ID_PLAYER_RECORDER, new AppStateStore(
             false, serializeBoolean, deserializeBoolean

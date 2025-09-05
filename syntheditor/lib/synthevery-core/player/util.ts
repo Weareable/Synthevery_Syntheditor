@@ -2,21 +2,23 @@ import { TickClockState, TrackState } from "@/lib/synthevery-core/types/player";
 import { deserializeFloat32, serializeFloat32, deserializeBoolean, serializeBoolean, deserializeUint32, serializeUint32, serializeUint8, deserializeUint8 } from "../appstate/appstates";
 
 export function deserializeTickClockState(data: Uint8Array): TickClockState | null {
-    if (data.length < 9) {
+    if (data.length !== 9) {
         return null;
     }
     const playing = data[0] === 1;
     const bpm = deserializeFloat32(data.slice(1, 5));
-    if (bpm === null) {
+    const originTimeUs = deserializeUint32(data.slice(5, 9));
+    if (bpm === null || originTimeUs === null) {
         return null;
     }
-    return { playing, bpm };
+    return { playing, bpm, originTimeUs };
 }
 
 export function serializeTickClockState(state: TickClockState): Uint8Array {
     const data = new Uint8Array(9);
     data[0] = state.playing ? 1 : 0;
     data.set(serializeFloat32(state.bpm), 1);
+    data.set(serializeUint32(state.originTimeUs >>> 0), 5);
     return data;
 }
 

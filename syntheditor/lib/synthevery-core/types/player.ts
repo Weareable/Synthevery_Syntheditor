@@ -1,6 +1,7 @@
 export interface TickClockState {
     playing: boolean;
     bpm: number;
+    originTimeUs: number;
 }
 
 export interface TrackState {
