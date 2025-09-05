@@ -1,32 +1,28 @@
 'use client'
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { motion, useMotionValue, useTransform } from 'framer-motion'
 
 interface LoopIndicatorProps {
+    progress: number
     currentStep: number
     totalSteps: number
     isPlaying?: boolean
-    bpm?: number
-    loopLengthMs?: number
     className?: string
 }
 
 export function LoopIndicator({
+    progress,
     currentStep,
     totalSteps,
     isPlaying = false,
-    bpm = 120,
-    loopLengthMs = 8000,
     className
 }: LoopIndicatorProps) {
-    const [currentTime, setCurrentTime] = useState(0)
-
-    // 現在のステップ位置を0-1の範囲に正規化
-    const progress = useMotionValue(currentStep / totalSteps)
+    // 0..1 の進捗をモーション値として保持
+    const progressMv = useMotionValue(isPlaying ? progress : (totalSteps > 0 ? currentStep / totalSteps : 0))
 
     // 角度をラジアンに変換（上=0度、時計回り）
-    const angleRad = useTransform(progress, [0, 1], [-Math.PI / 2, 3 * Math.PI / 2])
+    const angleRad = useTransform(progressMv, [0, 1], [-Math.PI / 2, 3 * Math.PI / 2])
 
     // ドットの座標を計算
     const center = 50
@@ -37,40 +33,12 @@ export function LoopIndicator({
     const dotY = useTransform(angleRad, (rad) => center + radius * Math.sin(rad))
 
     // 進捗リング用のtransform
-    const strokeDashoffset = useTransform(progress, p => 1 - p)
-
-    // 進捗更新のコールバック
-    const updateProgress = useCallback((newProgress: number) => {
-        progress.set(newProgress)
-    }, [progress])
-
-    // 再生中の時間ベースのアニメーション
+    const strokeDashoffset = useTransform(progressMv, p => 1 - p)
+    // 進捗の同期: 再生中は連続値 progress、停止中はステップ基準
     useEffect(() => {
-        if (!isPlaying) {
-            setCurrentTime(0)
-            return
-        }
-
-        const startTime = Date.now()
-        const interval = setInterval(() => {
-            const elapsed = Date.now() - startTime
-            const loopProgress = (elapsed % loopLengthMs) / loopLengthMs
-            setCurrentTime(loopProgress * loopLengthMs)
-
-            // ステップベースの進捗も更新
-            const stepProgress = Math.floor(loopProgress * totalSteps) / totalSteps
-            updateProgress(stepProgress)
-        }, 16) // 60fps
-
-        return () => clearInterval(interval)
-    }, [isPlaying, loopLengthMs, totalSteps, updateProgress])
-
-    // ステップが変更されたときにprogressを更新
-    useEffect(() => {
-        if (!isPlaying) {
-            updateProgress(currentStep / totalSteps)
-        }
-    }, [currentStep, totalSteps, isPlaying, updateProgress])
+        const value = isPlaying ? progress : (totalSteps > 0 ? currentStep / totalSteps : 0)
+        progressMv.set(value)
+    }, [progress, currentStep, totalSteps, isPlaying, progressMv])
 
     return (
         <div className={cn('relative w-full h-full', className)}>
@@ -99,10 +67,11 @@ export function LoopIndicator({
                         stroke="var(--primary)"
                         strokeWidth={1.5}
                         strokeLinecap="round"
+                        transform={`rotate(${-90} ${center} ${center})`}
                         initial={{ pathLength: 0 }}
-                        animate={{ pathLength: progress.get() }}
+                        animate={{ pathLength: progressMv.get() }}
                         style={{
-                            pathLength: progress,
+                            pathLength: progressMv,
                             strokeDashoffset: strokeDashoffset
                         }}
                     />

@@ -5,6 +5,7 @@ import { LoopIndicator } from './LoopIndicator'
 import { useSynthevery } from '@/contexts/SyntheveryContext'
 import { useAppState, useReadOnlyAppState } from '@/hooks/useAppState'
 import { useTrackConfig } from '@/hooks/useTrackConfig'
+import useTickClock from '@/hooks/useTickClock'
 
 interface SequencerCardProps {
     trackNumber: number
@@ -30,14 +31,20 @@ export function SequencerCard({
     const { playerSyncStates } = useSynthevery()
     const [trackStates, updateTrackStates] = useAppState(playerSyncStates.trackStates)
     const tickClockState = useReadOnlyAppState(playerSyncStates.tickClockState)
+    // TickClock フォロワで実時間ティックを取得
+    const { tick } = useTickClock()
     const { trackDetails, isReady } = useTrackConfig()
 
     // 現在のトラックの状態を取得
     const currentTrackState = trackStates[trackNumber - 1] || { loopLengthTick: 1920, mute: false, volume: 100 }
 
-    // 現在のステップ位置を計算（tickClockStateから取得）
-    const currentStep = tickClockState.playing ? Math.floor((Date.now() % 8000) / (8000 / 32)) : 0
-    const totalSteps = 32 // 固定値、後でtrackStateから取得可能
+    // 現在のステップ位置とループ進捗を計算（loopLengthTick と tick から導出）
+    const totalSteps = 32 // TODO: trackState から取得可能なら置換
+    const ticksPerLoop = currentTrackState.loopLengthTick ?? 1920
+    const tickWrapped = ticksPerLoop > 0 ? (tick % ticksPerLoop) : 0
+    const loopProgress = ticksPerLoop > 0 ? (tickWrapped / ticksPerLoop) : 0
+    const currentStep = tickClockState.playing ? Math.floor(loopProgress * totalSteps) : 0
+
 
     // 表示上のミュート判定は isActive を優先して同期させる
     const isMutedDisplay = !isActive
@@ -76,9 +83,12 @@ export function SequencerCard({
                             ) : null}
                         </div>
                         {/* トラック状態表示 */}
-                        <div className="flex items-center justify-center gap-1 mt-1">
+                        <div className="flex items-center justify-center gap-2 mt-1">
                             <span className="text-xs text-muted-foreground">
                                 Vol: {currentTrackState.volume}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                                Len: {currentTrackState.loopLengthTick}t ({Math.max(1, Math.round((currentTrackState.loopLengthTick ?? 0) / 480))}b)
                             </span>
                         </div>
                     </div>
@@ -87,11 +97,10 @@ export function SequencerCard({
                         <div className="absolute inset-x-0 bottom-[7.45%] top-[7.45%] flex items-center justify-center [container-type:size]">
                             <div className="w-[min(100cqw,100cqh)] h-[min(100cqw,100cqh)]">
                                 <LoopIndicator
+                                    progress={loopProgress}
                                     currentStep={currentStep}
                                     totalSteps={totalSteps}
                                     isPlaying={tickClockState.playing}
-                                    bpm={tickClockState.bpm}
-                                    loopLengthMs={(60 / tickClockState.bpm) * 4 * 1000} // 4拍分のループ
                                     className="w-full h-full"
                                 />
                             </div>

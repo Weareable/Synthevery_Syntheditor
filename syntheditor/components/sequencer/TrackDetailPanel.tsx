@@ -1,10 +1,12 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DraggableNumberInput } from '@/components/ui/draggable-number-input'
 import { SoloButton } from './SoloButton'
 import useDeviceControl from '@/hooks/useDeviceControl'
+import { useSynthevery } from '@/contexts/SyntheveryContext'
+import { useAppState } from '@/hooks/useAppState'
 
 interface TrackDetailPanelProps {
     tracks: Track[]
@@ -21,7 +23,19 @@ interface Track {
 }
 
 export function TrackDetailPanel({ tracks, selectedTrack, onTrackSelect, trackName, className }: TrackDetailPanelProps) {
-    const [loopLength, setLoopLength] = useState(16)
+    const { playerSyncStates } = useSynthevery()
+    const [trackStates, setTrackStates] = useAppState(playerSyncStates.trackStates)
+
+    // 表示値: 拍数（1拍=480tick）
+    const displayedBeats = useMemo(() => {
+        if (selectedTrack == null) return 16
+        const ts = trackStates[selectedTrack - 1]
+        if (!ts) return 16
+        const beats = Math.max(1, Math.round((ts.loopLengthTick ?? 1920) / 480))
+        return beats
+    }, [selectedTrack, trackStates])
+
+    const [loopLength, setLoopLength] = useState(displayedBeats)
     const [selectedStep, setSelectedStep] = useState(16)
     const { resetTrack } = useDeviceControl()
 
@@ -29,12 +43,26 @@ export function TrackDetailPanel({ tracks, selectedTrack, onTrackSelect, trackNa
 
     const handleLoopLengthChange = (value: number) => {
         setLoopLength(value)
+        if (selectedTrack == null) return
+        // beats -> ticks（1拍=480tick）
+        const ticks = Math.max(1, Math.floor(value * 480))
+        const idx = selectedTrack - 1
+        const updated = trackStates.slice()
+        if (!updated[idx]) return
+        updated[idx] = { ...updated[idx], loopLengthTick: ticks }
+        setTrackStates(updated)
     }
 
     const handleStepClick = (step: number) => {
         setSelectedStep(step)
-        setLoopLength(step)
+        handleLoopLengthChange(step)
     }
+
+    // 選択トラック変更や外部更新時に表示値を同期
+    useEffect(() => {
+        setLoopLength(displayedBeats)
+        setSelectedStep(displayedBeats)
+    }, [displayedBeats])
 
     // ソロボタンのハンドラー（将来的にSequencerCardGroupと連携）
     const handleSoloClick = () => {
