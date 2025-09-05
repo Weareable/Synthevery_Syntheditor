@@ -18,17 +18,18 @@ export function useAppState<T>(syncState: SyncState<T>): [T, (newValue: T) => vo
     const setState = useCallback((newValue: T) => {
         syncState.getStore().value = newValue;
         syncState.notifyChange();
-        setState_(() => { return newValue; });
     }, [syncState, setState_]);
 
     useEffect(() => {
         const callback = () => {
-            setState(syncState.getStore().value);
+            setState_(syncState.getStore().value);
         };
 
         syncState.eventEmitter.on('synced', callback);
+        syncState.eventEmitter.on('notify', callback);
         return () => {
             syncState.eventEmitter.off('synced', callback);
+            syncState.eventEmitter.off('notify', callback);
         };
     }, [syncState, setState]);
 
