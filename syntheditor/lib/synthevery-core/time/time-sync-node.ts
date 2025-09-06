@@ -1,4 +1,4 @@
-import { mesh } from '../connection/mesh'
+import { Mesh } from '../connection/mesh'
 import { MESH_PACKET_TYPE_TIME_SYNC } from '../connection/constants'
 import { P2PMacAddress } from '../types/mesh'
 import { TimeSynchronizer, TimeSyncSample } from './time-synchronizer'
@@ -7,6 +7,7 @@ import { TimeBase, writeU32LE, readU32LE, bytesToHex } from './utils'
 type OnComplete = (target: P2PMacAddress, finalOffsetUs: number) => void
 
 export class TimeSyncNode {
+    private readonly mesh: Mesh;
     private readonly synchronizer: TimeSynchronizer
     private readonly base: TimeBase
     private readonly numCommands: number
@@ -22,12 +23,13 @@ export class TimeSyncNode {
     private static readonly TIMEOUT_MS = 1000
     private static readonly MAX_RETRY = 3
 
-    constructor(synchronizer: TimeSynchronizer, base: TimeBase, numCommands: number = 8) {
+    constructor(mesh: Mesh, synchronizer: TimeSynchronizer, base: TimeBase, numCommands: number = 8) {
+        this.mesh = mesh;
         this.synchronizer = synchronizer
         this.base = base
         this.numCommands = numCommands
 
-        mesh.setCallback(MESH_PACKET_TYPE_TIME_SYNC, (packet) => {
+        this.mesh.setCallback(MESH_PACKET_TYPE_TIME_SYNC, (packet) => {
             this.receiveData(packet.source, packet.data)
         })
     }
@@ -48,7 +50,7 @@ export class TimeSyncNode {
         const t0 = this.base.micros()
         // 送信
         console.debug('[TimeSync] TX len=', buf.length, 'data=', bytesToHex(buf))
-        mesh.sendPacket(MESH_PACKET_TYPE_TIME_SYNC, this.syncingTarget, buf)
+        this.mesh.sendPacket(MESH_PACKET_TYPE_TIME_SYNC, this.syncingTarget, buf)
         // 記録
         this.ensureSampleSlot()
         this.samples[this.currentCommandIndex].t0 = t0
@@ -78,7 +80,7 @@ export class TimeSyncNode {
             // Web側がサーバ応答を返す場合は、現在の同期オフセットを返す
             const currentOffsetUs = this.synchronizer.getSyncTime().getOffset() >>> 0
             writeU32LE(view, 9, currentOffsetUs)
-            mesh.sendPacket(MESH_PACKET_TYPE_TIME_SYNC, address, serverData)
+            this.mesh.sendPacket(MESH_PACKET_TYPE_TIME_SYNC, address, serverData)
             return
         }
 

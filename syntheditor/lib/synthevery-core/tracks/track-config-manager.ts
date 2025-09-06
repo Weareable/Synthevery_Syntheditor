@@ -1,5 +1,5 @@
 import { EventEmitter } from 'eventemitter3';
-import { deviceConfigManager } from '../device/device-config-manager';
+import { DeviceConfigManager } from '../device/device-config-manager';
 import { P2PMacAddress } from '../types/mesh';
 import {
     TrackDetail,
@@ -7,7 +7,7 @@ import {
     GeneratorConfig
 } from '../types/player';
 import { getAddressString, getAddressFromString } from '../connection/util';
-import { mesh } from '../connection/mesh';
+import { Mesh } from '../connection/mesh';
 
 /**
  * トラックコンフィグ管理のイベント
@@ -30,7 +30,9 @@ export interface TrackConfigManagerEvents {
  * トラックコンフィグ管理クラス
  * 各デバイスのTrackDetail、NoteBuilderConfig、GeneratorConfigを統合管理
  */
-class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
+export class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
+    private mesh: Mesh;
+    private deviceConfigManager: DeviceConfigManager;
     // アプリで保持する統合コンフィグ（最初に接続されたデバイスのコンフィグをベース）
     private appTrackDetails: TrackDetail[] = [];
     private appNoteBuilderConfigs: NoteBuilderConfig[] = [];
@@ -53,8 +55,10 @@ class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
         generator: false
     };
 
-    constructor() {
+    constructor(mesh: Mesh, deviceConfigManager: DeviceConfigManager) {
         super();
+        this.mesh = mesh;
+        this.deviceConfigManager = deviceConfigManager;
         this.setupDeviceConfigManagerListeners();
         this.initializeDefaultConfigs();
     }
@@ -64,27 +68,27 @@ class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
      */
     private setupDeviceConfigManagerListeners(): void {
         // TrackDetail受信時の処理
-        deviceConfigManager.eventEmitter.on('trackDetailReceived', (device: P2PMacAddress, trackDetails: TrackDetail[]) => {
+        this.deviceConfigManager.eventEmitter.on('trackDetailReceived', (device: P2PMacAddress, trackDetails: TrackDetail[]) => {
             this.handleTrackDetailReceived(device, trackDetails);
         });
 
         // NoteBuilderConfig受信時の処理
-        deviceConfigManager.eventEmitter.on('noteBuilderConfigReceived', (device: P2PMacAddress, configs: NoteBuilderConfig[]) => {
+        this.deviceConfigManager.eventEmitter.on('noteBuilderConfigReceived', (device: P2PMacAddress, configs: NoteBuilderConfig[]) => {
             this.handleNoteBuilderConfigReceived(device, configs);
         });
 
         // GeneratorConfig受信時の処理
-        deviceConfigManager.eventEmitter.on('generatorConfigReceived', (device: P2PMacAddress, configs: GeneratorConfig[]) => {
+        this.deviceConfigManager.eventEmitter.on('generatorConfigReceived', (device: P2PMacAddress, configs: GeneratorConfig[]) => {
             this.handleGeneratorConfigReceived(device, configs);
         });
 
         // デバイス接続時の処理
-        deviceConfigManager.eventEmitter.on('deviceConnected', (device: P2PMacAddress) => {
+        this.deviceConfigManager.eventEmitter.on('deviceConnected', (device: P2PMacAddress) => {
             this.handleDeviceConnected(device);
         });
 
         // デバイス切断時の処理
-        deviceConfigManager.eventEmitter.on('deviceDisconnected', (device: P2PMacAddress) => {
+        this.deviceConfigManager.eventEmitter.on('deviceDisconnected', (device: P2PMacAddress) => {
             this.handleDeviceDisconnected(device);
         });
     }
@@ -110,7 +114,7 @@ class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
         const deviceStr = getAddressString(device);
 
         // アプリのMACアドレス（自分自身）からのコンフィグは除外
-        const myAddress = mesh.getAddress();
+        const myAddress = this.mesh.getAddress();
         console.log('TrackConfigManager: TrackDetail received from device:', deviceStr, 'myAddress:', getAddressString(myAddress), 'isSelf:', getAddressString(device) === getAddressString(myAddress));
         if (getAddressString(device) === getAddressString(myAddress)) {
             console.log('TrackConfigManager: Skipping TrackDetail from self:', deviceStr);
@@ -147,7 +151,7 @@ class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
         const deviceStr = getAddressString(device);
 
         // アプリのMACアドレス（自分自身）からのコンフィグは除外
-        const myAddress = mesh.getAddress();
+        const myAddress = this.mesh.getAddress();
         console.log('TrackConfigManager: NoteBuilderConfig received from device:', deviceStr, 'myAddress:', getAddressString(myAddress), 'isSelf:', getAddressString(device) === getAddressString(myAddress));
         if (getAddressString(device) === getAddressString(myAddress)) {
             console.log('TrackConfigManager: Skipping NoteBuilderConfig from self:', deviceStr);
@@ -182,7 +186,7 @@ class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
         const deviceStr = getAddressString(device);
 
         // アプリのMACアドレス（自分自身）からのコンフィグは除外
-        const myAddress = mesh.getAddress();
+        const myAddress = this.mesh.getAddress();
         console.log('TrackConfigManager: GeneratorConfig received from device:', deviceStr, 'myAddress:', getAddressString(myAddress), 'isSelf:', getAddressString(myAddress));
         if (getAddressString(device) === getAddressString(myAddress)) {
             console.log('TrackConfigManager: Skipping GeneratorConfig from self:', deviceStr);
@@ -217,7 +221,7 @@ class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
         const deviceStr = getAddressString(device);
 
         // アプリのMACアドレス（自分自身）は除外
-        const myAddress = mesh.getAddress();
+        const myAddress = this.mesh.getAddress();
         if (getAddressString(device) === getAddressString(myAddress)) {
             console.log('TrackConfigManager: Skipping device connection from self:', deviceStr);
             return;
@@ -243,7 +247,7 @@ class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
         const deviceStr = getAddressString(device);
 
         // アプリのMACアドレス（自分自身）は除外
-        const myAddress = mesh.getAddress();
+        const myAddress = this.mesh.getAddress();
         if (getAddressString(device) === getAddressString(myAddress)) {
             console.log('TrackConfigManager: Skipping device disconnection from self:', deviceStr);
             return;
@@ -485,4 +489,5 @@ class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
     }
 }
 
-export const trackConfigManager = new TrackConfigManager();
+// シングルトンインスタンスの即座生成を停止
+// export const trackConfigManager = new TrackConfigManager();

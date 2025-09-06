@@ -1,51 +1,46 @@
 'use client'
-import React, { createContext, useContext, ReactNode } from 'react'
-import { mesh } from '@/lib/synthevery-core/connection/mesh'
-import { commandDispatcher } from '@/lib/synthevery-core/command/dispatcher'
-import { deviceController } from '@/lib/synthevery-core/device/controller'
-import { deviceConfigManager } from '@/lib/synthevery-core/device/device-config-manager'
-import { dataTransferController } from '@/lib/synthevery-core/data-transfer/data-transfer-controller'
-import { trackConfigManager } from '@/lib/synthevery-core/tracks/track-config-manager'
-import { playerSyncStates } from '@/lib/synthevery-core/player/states'
-import { appStateSyncConnector } from '@/lib/synthevery-core/appstate/sync'
-import { deviceTypeSynchronizer } from '@/lib/synthevery-core/devicetype/devicetype'
-import { srarqSessionsController } from '@/lib/synthevery-core/connection/srarq/session'
-import { timeSyncService } from '@/lib/synthevery-core/time/time-sync-service'
+import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react'
+import { syntheveryServiceContainer, SyntheveryServices } from '@/lib/synthevery-core/service-container'
 
 interface SyntheveryContextType {
-    mesh: typeof mesh
-    commandDispatcher: typeof commandDispatcher
-    deviceController: typeof deviceController
-    deviceConfigManager: typeof deviceConfigManager
-    dataTransferController: typeof dataTransferController
-    trackConfigManager: typeof trackConfigManager
-    playerSyncStates: typeof playerSyncStates
-    appStateSyncConnector: typeof appStateSyncConnector
-    deviceTypeSynchronizer: typeof deviceTypeSynchronizer
-    srarqSessionsController: typeof srarqSessionsController
-    timeSyncService: typeof timeSyncService
+    mesh: SyntheveryServices['mesh']
+    commandDispatcher: SyntheveryServices['commandDispatcher']
+    deviceController: SyntheveryServices['deviceController']
+    deviceConfigManager: SyntheveryServices['deviceConfigManager']
+    dataTransferController: SyntheveryServices['dataTransferController']
+    trackConfigManager: SyntheveryServices['trackConfigManager']
+    playerSyncStates: SyntheveryServices['playerSyncStates']
+    appStateSyncConnector: SyntheveryServices['appStateSyncConnector']
+    deviceTypeSynchronizer: SyntheveryServices['deviceTypeSynchronizer']
+    srarqSessionsController: SyntheveryServices['srarqSessionsController']
+    timeSyncService: SyntheveryServices['timeSyncService']
 }
 
 const SyntheveryContext = createContext<SyntheveryContextType | undefined>(undefined)
 
-// 🎯 フックの外側で定義！オブジェクトが不変になる
-const syntheveryValue: SyntheveryContextType = {
-    mesh,
-    commandDispatcher,
-    deviceController,
-    deviceConfigManager,
-    dataTransferController,
-    trackConfigManager,
-    playerSyncStates,
-    appStateSyncConnector,
-    deviceTypeSynchronizer,
-    srarqSessionsController,
-    timeSyncService,
-}
-
 export function SyntheveryProvider({ children }: { children: ReactNode }) {
+    const [services, setServices] = useState<SyntheveryServices | null>(null)
+
+    useEffect(() => {
+        // クライアントサイドでのみ実行される
+        console.log('Initializing Synthevery services on the client...')
+
+        try {
+            const initializedServices = syntheveryServiceContainer.initialize()
+            setServices(initializedServices)
+        } catch (error) {
+            console.error('Failed to initialize Synthevery services:', error)
+        }
+    }, [])
+
+    // サービスが初期化されるまではローディングUIなどを表示
+    if (!services) {
+        return <div>Loading Synthevery Services...</div>
+    }
+
+    // 初期化完了後、Context経由で全サービスを配下のコンポーネントに提供
     return (
-        <SyntheveryContext.Provider value={syntheveryValue}>
+        <SyntheveryContext.Provider value={services}>
             {children}
         </SyntheveryContext.Provider>
     )

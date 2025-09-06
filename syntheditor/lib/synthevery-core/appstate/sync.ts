@@ -1,5 +1,5 @@
-import { mesh } from '../connection/mesh';
-import { commandDispatcher } from '../command/dispatcher';
+import { Mesh } from '../connection/mesh';
+import { CommandDispatcher } from '../command/dispatcher';
 import { EventEmitter } from 'eventemitter3';
 import { P2PMacAddress } from '../types/mesh';
 import { AppStateID, AppStateSyncInterface } from '../types/appstate';
@@ -11,18 +11,22 @@ import { COMMAND_CLIENT_ID_APPSTATE_NOTIFY, COMMAND_CLIENT_ID_APPSTATE_RETRIEVE 
 interface AppStateSyncConnectorEvents {
     synced: (appStateId: AppStateID, source: P2PMacAddress) => void;
 }
-class AppStateSyncConnector {
+export class AppStateSyncConnector {
     private syncStates: Map<AppStateID, AppStateSyncInterface> = new Map();
     public readonly eventEmitter = new EventEmitter<AppStateSyncConnectorEvents>();
+    private mesh: Mesh;
+    private commandDispatcher: CommandDispatcher;
 
-    constructor() {
-        mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
+    constructor(mesh: Mesh, commandDispatcher: CommandDispatcher) {
+        this.mesh = mesh;
+        this.commandDispatcher = commandDispatcher;
+        this.mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
             // 新規追加されたデバイスのみ初期化
             for (const device of added) {
                 this.initializeNode(device);
             }
-            if (mesh.getConnectedPeers().length > 0) {
-                this.retrieveAllStates(mesh.getConnectedPeers()[0]);
+            if (this.mesh.getConnectedPeers().length > 0) {
+                this.retrieveAllStates(this.mesh.getConnectedPeers()[0]);
             }
         });
     }
@@ -48,22 +52,22 @@ class AppStateSyncConnector {
             return;
         }
 
-        if (mesh.getConnectedPeers().length === 0) {
+        if (this.mesh.getConnectedPeers().length === 0) {
             console.warn("notifyStateUpdate() : no connected peers");
             return;
         }
 
-        const first_peer_address = mesh.getConnectedPeers()[0];
+        const first_peer_address = this.mesh.getConnectedPeers()[0];
         const command: CommandID = {
             client_id: COMMAND_CLIENT_ID_APPSTATE_NOTIFY,
             type: appStateId,
         };
-        const handler = commandDispatcher.getCommandHandler(first_peer_address, false);
+        const handler = this.commandDispatcher.getCommandHandler(first_peer_address, false);
         handler?.pushCommand(command);
     }
 
     retrieveAllStates(destination: P2PMacAddress): void {
-        const available = commandDispatcher.isAvailable(destination);
+        const available = this.commandDispatcher.isAvailable(destination);
         if (!available) {
             console.warn("retrieveAllStates() : destination is not available");
             return;
@@ -74,17 +78,17 @@ class AppStateSyncConnector {
                 client_id: COMMAND_CLIENT_ID_APPSTATE_RETRIEVE,
                 type: state.getID(),
             };
-            const handler = commandDispatcher.getCommandHandler(destination, false);
+            const handler = this.commandDispatcher.getCommandHandler(destination, false);
             handler?.pushCommand(command);
         }
     }
 
     private isAvailable(peer: P2PMacAddress): boolean {
-        return commandDispatcher.isAvailable(peer);
+        return this.commandDispatcher.isAvailable(peer);
     }
 
     private initializeNode(address: P2PMacAddress): void {
-        const handler = commandDispatcher.getCommandHandler(address, true);
+        const handler = this.commandDispatcher.getCommandHandler(address, true);
         if (handler === undefined) {
             console.error("initializeNode() : handler could not be created");
             return;
@@ -198,7 +202,7 @@ class AppStateSyncConnector {
                     client_id: COMMAND_CLIENT_ID_APPSTATE_NOTIFY,
                     type,
                 };
-                const handler = commandDispatcher.getCommandHandler(sender, false);
+                const handler = this.commandDispatcher.getCommandHandler(sender, false);
                 handler?.pushCommand(command);
             }
         }
@@ -222,11 +226,12 @@ class AppStateSyncConnector {
                     client_id: COMMAND_CLIENT_ID_APPSTATE_RETRIEVE,
                     type,
                 };
-                const handler = commandDispatcher.getCommandHandler(sender, false);
+                const handler = this.commandDispatcher.getCommandHandler(sender, false);
                 handler?.pushCommand(command);
             }
         }
     }
 }
 
-export const appStateSyncConnector = new AppStateSyncConnector();
+// シングルトンインスタンスの即座生成を停止
+// export const appStateSyncConnector = new AppStateSyncConnector();

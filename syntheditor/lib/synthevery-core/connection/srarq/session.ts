@@ -2,7 +2,7 @@ import { SRArqSender, SRArqReceiver, PacketTransmitter, getFixedTimeoutStrategy,
 import { MeshPacket, P2PMacAddress } from '../../types/mesh';
 import { deserializeAckPacket, deserializeDataPacket, getMeshPacketTransmitter, uint8SequenceNumberOperations } from './adapter';
 import { getAddressString } from '../util';
-import { mesh } from '../mesh';
+import { Mesh } from '../mesh';
 import { MESH_PACKET_TYPE_SRARQ_DATA, MESH_PACKET_TYPE_SRARQ_ACK } from '../constants';
 
 export class SRArqSenderSession {
@@ -10,10 +10,11 @@ export class SRArqSenderSession {
     sender: SRArqSender;
     packetMap: Map<number, SendPacket> = new Map();
     constructor(
+        private mesh: Mesh,
         readonly address: P2PMacAddress,
         readonly sessionId: number,
     ) {
-        this.meshPacketTransmitter = getMeshPacketTransmitter(sessionId, address);
+        this.meshPacketTransmitter = getMeshPacketTransmitter(mesh, sessionId, address);
         this.sender = new SRArqSender(this.packetMap, uint8SequenceNumberOperations, getFixedTimeoutStrategy(1000), this.meshPacketTransmitter, 5);
     }
 }
@@ -23,10 +24,11 @@ export class SRArqReceiverSession {
     receiver: SRArqReceiver;
     packetMap: Map<number, ReceivePacket> = new Map();
     constructor(
+        private mesh: Mesh,
         readonly address: P2PMacAddress,
         readonly sessionId: number,
     ) {
-        this.meshPacketTransmitter = getMeshPacketTransmitter(sessionId, address);
+        this.meshPacketTransmitter = getMeshPacketTransmitter(mesh, sessionId, address);
         this.receiver = new SRArqReceiver(this.packetMap, uint8SequenceNumberOperations, 5, this.meshPacketTransmitter, getImmediateMissingPacketHandler(this.meshPacketTransmitter));
     }
 }
@@ -44,16 +46,18 @@ const SessionIdOperations = {
         return sessionId < 0 || sessionId >= SessionIdOperations.NUM_SESSION_IDS;
     },
 }
-class SRArqSessionsController {
+export class SRArqSessionsController {
+    private mesh: Mesh;
     senderSessions: Map<string, Map<number, SRArqSenderSession>> = new Map();
     receiverSessions: Map<string, Map<number, SRArqReceiverSession>> = new Map();
     lastSessionId: Map<string, number> = new Map();
 
-    constructor() {
-        mesh.setCallback(MESH_PACKET_TYPE_SRARQ_DATA, (meshPacket: MeshPacket) => {
+    constructor(mesh: Mesh) {
+        this.mesh = mesh;
+        this.mesh.setCallback(MESH_PACKET_TYPE_SRARQ_DATA, (meshPacket: MeshPacket) => {
             this.onReceiveData(meshPacket);
         });
-        mesh.setCallback(MESH_PACKET_TYPE_SRARQ_ACK, (meshPacket: MeshPacket) => {
+        this.mesh.setCallback(MESH_PACKET_TYPE_SRARQ_ACK, (meshPacket: MeshPacket) => {
             this.onReceiveAck(meshPacket);
         });
     }
@@ -70,7 +74,7 @@ class SRArqSessionsController {
             return null;
         }
 
-        const session = new SRArqSenderSession(address, sessionId);
+        const session = new SRArqSenderSession(this.mesh, address, sessionId);
         senderSession.set(sessionId, session);
 
         return { session, sessionId };
@@ -88,7 +92,7 @@ class SRArqSessionsController {
             return null;
         }
 
-        const session = new SRArqReceiverSession(address, sessionId);
+        const session = new SRArqReceiverSession(this.mesh, address, sessionId);
         receiverSession.set(sessionId, session);
 
         return session;
@@ -198,4 +202,5 @@ class SRArqSessionsController {
     }
 }
 
-export const srarqSessionsController = new SRArqSessionsController();
+// シングルトンインスタンスの即座生成を停止
+// export const srarqSessionsController = new SRArqSessionsController();

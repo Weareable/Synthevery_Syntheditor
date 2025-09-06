@@ -5,27 +5,29 @@ import { createRoleRegistry, RoleRegistry } from './node-role';
 import { MESH_PACKET_TYPE_DEVICE_TYPE } from '../connection/constants';
 import { APP_MAC_ADDRESS } from '../connection/constants';
 import { DEVICE_TYPE_APP } from './constants';
-import { mesh } from '../connection/mesh';
+import { Mesh } from '../connection/mesh';
 import { MeshPacket } from '../types/mesh';
 import { handleRolePacket } from './role-packet-handler';
 import { refreshRegistry } from './node-role-synchronizer';
 
-class DeviceTypeSynchronizer {
+export class DeviceTypeSynchronizer {
+    private mesh: Mesh;
     private registry: RoleRegistry;
     private intervalId: NodeJS.Timeout | null = null;
 
-    constructor() {
+    constructor(mesh: Mesh) {
+        this.mesh = mesh;
         this.registry = createRoleRegistry(MESH_PACKET_TYPE_DEVICE_TYPE);
         this.registry.registerRole({ address: APP_MAC_ADDRESS }, DEVICE_TYPE_APP);
 
-        mesh.setCallback(MESH_PACKET_TYPE_DEVICE_TYPE, this.handlePacket.bind(this));
+        this.mesh.setCallback(MESH_PACKET_TYPE_DEVICE_TYPE, this.handlePacket.bind(this));
 
         this.intervalId = setInterval(() => {
-            this.registry.updateNodeRoles(mesh.getConnectedDevices());
+            this.registry.updateNodeRoles(this.mesh.getConnectedDevices());
             refreshRegistry(
-                (type: number, destination: P2PMacAddress, data: Uint8Array) => mesh.sendPacket(type, destination, data),
+                (type: number, destination: P2PMacAddress, data: Uint8Array) => this.mesh.sendPacket(type, destination, data),
                 this.registry,
-                mesh.getAddress,
+                this.mesh.getAddress,
                 true
             );
         }, 1000);
@@ -41,8 +43,8 @@ class DeviceTypeSynchronizer {
 
     private handlePacket(packet: MeshPacket) {
         handleRolePacket(
-            (type: number, destination: P2PMacAddress, data: Uint8Array) => mesh.sendPacket(type, destination, data),
-            mesh.getAddress,
+            (type: number, destination: P2PMacAddress, data: Uint8Array) => this.mesh.sendPacket(type, destination, data),
+            this.mesh.getAddress,
             this.registry,
             packet,
             (updatedRegistry: RoleRegistry) => {
@@ -53,4 +55,5 @@ class DeviceTypeSynchronizer {
 
 }
 
-export const deviceTypeSynchronizer = new DeviceTypeSynchronizer();
+// シングルトンインスタンスの即座生成を停止
+// export const deviceTypeSynchronizer = new DeviceTypeSynchronizer();

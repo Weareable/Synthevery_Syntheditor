@@ -1,5 +1,5 @@
-import { mesh } from "../connection/mesh";
-import { dataTransferController } from "../data-transfer/data-transfer-controller";
+import { Mesh } from "../connection/mesh";
+import { DataTransferController } from "../data-transfer/data-transfer-controller";
 import { ReceiverPortInterface, ReceiverSessionInterface, ReceiverDataStoreInterface } from "../data-transfer/interfaces";
 import { DataType, RequestData, ResponseData } from "../types/data-transfer";
 import { DataTypes, SessionID } from "../data-transfer/constants";
@@ -15,7 +15,7 @@ import {
     LedColorConfigReceiverPort,
     SettingsConfigReceiverPort
 } from "./config";
-import { deviceController } from "./controller";
+import { DeviceController } from "./controller";
 import { getAddressString } from "../connection/util";
 
 interface DeviceConfigManagerEvents {
@@ -29,7 +29,10 @@ interface DeviceConfigManagerEvents {
     settingsConfigReceived: (device: P2PMacAddress, config: any) => void;
 }
 
-class DeviceConfigManager {
+export class DeviceConfigManager {
+    private mesh: Mesh;
+    private dataTransferController: DataTransferController;
+    private deviceController: DeviceController;
     private deviceConfigs: Map<string, NoteBuilderConfig[]> = new Map();
     private generatorConfigs: Map<string, GeneratorConfig[]> = new Map();
     private trackDetails: Map<string, TrackDetail[]> = new Map();
@@ -45,7 +48,11 @@ class DeviceConfigManager {
     private settingsConfigReceiverPort: SettingsConfigReceiverPort;
     readonly eventEmitter = new EventEmitter<DeviceConfigManagerEvents>();
 
-    constructor() {
+    constructor(mesh: Mesh, dataTransferController: DataTransferController, deviceController: DeviceController) {
+        this.mesh = mesh;
+        this.dataTransferController = dataTransferController;
+        this.deviceController = deviceController;
+
         this.noteBuilderConfigReceiverPort = new NoteBuilderConfigReceiverPort();
         this.generatorConfigReceiverPort = new GeneratorConfigReceiverPort();
         this.trackDetailReceiverPort = new TrackDetailReceiverPort();
@@ -62,7 +69,7 @@ class DeviceConfigManager {
 
     private setupEventListeners(): void {
         // connectedDevicesChangedで初期化完了を確認（メイン処理）
-        mesh.eventEmitter.on('connectedDevicesChanged', (devices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
+        this.mesh.eventEmitter.on('connectedDevicesChanged', (devices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
             this.handleDevicesChanged(devices, added, removed);
         });
 
@@ -109,7 +116,7 @@ class DeviceConfigManager {
         });
 
         // データ転送セッション開始時の処理（デバッグ用）
-        dataTransferController.getEventEmitter().on('sessionStart', (peer: P2PMacAddress, sessionId: number, type: string) => {
+        this.dataTransferController.getEventEmitter().on('sessionStart', (peer: P2PMacAddress, sessionId: number, type: string) => {
             if (type === 'receiver') {
                 console.log('NoteBuilderConfig session started from:', getAddressString(peer), 'sessionId:', sessionId);
             }
@@ -117,12 +124,12 @@ class DeviceConfigManager {
     }
 
     private registerReceiverPort(): void {
-        dataTransferController.registerReceiverPort(this.noteBuilderConfigReceiverPort);
-        dataTransferController.registerReceiverPort(this.generatorConfigReceiverPort);
-        dataTransferController.registerReceiverPort(this.trackDetailReceiverPort);
-        dataTransferController.registerReceiverPort(this.bodyColorConfigReceiverPort);
-        dataTransferController.registerReceiverPort(this.ledColorConfigReceiverPort);
-        dataTransferController.registerReceiverPort(this.settingsConfigReceiverPort);
+        this.dataTransferController.registerReceiverPort(this.noteBuilderConfigReceiverPort);
+        this.dataTransferController.registerReceiverPort(this.generatorConfigReceiverPort);
+        this.dataTransferController.registerReceiverPort(this.trackDetailReceiverPort);
+        this.dataTransferController.registerReceiverPort(this.bodyColorConfigReceiverPort);
+        this.dataTransferController.registerReceiverPort(this.ledColorConfigReceiverPort);
+        this.dataTransferController.registerReceiverPort(this.settingsConfigReceiverPort);
     }
 
     private handleDevicesChanged(devices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]): void {
@@ -153,79 +160,79 @@ class DeviceConfigManager {
 
     private requestNoteBuilderConfig(device: P2PMacAddress): void {
         // webアプリ（自分自身）にはリクエストを送信しない
-        const myAddress = mesh.getAddress();
+        const myAddress = this.mesh.getAddress();
         if (getAddressString(device) === getAddressString(myAddress)) {
             console.log('Skipping request to self:', getAddressString(device));
             return;
         }
 
         // NoteBuilderConfigのリクエストを送信
-        deviceController.requestNoteBuilderConfig(device);
+        this.deviceController.requestNoteBuilderConfig(device);
         console.log('Requesting NoteBuilderConfig from device:', getAddressString(device));
     }
 
     private requestGeneratorConfig(device: P2PMacAddress): void {
         // webアプリ（自分自身）にはリクエストを送信しない
-        const myAddress = mesh.getAddress();
+        const myAddress = this.mesh.getAddress();
         if (getAddressString(device) === getAddressString(myAddress)) {
             console.log('Skipping GeneratorConfig request to self:', getAddressString(device));
             return;
         }
 
         // GeneratorConfigのリクエストを送信
-        deviceController.requestGeneratorConfig(device);
+        this.deviceController.requestGeneratorConfig(device);
         console.log('Requesting GeneratorConfig from device:', getAddressString(device));
     }
 
     private requestTrackDetail(device: P2PMacAddress): void {
         // webアプリ（自分自身）にはリクエストを送信しない
-        const myAddress = mesh.getAddress();
+        const myAddress = this.mesh.getAddress();
         if (getAddressString(device) === getAddressString(myAddress)) {
             console.log('Skipping TrackDetail request to self:', getAddressString(device));
             return;
         }
 
         // TrackDetailのリクエストを送信
-        deviceController.requestTrackDetail(device);
+        this.deviceController.requestTrackDetail(device);
         console.log('Requesting TrackDetail from device:', getAddressString(device));
     }
 
     private requestBodyColorConfig(device: P2PMacAddress): void {
         // webアプリ（自分自身）にはリクエストを送信しない
-        const myAddress = mesh.getAddress();
+        const myAddress = this.mesh.getAddress();
         if (getAddressString(device) === getAddressString(myAddress)) {
             console.log('Skipping BodyColorConfig request to self:', getAddressString(device));
             return;
         }
 
         // BodyColorConfigのリクエストを送信
-        deviceController.requestBodyColorConfig(device);
+        this.deviceController.requestBodyColorConfig(device);
         console.log('Requesting BodyColorConfig from device:', getAddressString(device));
     }
 
     private requestLedColorConfig(device: P2PMacAddress): void {
         // webアプリ（自分自身）にはリクエストを送信しない
-        const myAddress = mesh.getAddress();
+        const myAddress = this.mesh.getAddress();
         if (getAddressString(device) === getAddressString(myAddress)) {
             console.log('Skipping LedColorConfig request to self:', getAddressString(device));
             return;
         }
 
         // LedColorConfigのリクエストを送信
-        deviceController.requestLedColorConfig(device);
+        this.deviceController.requestLedColorConfig(device);
         console.log('Requesting LedColorConfig from device:', getAddressString(device));
     }
 
     private requestSettingsConfig(device: P2PMacAddress, namespaces: string[]): void {
         // webアプリ（自分自身）にはリクエストを送信しない
-        const myAddress = mesh.getAddress();
+        const myAddress = this.mesh.getAddress();
         if (getAddressString(device) === getAddressString(myAddress)) {
             console.log('Skipping SettingsConfig request to self:', getAddressString(device));
             return;
         }
 
         // SettingsConfigのリクエストを送信
-        deviceController.requestSettingsConfig(device, namespaces);
+        this.deviceController.requestSettingsConfig(device, namespaces);
         console.log('Requesting SettingsConfig from device:', getAddressString(device), 'namespaces:', namespaces);
     }
 
@@ -318,8 +325,8 @@ class DeviceConfigManager {
 
     private initializeExistingDevices(): void {
         // 初期化時に既存の接続デバイスに対してNoteBuilderConfigをリクエスト
-        const existingDevices = mesh.getConnectedDevices();
-        const myAddress = mesh.getAddress();
+        const existingDevices = this.mesh.getConnectedDevices();
+        const myAddress = this.mesh.getAddress();
 
         existingDevices.forEach(device => {
             // webアプリ（自分自身）にはリクエストを送信しない
@@ -384,4 +391,5 @@ class DeviceConfigManager {
     }
 }
 
-export const deviceConfigManager = new DeviceConfigManager(); 
+// シングルトンインスタンスの即座生成を停止
+// export const deviceConfigManager = new DeviceConfigManager(); 

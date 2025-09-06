@@ -251,7 +251,7 @@ export interface MeshEvents {
     leaderMacAddressChanged: (leader: P2PMacAddress | null) => void;
 }
 
-class Mesh {
+export class Mesh {
     meshDevices: Map<string, BLEMeshDevice> = new Map();
     private prevConnectedDevices: P2PMacAddress[] = [];
     // 新規追加: 前回のデータを保持して変更検知
@@ -532,4 +532,5 @@ class Mesh {
     }
 }
 
-export const mesh = new Mesh();
+// シングルトンインスタンスの即座生成を停止
+// export const mesh = new Mesh();

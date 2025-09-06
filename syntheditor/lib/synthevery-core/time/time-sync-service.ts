@@ -1,5 +1,5 @@
 import { EventEmitter } from 'eventemitter3'
-import { mesh } from '../connection/mesh'
+import { Mesh } from '../connection/mesh'
 import { getAddressString } from '../connection/util'
 import { P2PMacAddress } from '../types/mesh'
 import { PerfTimeBase, SyncTime } from './sync-time'
@@ -13,10 +13,11 @@ interface TimeSyncServiceEvents {
 }
 
 export class TimeSyncService {
+    private mesh: Mesh;
     readonly base = new PerfTimeBase()
     readonly syncTime = new SyncTime(this.base)
     readonly synchronizer = new TimeSynchronizer(this.syncTime)
-    readonly node = new TimeSyncNode(this.synchronizer, this.base, 8)
+    readonly node: TimeSyncNode;
 
     readonly eventEmitter = new EventEmitter<TimeSyncServiceEvents>()
 
@@ -28,9 +29,12 @@ export class TimeSyncService {
     private _syncTimer: NodeJS.Timeout | null = null
     private _isAutoSyncEnabled = true
 
-    constructor() {
+    constructor(mesh: Mesh) {
+        this.mesh = mesh;
+        this.node = new TimeSyncNode(mesh, this.synchronizer, this.base, 8);
+
         // 自動開始: デバイス順序が更新されたら先頭と同期
-        mesh.eventEmitter.on('deviceOrderChanged', () => {
+        this.mesh.eventEmitter.on('deviceOrderChanged', () => {
             this.tryStartOldest()
         })
 
@@ -39,7 +43,7 @@ export class TimeSyncService {
     }
 
     private tryStartOldest(): void {
-        const order = mesh.getDeviceOrder()
+        const order = this.mesh.getDeviceOrder()
         if (order.length === 0) {
             console.log('[TimeSync] No devices available for synchronization')
             return
@@ -85,7 +89,7 @@ export class TimeSyncService {
     }
 
     start(target: P2PMacAddress): boolean {
-        if (!mesh.isAvailable(target)) {
+        if (!this.mesh.isAvailable(target)) {
             console.log('[TimeSync] Failed to start sync: target not available', getAddressString(target))
             return false
         }
@@ -132,6 +136,7 @@ export class TimeSyncService {
     }
 }
 
-export const timeSyncService = new TimeSyncService()
+// シングルトンインスタンスの即座生成を停止
+// export const timeSyncService = new TimeSyncService()
 
 

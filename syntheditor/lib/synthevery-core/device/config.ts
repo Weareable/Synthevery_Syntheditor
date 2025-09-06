@@ -1,4 +1,4 @@
-import { dataTransferController } from "../data-transfer/data-transfer-controller";
+import { DataTransferController } from "../data-transfer/data-transfer-controller";
 import { ReceiverPortInterface, ReceiverSessionInterface, ReceiverDataStoreInterface } from "../data-transfer/interfaces";
 import { DataType, RequestData, ResponseData } from "../types/data-transfer";
 import { DataTypes, SessionID } from "../data-transfer/constants";
@@ -105,7 +105,7 @@ export class TrackDetailReceiverPort implements ReceiverPortInterface {
     }
 }
 
-export function sendNoteBuilderConfig(receiver: P2PMacAddress, config: NoteBuilderConfig[]): boolean {
+export function sendNoteBuilderConfig(dataTransferController: DataTransferController, receiver: P2PMacAddress, config: NoteBuilderConfig[]): boolean {
     const store = new JsonSenderDataStore(config, DataTypes.kNoteBuilderConfig, "");
     const result = dataTransferController.sendRequest(receiver, store, []);
     if (result === null) {
@@ -114,7 +114,7 @@ export function sendNoteBuilderConfig(receiver: P2PMacAddress, config: NoteBuild
     return true;
 }
 
-export function sendGeneratorConfig(receiver: P2PMacAddress, config: GeneratorConfig[]): boolean {
+export function sendGeneratorConfig(dataTransferController: DataTransferController, receiver: P2PMacAddress, config: GeneratorConfig[]): boolean {
     const store = new JsonSenderDataStore(config, DataTypes.kGeneratorConfig, "");
     const result = dataTransferController.sendRequest(receiver, store, []);
     if (result === null) {
@@ -123,7 +123,7 @@ export function sendGeneratorConfig(receiver: P2PMacAddress, config: GeneratorCo
     return true;
 }
 
-export function sendTrackDetail(receiver: P2PMacAddress, trackDetails: TrackDetail[]): boolean {
+export function sendTrackDetail(dataTransferController: DataTransferController, receiver: P2PMacAddress, trackDetails: TrackDetail[]): boolean {
     const store = new JsonSenderDataStore(trackDetails, DataTypes.kTrackDetail, "");
     const result = dataTransferController.sendRequest(receiver, store, []);
     if (result === null) {
@@ -229,7 +229,7 @@ export class SettingsConfigReceiverPort implements ReceiverPortInterface {
     }
 }
 
-export function sendBodyColorConfig(receiver: P2PMacAddress, config: BodyColorConfig): boolean {
+export function sendBodyColorConfig(dataTransferController: DataTransferController, receiver: P2PMacAddress, config: BodyColorConfig): boolean {
     const store = new JsonSenderDataStore(config, DataTypes.kBodyColorConfig, "");
     const result = dataTransferController.sendRequest(receiver, store, []);
     if (result === null) {
@@ -238,7 +238,7 @@ export function sendBodyColorConfig(receiver: P2PMacAddress, config: BodyColorCo
     return true;
 }
 
-export function sendLedColorConfig(receiver: P2PMacAddress, config: LedColorConfig): boolean {
+export function sendLedColorConfig(dataTransferController: DataTransferController, receiver: P2PMacAddress, config: LedColorConfig): boolean {
     const store = new JsonSenderDataStore(config, DataTypes.kLedColorConfig, "");
     const result = dataTransferController.sendRequest(receiver, store, []);
     if (result === null) {
@@ -248,7 +248,7 @@ export function sendLedColorConfig(receiver: P2PMacAddress, config: LedColorConf
 }
 
 // Web -> Device 設定更新（任意JSON + ドット区切りメタデータ）
-export function sendSettingsConfigUpdate(receiver: P2PMacAddress, namespaces: string[], json: any): boolean {
+export function sendSettingsConfigUpdate(dataTransferController: DataTransferController, receiver: P2PMacAddress, namespaces: string[], json: any): boolean {
     const path = namespaces.join('.');
     // 要求に従い、送信DataTypeは kSettingsConfig を使用する
     const store = new JsonSenderDataStore(json, DataTypes.kSettingsConfig, path);

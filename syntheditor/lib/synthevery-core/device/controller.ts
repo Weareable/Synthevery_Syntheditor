@@ -1,10 +1,10 @@
 import { CommandClientInterface } from "../command/handler";
 import { CommandID } from "../types/command";
 import { COMMAND_CLIENT_ID_DEVICE_CONTROL, COMMAND_CLIENT_ID_EDITOR_SETTINGS_CONFIG } from "../command/constants";
-import { playerSyncStates } from "../player/states";
-import { mesh } from "../connection/mesh";
+import { PlayerSyncStates } from "../player/states";
+import { Mesh } from "../connection/mesh";
 import { P2PMacAddress } from "../types/mesh";
-import { commandDispatcher } from "../command/dispatcher";
+import { CommandDispatcher } from "../command/dispatcher";
 import { serializeBoolean, serializeFloat32 } from "../appstate/appstates";
 import { PayloadCommandClient } from "../command/payload-command-client";
 import { getAddressString } from "../connection/util";
@@ -24,12 +24,18 @@ class DeviceCommandClient implements CommandClientInterface {
     static readonly COMMAND_TYPE_PLAYING_STATE_SIZE = 1;
     static readonly COMMAND_TYPE_BPM_SIZE = 4;
 
+    private playerSyncStates: PlayerSyncStates;
+
+    constructor(playerSyncStates: PlayerSyncStates) {
+        this.playerSyncStates = playerSyncStates;
+    }
+
     generateData(commandId: CommandID): Uint8Array {
         switch (commandId.type) {
             case DeviceCommandClient.COMMAND_TYPE_PLAYING_STATE:
-                return serializeBoolean(playerSyncStates.metronomeState.getStore().value);
+                return serializeBoolean(this.playerSyncStates.metronomeState.getStore().value);
             case DeviceCommandClient.COMMAND_TYPE_BPM:
-                return serializeFloat32(playerSyncStates.tickClockState.getStore().value.bpm);
+                return serializeFloat32(this.playerSyncStates.tickClockState.getStore().value.bpm);
             case DeviceCommandClient.COMMAND_TYPE_STOP:
                 return new Uint8Array();
             case DeviceCommandClient.COMMAND_TYPE_REQUEST_NOTE_BUILDER_CONFIG:
@@ -105,10 +111,18 @@ class DeviceCommandClient implements CommandClientInterface {
     }
 }
 
-class DeviceController {
+export class DeviceController {
+    private mesh: Mesh;
+    private commandDispatcher: CommandDispatcher;
+    private playerSyncStates: PlayerSyncStates;
     private settingsClients: Map<string, PayloadCommandClient> = new Map();
-    constructor() {
-        mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
+
+    constructor(mesh: Mesh, commandDispatcher: CommandDispatcher, playerSyncStates: PlayerSyncStates) {
+        this.mesh = mesh;
+        this.commandDispatcher = commandDispatcher;
+        this.playerSyncStates = playerSyncStates;
+
+        this.mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
             // 新規追加されたデバイスのみ初期化
             for (const device of added) {
                 this.initializeNode(device);
@@ -119,21 +133,21 @@ class DeviceController {
     setPlayingState(state: "play" | "pause" | "stop"): void {
         switch (state) {
             case "play":
-                playerSyncStates.metronomeState.getStore().value = true;
+                this.playerSyncStates.metronomeState.getStore().value = true;
                 this.sendCommand({
                     client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
                     type: DeviceCommandClient.COMMAND_TYPE_PLAYING_STATE,
                 });
                 break;
             case "pause":
-                playerSyncStates.metronomeState.getStore().value = false;
+                this.playerSyncStates.metronomeState.getStore().value = false;
                 this.sendCommand({
                     client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
                     type: DeviceCommandClient.COMMAND_TYPE_PLAYING_STATE,
                 });
                 break;
             case "stop":
-                playerSyncStates.metronomeState.getStore().value = false;
+                this.playerSyncStates.metronomeState.getStore().value = false;
                 this.sendCommand({
                     client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
                     type: DeviceCommandClient.COMMAND_TYPE_STOP,
@@ -150,7 +164,7 @@ class DeviceController {
             console.warn("setBpm() : invalid bpm, must be between 10 ~ 500");
             return;
         }
-        playerSyncStates.tickClockState.getStore().value.bpm = bpm;
+        this.playerSyncStates.tickClockState.getStore().value.bpm = bpm;
         this.sendCommand({
             client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
             type: DeviceCommandClient.COMMAND_TYPE_BPM,
@@ -169,7 +183,7 @@ class DeviceController {
     }
 
     requestNoteBuilderConfig(peer: P2PMacAddress): void {
-        const handler = commandDispatcher.getCommandHandler(peer, false);
+        const handler = this.commandDispatcher.getCommandHandler(peer, false);
         if (!handler) {
             console.warn("requestNoteBuilderConfig() : handler unavailable");
             return;
@@ -182,7 +196,7 @@ class DeviceController {
     }
 
     requestGeneratorConfig(peer: P2PMacAddress): void {
-        const handler = commandDispatcher.getCommandHandler(peer, false);
+        const handler = this.commandDispatcher.getCommandHandler(peer, false);
         if (!handler) {
             console.warn("requestGeneratorConfig() : handler unavailable");
             return;
@@ -195,7 +209,7 @@ class DeviceController {
     }
 
     requestTrackDetail(peer: P2PMacAddress): void {
-        const handler = commandDispatcher.getCommandHandler(peer, false);
+        const handler = this.commandDispatcher.getCommandHandler(peer, false);
         if (!handler) {
             console.warn("requestTrackDetail() : handler unavailable");
             return;
@@ -208,7 +222,7 @@ class DeviceController {
     }
 
     requestBodyColorConfig(peer: P2PMacAddress): void {
-        const handler = commandDispatcher.getCommandHandler(peer, false);
+        const handler = this.commandDispatcher.getCommandHandler(peer, false);
         if (!handler) {
             console.warn("requestBodyColorConfig() : handler unavailable");
             return;
@@ -221,7 +235,7 @@ class DeviceController {
     }
 
     requestLedColorConfig(peer: P2PMacAddress): void {
-        const handler = commandDispatcher.getCommandHandler(peer, false);
+        const handler = this.commandDispatcher.getCommandHandler(peer, false);
         if (!handler) {
             console.warn("requestLedColorConfig() : handler unavailable");
             return;
@@ -234,7 +248,7 @@ class DeviceController {
     }
 
     requestSettingsConfig(peer: P2PMacAddress, namespaces: string[]): void {
-        const handler = commandDispatcher.getCommandHandler(peer, false);
+        const handler = this.commandDispatcher.getCommandHandler(peer, false);
         if (!handler) {
             console.warn("requestSettingsConfig() : handler unavailable");
             return;
@@ -244,7 +258,7 @@ class DeviceController {
         let client = this.settingsClients.get(peerKey);
         if (!client) {
             // Ensure client is registered if initializeNode wasn't called yet for some reason
-            const createHandler = commandDispatcher.getCommandHandler(peer, true);
+            const createHandler = this.commandDispatcher.getCommandHandler(peer, true);
             if (!createHandler) {
                 console.warn("requestSettingsConfig() : could not create handler");
                 return;
@@ -267,14 +281,14 @@ class DeviceController {
     }
 
     private initializeNode(address: P2PMacAddress): void {
-        const handler = commandDispatcher.getCommandHandler(address, true);
+        const handler = this.commandDispatcher.getCommandHandler(address, true);
         if (!handler) {
             console.warn("initializeNode() : handler could not be created");
             return;
         }
 
         if (!handler.hasClientInterface(COMMAND_CLIENT_ID_DEVICE_CONTROL)) {
-            handler.setClientInterface(new DeviceCommandClient());
+            handler.setClientInterface(new DeviceCommandClient(this.playerSyncStates));
         } else {
             console.warn("initializeNode() : device control client already exists");
         }
@@ -287,12 +301,12 @@ class DeviceController {
     }
 
     sendCommand(commandId: CommandID): void {
-        if (mesh.getConnectedPeers().length === 0) {
+        if (this.mesh.getConnectedPeers().length === 0) {
             console.warn("sendCommand() : no connected peers");
             return;
         }
 
-        const handler = commandDispatcher.getCommandHandler(mesh.getConnectedPeers()[0], false);
+        const handler = this.commandDispatcher.getCommandHandler(this.mesh.getConnectedPeers()[0], false);
         if (!handler) {
             console.warn("sendCommand() : handler unavailable");
             return;
@@ -302,4 +316,5 @@ class DeviceController {
     }
 }
 
-export const deviceController = new DeviceController();
+// シングルトンインスタンスの即座生成を停止
+// export const deviceController = new DeviceController();
