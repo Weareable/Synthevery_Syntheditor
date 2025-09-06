@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { mesh } from '@/lib/synthevery-core/connection/mesh';
+import { useSynthevery } from '@/contexts/SyntheveryContext';
 import { getAddressFromString, getAddressString } from '@/lib/synthevery-core/connection/util';
-import { deviceConfigManager } from '@/lib/synthevery-core/device/device-config-manager';
-import { deviceController } from '@/lib/synthevery-core/device/controller';
 import { sendSettingsConfigUpdate } from '@/lib/synthevery-core/device/config';
 
 interface EventLog {
@@ -15,6 +13,7 @@ interface EventLog {
 }
 
 const DeviceSettingsTestPage: React.FC = () => {
+    const { mesh, deviceConfigManager, deviceController, dataTransferController } = useSynthevery();
     const [peerDevices, setPeerDevices] = useState<string[]>([]);
     const [settingsConfigs, setSettingsConfigs] = useState<Map<string, any>>(new Map());
     const [namespaceInput, setNamespaceInput] = useState<string>('core.player');
@@ -61,7 +60,7 @@ const DeviceSettingsTestPage: React.FC = () => {
             return;
         }
         const addr = getAddressFromString(peer);
-        const ok = sendSettingsConfigUpdate(addr, namespaces, payload);
+        const ok = sendSettingsConfigUpdate(dataTransferController, addr, namespaces, payload);
         if (!ok) {
             addEventLog('ERROR', `${peer} への送信に失敗しました`);
         } else {

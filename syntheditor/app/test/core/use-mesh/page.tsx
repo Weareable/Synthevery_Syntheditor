@@ -2,10 +2,11 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import useMesh from '@/hooks/useMesh';
-import { mesh } from '@/lib/synthevery-core/connection/mesh';
+import { useSynthevery } from '@/contexts/SyntheveryContext';
 import { getAddressFromString } from '@/lib/synthevery-core/connection/util';
 
 const MultiConnectExample: React.FC = () => {
+    const { mesh } = useSynthevery();
     const { connectedDevices, connectedPeers, connectDevice, disconnectDevice } = useMesh();
 
     const sendData = async (peer: string) => {

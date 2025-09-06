@@ -1,16 +1,13 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { mesh } from '@/lib/synthevery-core/connection/mesh';
+import { useSynthevery } from '@/contexts/SyntheveryContext';
 import { getAddressFromString, getAddressString } from '@/lib/synthevery-core/connection/util';
 
 import { sendGeneratorConfig, sendNoteBuilderConfig } from '@/lib/synthevery-core/device/config';
-import { deviceConfigManager } from '@/lib/synthevery-core/device/device-config-manager';
-import { deviceController } from '@/lib/synthevery-core/device/controller';
-
-
 
 const DataTransferExample: React.FC = () => {
+    const { mesh, deviceConfigManager, deviceController, dataTransferController } = useSynthevery();
     const [peerDevices, setPeerDevices] = useState<string[]>([]);
     const [deviceConfigs, setDeviceConfigs] = useState<Map<string, any[]>>(new Map());
     const [generatorConfigs, setGeneratorConfigs] = useState<Map<string, any[]>>(new Map());
@@ -22,7 +19,7 @@ const DataTransferExample: React.FC = () => {
     const updatePeerDevices = () => {
         console.log('updatePeerDevices');
         const connectedDevices = mesh.getConnectedDevices();
-        const deviceStrings = connectedDevices.map(device => getAddressString(device));
+        const deviceStrings = connectedDevices.map((device: any) => getAddressString(device));
         console.log('Connected devices:', deviceStrings);
         console.log('DeviceConfigManager configs:', Array.from(deviceConfigManager.getAllConfigs().keys()));
         console.log('DeviceConfigManager generator configs:', Array.from(deviceConfigManager.getAllGeneratorConfigs().keys()));
@@ -63,10 +60,10 @@ const DataTransferExample: React.FC = () => {
     const sendConfig = useCallback((peer: string) => {
         const peerAddress = getAddressFromString(peer);
 
-        sendNoteBuilderConfig(peerAddress, [{ type: "bongo" }, { type: "bongo" }, { type: "bongo" }]);
+        sendNoteBuilderConfig(dataTransferController, peerAddress, [{ type: "bongo" }, { type: "bongo" }, { type: "bongo" }]);
 
-        sendGeneratorConfig(peerAddress, [{ class: "sf", params: { filename: "/rock_drum.sf2", preset_index: 9, is_drum: true } }, { class: "sf", params: { filename: "/rock_drum.sf2", preset_index: 9, is_drum: true } }, { class: "sf", params: { filename: "/rock_drum.sf2", preset_index: 9, is_drum: true } }]);
-    }, []);
+        sendGeneratorConfig(dataTransferController, peerAddress, [{ class: "sf", params: { filename: "/rock_drum.sf2", preset_index: 9, is_drum: true } }, { class: "sf", params: { filename: "/rock_drum.sf2", preset_index: 9, is_drum: true } }, { class: "sf", params: { filename: "/rock_drum.sf2", preset_index: 9, is_drum: true } }]);
+    }, [dataTransferController]);
 
     const retrieveConfig = useCallback((peer: string) => {
         console.log('Retrieving config for peer string:', peer);

@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { mesh } from '@/lib/synthevery-core/connection/mesh';
+import { useSynthevery } from '@/contexts/SyntheveryContext';
 import { getAddressString } from '@/lib/synthevery-core/connection/util';
 
 const DevicePanel: React.FC<{ address: string }> = ({ address }) => {
+    const { mesh } = useSynthevery();
     const [connectedDevices, setConnectedDevices] = useState<string[]>([]);
 
     const device = useMemo(() => {
         return mesh.meshDevices.get(address);
-    }, [address]);
+    }, [address, mesh]);
 
     useEffect(() => {
         const handleConnectedDevicesChanged = () => {
@@ -44,6 +45,7 @@ const DevicePanel: React.FC<{ address: string }> = ({ address }) => {
 }
 
 const MultiConnectExample: React.FC = () => {
+    const { mesh } = useSynthevery();
     const [peerDevices, setPeerDevices] = useState<string[]>([]);
 
     const connectDevice = async () => {
@@ -64,7 +66,7 @@ const MultiConnectExample: React.FC = () => {
             mesh.eventEmitter.removeListener('peerDisconnected', updatePeerDevices);
         }
 
-    }, []);
+    }, [mesh]);
 
     return (
         <div className="light min-h-screen bg-background text-foreground p-6">

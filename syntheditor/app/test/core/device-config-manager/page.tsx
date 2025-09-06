@@ -1,13 +1,11 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { mesh } from '@/lib/synthevery-core/connection/mesh';
+import { useSynthevery } from '@/contexts/SyntheveryContext';
 import { getAddressFromString, getAddressString } from '@/lib/synthevery-core/connection/util';
-import { deviceConfigManager } from '@/lib/synthevery-core/device/device-config-manager';
 import { sendNoteBuilderConfig, sendGeneratorConfig, sendTrackDetail, sendBodyColorConfig, sendLedColorConfig } from '@/lib/synthevery-core/device/config';
 import { NoteBuilderConfig, GeneratorConfig, TrackDetail, BodyColorConfig, LedColorConfig } from '@/lib/synthevery-core/types/player';
 import { P2PMacAddress } from '@/lib/synthevery-core/types/mesh';
-import { deviceController } from '@/lib/synthevery-core/device/controller';
 
 interface EventLog {
     timestamp: Date;
@@ -17,6 +15,7 @@ interface EventLog {
 }
 
 const DeviceConfigManagerTestPage: React.FC = () => {
+    const { mesh, deviceConfigManager, deviceController, dataTransferController } = useSynthevery();
     const [peerDevices, setPeerDevices] = useState<string[]>([]);
     const [deviceConfigs, setDeviceConfigs] = useState<Map<string, NoteBuilderConfig[]>>(new Map());
     const [generatorConfigs, setGeneratorConfigs] = useState<Map<string, GeneratorConfig[]>>(new Map());
@@ -78,7 +77,7 @@ const DeviceConfigManagerTestPage: React.FC = () => {
                         { type: "drum" },
                         { type: "synth" }
                     ];
-                    sendNoteBuilderConfig(peerAddress, noteBuilderConfig);
+                    sendNoteBuilderConfig(dataTransferController, peerAddress, noteBuilderConfig);
                     addEventLog('SEND', `${peer}にNoteBuilderConfigを送信しました`, noteBuilderConfig);
                     break;
 
@@ -87,7 +86,7 @@ const DeviceConfigManagerTestPage: React.FC = () => {
                         { class: "sf", params: { filename: "/rock_drum.sf2", preset_index: 9, is_drum: true } },
                         { class: "sf", params: { filename: "/piano.sf2", preset_index: 0, is_drum: false } }
                     ];
-                    sendGeneratorConfig(peerAddress, generatorConfig);
+                    sendGeneratorConfig(dataTransferController, peerAddress, generatorConfig);
                     addEventLog('SEND', `${peer}にGeneratorConfigを送信しました`, generatorConfig);
                     break;
 
@@ -96,19 +95,19 @@ const DeviceConfigManagerTestPage: React.FC = () => {
                         { displayName: "Track 1", icon: "drum", instrumentPresetId: "preset1" },
                         { displayName: "Track 2", icon: "piano", instrumentPresetId: "preset2" }
                     ];
-                    sendTrackDetail(peerAddress, trackDetail);
+                    sendTrackDetail(dataTransferController, peerAddress, trackDetail);
                     addEventLog('SEND', `${peer}にTrackDetailを送信しました`, trackDetail);
                     break;
 
                 case 'bodyColor':
                     const bodyColorConfig: BodyColorConfig = { body_color: "#0000FF" };
-                    sendBodyColorConfig(peerAddress, bodyColorConfig);
+                    sendBodyColorConfig(dataTransferController, peerAddress, bodyColorConfig);
                     addEventLog('SEND', `${peer}にBodyColorConfigを送信しました`, bodyColorConfig);
                     break;
 
                 case 'ledColor':
                     const ledColorConfig: LedColorConfig = { base_led_color: "#FFFF00" };
-                    sendLedColorConfig(peerAddress, ledColorConfig);
+                    sendLedColorConfig(dataTransferController, peerAddress, ledColorConfig);
                     addEventLog('SEND', `${peer}にLedColorConfigを送信しました`, ledColorConfig);
                     break;
             }
