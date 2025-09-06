@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAppState } from '@/hooks/useAppState';
-import { playerSyncStates } from '@/lib/synthevery-core/player/states';
+import { useSynthevery } from '@/contexts/SyntheveryContext';
 import { P2PMacAddress } from '@/lib/synthevery-core/types/mesh';
 import { getAddressString } from '@/lib/synthevery-core/connection/util';
 
@@ -73,6 +73,7 @@ export interface UseDevicePositionsReturn {
  * デバイスの装着位置を管理し、人体アイコン表示用のデータを提供します。
  */
 export function useDevicePositions(): UseDevicePositionsReturn {
+    const { playerSyncStates } = useSynthevery();
     const [devicePositions, updateDevicePositions] = useAppState(playerSyncStates.devicePositions);
     const [isPositionsReady, setIsPositionsReady] = useState(false);
 
