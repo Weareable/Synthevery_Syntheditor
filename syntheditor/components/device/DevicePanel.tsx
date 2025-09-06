@@ -7,7 +7,6 @@ import { useDevicePositions } from '@/hooks/useDevicePositions';
 import { useDeviceColors } from '@/hooks/useDeviceColors';
 import { useTrackConfig } from '@/hooks/useTrackConfig';
 import { useAppState } from '@/hooks/useAppState';
-import { playerSyncStates } from '@/lib/synthevery-core/player/states';
 import { useSynthevery } from '@/contexts/SyntheveryContext';
 import { P2PMacAddress } from '@/lib/synthevery-core/types/mesh';
 import { getAddressString, getAddressFromString } from '@/lib/synthevery-core/connection/util';
@@ -36,7 +35,7 @@ export const DevicePanel: React.FC<DevicePanelProps> = ({
     layoutMode = 'auto',
     className
 }) => {
-    const { mesh, deviceConfigManager } = useSynthevery();
+    const { mesh, deviceConfigManager, playerSyncStates } = useSynthevery();
     const [isBreakpointLarge, setIsBreakpointLarge] = useState(false);
 
     // 変更: useMeshフックを使用してデバイス接続と順序を取得

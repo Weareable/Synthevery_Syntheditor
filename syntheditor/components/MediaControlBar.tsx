@@ -11,9 +11,11 @@ import { UndoIcon, RedoIcon } from '@/components/icons/control'
 import BPMInput from './ui/bpm-input'
 import { useAppState, useReadOnlyAppState } from '@/hooks/useAppState'
 import useDeviceControl from '@/hooks/useDeviceControl'
-import { playerSyncStates } from '@/lib/synthevery-core/player/states'
+import { useSynthevery } from '@/contexts/SyntheveryContext'
 
 export function MediaControlBar() {
+    const { playerSyncStates } = useSynthevery();
+
     // AppStateを使用した状態管理
     const [isQActive, setIsQActive] = useAppState(playerSyncStates.quantizerState);
     const [isMActive, setIsMActive] = useAppState(playerSyncStates.metronomeState);

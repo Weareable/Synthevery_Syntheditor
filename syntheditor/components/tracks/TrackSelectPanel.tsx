@@ -4,8 +4,8 @@ import { Panel } from '@/components/ui/panel';
 import { TrackCard } from './TrackCard';
 import { AddTrackButton } from './add-track-button';
 import { useTrackConfig } from '@/hooks/useTrackConfig';
-import { playerSyncStates } from '@/lib/synthevery-core/player/states';
 import { useAppState } from '@/hooks/useAppState';
+import { useSynthevery } from '@/contexts/SyntheveryContext';
 
 export interface TrackSelectPanelProps {
     onEditTrack?: (trackIndex: number) => void;
@@ -17,6 +17,7 @@ export interface TrackSelectPanelProps {
 export const TrackSelectPanel: React.FC<TrackSelectPanelProps> = ({
     onEditTrack
 }) => {
+    const { playerSyncStates } = useSynthevery();
     const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
 
     // useTrackConfigフックを使用
