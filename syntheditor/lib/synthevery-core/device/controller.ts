@@ -19,6 +19,7 @@ class DeviceCommandClient implements CommandClientInterface {
     static readonly COMMAND_TYPE_REQUEST_BODY_COLOR_CONFIG = 0x13;
     static readonly COMMAND_TYPE_REQUEST_LED_COLOR_CONFIG = 0x14;
     static readonly COMMAND_TYPE_REQUEST_SETTINGS_CONFIG = 0x15;
+    static readonly COMMAND_TYPE_REQUEST_CHORD_SCALE_CONFIG = 0x16;
     static readonly COMMAND_TYPE_RESET_TRACK_BASE = 0x20; // 0x20 - 0x27 (track 0-7)
 
     static readonly COMMAND_TYPE_PLAYING_STATE_SIZE = 1;
@@ -278,6 +279,19 @@ export class DeviceController {
             return;
         }
         handler.pushCommand(out);
+    }
+
+    requestChordScaleConfig(peer: P2PMacAddress): void {
+        const handler = this.commandDispatcher.getCommandHandler(peer, false);
+        if (!handler) {
+            console.warn("requestChordScaleConfig() : handler unavailable");
+            return;
+        }
+
+        handler.pushCommand({
+            client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+            type: DeviceCommandClient.COMMAND_TYPE_REQUEST_CHORD_SCALE_CONFIG,
+        });
     }
 
     private initializeNode(address: P2PMacAddress): void {

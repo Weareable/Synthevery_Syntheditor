@@ -7,13 +7,15 @@ import { P2PMacAddress } from "../types/mesh";
 import { JsonReceiverDataStore, JsonSenderDataStore } from "../data-transfer/json-store";
 import { EventEmitter } from "eventemitter3";
 import { NoteBuilderConfig, GeneratorConfig, TrackDetail, BodyColorConfig, LedColorConfig } from "../types/player";
+import { ChordScaleConfig } from "../../../types/chordScale";
 import {
     NoteBuilderConfigReceiverPort,
     GeneratorConfigReceiverPort,
     TrackDetailReceiverPort,
     BodyColorConfigReceiverPort,
     LedColorConfigReceiverPort,
-    SettingsConfigReceiverPort
+    SettingsConfigReceiverPort,
+    ChordScaleConfigReceiverPort
 } from "./config";
 import { DeviceController } from "./controller";
 import { getAddressString } from "../connection/util";
@@ -27,6 +29,7 @@ interface DeviceConfigManagerEvents {
     bodyColorConfigReceived: (device: P2PMacAddress, config: BodyColorConfig) => void;
     ledColorConfigReceived: (device: P2PMacAddress, config: LedColorConfig) => void;
     settingsConfigReceived: (device: P2PMacAddress, config: any) => void;
+    chordScaleConfigReceived: (device: P2PMacAddress, config: ChordScaleConfig) => void;
 }
 
 export class DeviceConfigManager {
@@ -39,6 +42,7 @@ export class DeviceConfigManager {
     private bodyColorConfigs: Map<string, BodyColorConfig> = new Map();
     private ledColorConfigs: Map<string, LedColorConfig> = new Map();
     private settingsConfigs: Map<string, any> = new Map();
+    private chordScaleConfigs: Map<string, ChordScaleConfig> = new Map();
 
     private noteBuilderConfigReceiverPort: NoteBuilderConfigReceiverPort;
     private generatorConfigReceiverPort: GeneratorConfigReceiverPort;
@@ -46,6 +50,7 @@ export class DeviceConfigManager {
     private bodyColorConfigReceiverPort: BodyColorConfigReceiverPort;
     private ledColorConfigReceiverPort: LedColorConfigReceiverPort;
     private settingsConfigReceiverPort: SettingsConfigReceiverPort;
+    private chordScaleConfigReceiverPort: ChordScaleConfigReceiverPort;
     readonly eventEmitter = new EventEmitter<DeviceConfigManagerEvents>();
 
     constructor(mesh: Mesh, dataTransferController: DataTransferController, deviceController: DeviceController) {
@@ -59,6 +64,7 @@ export class DeviceConfigManager {
         this.bodyColorConfigReceiverPort = new BodyColorConfigReceiverPort();
         this.ledColorConfigReceiverPort = new LedColorConfigReceiverPort();
         this.settingsConfigReceiverPort = new SettingsConfigReceiverPort();
+        this.chordScaleConfigReceiverPort = new ChordScaleConfigReceiverPort();
 
         this.setupEventListeners();
         this.registerReceiverPort();
@@ -115,6 +121,13 @@ export class DeviceConfigManager {
             this.saveReceivedSettingsConfig(config, sender);
         });
 
+        // ChordScaleConfig受信時の処理
+        this.chordScaleConfigReceiverPort.eventEmitter.on('received', (config: ChordScaleConfig, sender: P2PMacAddress) => {
+            // 受信したコード進行設定を保存
+            console.log('Received ChordScaleConfig from:', getAddressString(sender), 'config:', config);
+            this.saveReceivedChordScaleConfig(config, sender);
+        });
+
         // データ転送セッション開始時の処理（デバッグ用）
         this.dataTransferController.getEventEmitter().on('sessionStart', (peer: P2PMacAddress, sessionId: number, type: string) => {
             if (type === 'receiver') {
@@ -130,19 +143,36 @@ export class DeviceConfigManager {
         this.dataTransferController.registerReceiverPort(this.bodyColorConfigReceiverPort);
         this.dataTransferController.registerReceiverPort(this.ledColorConfigReceiverPort);
         this.dataTransferController.registerReceiverPort(this.settingsConfigReceiverPort);
+        this.dataTransferController.registerReceiverPort(this.chordScaleConfigReceiverPort);
     }
 
     private handleDevicesChanged(devices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]): void {
         // 新規追加されたデバイスに対してリクエストを送信
         added.forEach(device => {
             console.log('New device added:', getAddressString(device));
-            this.requestNoteBuilderConfig(device);
-            this.requestGeneratorConfig(device);
-            this.requestTrackDetail(device);
-            this.requestBodyColorConfig(device);
-            this.requestLedColorConfig(device);
-            this.requestSettingsConfig(device, ['player']); // 新規接続時は設定をリクエスト
-            this.eventEmitter.emit('deviceConnected', device);
+            const configRequests = [
+                () => this.requestNoteBuilderConfig(device),
+                () => this.requestGeneratorConfig(device),
+                () => this.requestTrackDetail(device),
+                () => this.requestBodyColorConfig(device),
+                () => this.requestLedColorConfig(device),
+                () => this.requestSettingsConfig(device, ['player']),
+                () => this.requestChordScaleConfig(device)
+            ];
+
+            const delay = (fn: () => void, ms: number) => new Promise<void>(resolve => {
+                setTimeout(() => {
+                    fn();
+                    resolve();
+                }, ms);
+            });
+
+            (async () => {
+                for (const req of configRequests) {
+                    await delay(req, 1000);
+                }
+                this.eventEmitter.emit('deviceConnected', device);
+            })();
         });
 
         // 切断されたデバイスの設定を削除
@@ -154,6 +184,7 @@ export class DeviceConfigManager {
             this.removeBodyColorConfig(device);
             this.removeLedColorConfig(device);
             this.removeSettingsConfig(device); // 切断時も設定を削除
+            this.removeChordScaleConfig(device);
             this.eventEmitter.emit('deviceDisconnected', device);
         });
     }
@@ -337,6 +368,7 @@ export class DeviceConfigManager {
                 this.requestBodyColorConfig(device);
                 this.requestLedColorConfig(device);
                 this.requestSettingsConfig(device, ['player']); // 既存接続時も設定をリクエスト
+                this.requestChordScaleConfig(device);
             }
         });
         console.log('Initialized with existing devices:', existingDevices.map(d => getAddressString(d)));
@@ -382,12 +414,45 @@ export class DeviceConfigManager {
         return new Map(this.ledColorConfigs);
     }
 
+    getChordScaleConfig(device: P2PMacAddress): ChordScaleConfig | undefined {
+        return this.chordScaleConfigs.get(getAddressString(device));
+    }
+
+    getAllChordScaleConfigs(): Map<string, ChordScaleConfig> {
+        return new Map(this.chordScaleConfigs);
+    }
+
     getAllSettingsConfigs(): Map<string, any> {
         return new Map(this.settingsConfigs);
     }
 
     getSettingsConfig(device: string): any | undefined {
         return this.settingsConfigs.get(device);
+    }
+
+    private requestChordScaleConfig(device: P2PMacAddress): void {
+        // webアプリ（自分自身）にはリクエストを送信しない
+        const myAddress = this.mesh.getAddress();
+        if (getAddressString(device) === getAddressString(myAddress)) {
+            console.log('Skipping ChordScaleConfig request to self:', getAddressString(device));
+            return;
+        }
+
+        console.log('Requesting ChordScaleConfig from:', getAddressString(device));
+        setTimeout(() => {
+            this.deviceController.requestChordScaleConfig(device);
+        }, 100); // 100ms遅延でhandler初期化完了を待機
+    }
+
+    private saveReceivedChordScaleConfig(config: ChordScaleConfig, sender: P2PMacAddress): void {
+        const deviceStr = getAddressString(sender);
+        this.chordScaleConfigs.set(deviceStr, config);
+        this.eventEmitter.emit('chordScaleConfigReceived', sender, config);
+    }
+
+    private removeChordScaleConfig(device: P2PMacAddress): void {
+        const deviceStr = getAddressString(device);
+        this.chordScaleConfigs.delete(deviceStr);
     }
 }
 

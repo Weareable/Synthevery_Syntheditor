@@ -6,6 +6,7 @@ import { P2PMacAddress } from "../types/mesh";
 import { JsonReceiverDataStore, JsonSenderDataStore } from "../data-transfer/json-store";
 import { EventEmitter } from "eventemitter3";
 import { NoteBuilderConfig, GeneratorConfig, TrackDetail, BodyColorConfig, LedColorConfig } from "../types/player";
+import { ChordScaleConfig } from "../../../types/chordScale";
 
 interface NoteBuilderConfigReceiverPortEvents {
     received: (json: any, sender: P2PMacAddress) => void;
@@ -144,6 +145,10 @@ interface SettingsConfigReceiverPortEvents {
     received: (json: any, sender: P2PMacAddress, metadata: string) => void;
 }
 
+interface ChordScaleConfigReceiverPortEvents {
+    received: (json: any, sender: P2PMacAddress) => void;
+}
+
 export class BodyColorConfigReceiverPort implements ReceiverPortInterface {
     readonly eventEmitter = new EventEmitter<BodyColorConfigReceiverPortEvents>();
 
@@ -229,6 +234,34 @@ export class SettingsConfigReceiverPort implements ReceiverPortInterface {
     }
 }
 
+export class ChordScaleConfigReceiverPort implements ReceiverPortInterface {
+    readonly eventEmitter = new EventEmitter<ChordScaleConfigReceiverPortEvents>();
+
+    getDataType(): DataType {
+        return DataTypes.kChordScaleConfig;
+    }
+
+    handleRequest(sender: P2PMacAddress, sessionId: SessionID, data: RequestData): { receiver: ReceiverDataStoreInterface, responseData: ResponseData } {
+        const receiver = new JsonReceiverDataStore(data.totalSize, sender);
+        receiver.eventEmitter.on('received', (json: any, sender: P2PMacAddress) => {
+            this.eventEmitter.emit('received', json, sender);
+        });
+        const responseData: ResponseData = {
+            isAccepted: true,
+            reason: 0
+        };
+        return { receiver, responseData };
+    }
+
+    onStart(session: ReceiverSessionInterface, id: SessionID): void {
+        console.log("ChordScaleConfigReceiverPort: onStart session: ", session, "id: ", id);
+    }
+
+    onFinish(session: ReceiverSessionInterface, id: SessionID): void {
+        console.log("ChordScaleConfigReceiverPort: onFinish session: ", session, "id: ", id);
+    }
+}
+
 export function sendBodyColorConfig(dataTransferController: DataTransferController, receiver: P2PMacAddress, config: BodyColorConfig): boolean {
     const store = new JsonSenderDataStore(config, DataTypes.kBodyColorConfig, "");
     const result = dataTransferController.sendRequest(receiver, store, []);
@@ -252,6 +285,15 @@ export function sendSettingsConfigUpdate(dataTransferController: DataTransferCon
     const path = namespaces.join('.');
     // 要求に従い、送信DataTypeは kSettingsConfig を使用する
     const store = new JsonSenderDataStore(json, DataTypes.kSettingsConfig, path);
+    const result = dataTransferController.sendRequest(receiver, store, []);
+    if (result === null) {
+        return false;
+    }
+    return true;
+}
+
+export function sendChordScaleConfig(dataTransferController: DataTransferController, receiver: P2PMacAddress, config: ChordScaleConfig): boolean {
+    const store = new JsonSenderDataStore(config, DataTypes.kChordScaleConfig, "");
     const result = dataTransferController.sendRequest(receiver, store, []);
     if (result === null) {
         return false;
