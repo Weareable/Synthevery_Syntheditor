@@ -40,6 +40,16 @@ const ChordProgressionPreview: React.FC<ChordProgressionPreviewProps> = ({
     const [isLooping, setIsLooping] = useState(false);
     const partRef = useRef<Tone.Part | null>(null);
 
+    // デバッグログ用の状態
+    const [debugLogs, setDebugLogs] = useState<Array<{
+        timestamp: Date;
+        chordName: string;
+        relativeNotes: number[];
+        midiNotes: number[];
+        toneNotes: string[];
+        message: string;
+    }>>([]);
+
     // サンプラーの初期化
     useEffect(() => {
         const initSampler = async () => {
@@ -90,10 +100,23 @@ const ChordProgressionPreview: React.FC<ChordProgressionPreviewProps> = ({
         };
     }, []); // 依存配列を空にして、初回のみ実行
 
+    // デバッグログを追加する関数
+    const addDebugLog = useCallback((chordName: string, relativeNotes: number[], midiNotes: number[], toneNotes: string[], message: string) => {
+        const newLog = {
+            timestamp: new Date(),
+            chordName,
+            relativeNotes: [...relativeNotes],
+            midiNotes: [...midiNotes],
+            toneNotes: [...toneNotes],
+            message
+        };
+        setDebugLogs(prev => [newLog, ...prev.slice(0, 19)]); // 最新20件を保持
+    }, []);
+
     // コード名から音符配列を生成する関数（MIDIノート番号を使用）
     const getChordNotes = useCallback((chordName: string): string[] => {
         try {
-            // tonal-chordscaleのchordToNotes関数を使用してMIDIノート番号を取得
+            // tonal-chordscaleのchordToNotes関数を使用して相対ノート番号を取得
             const relativeNotes = chordToNotes(chordName);
 
             if (relativeNotes && relativeNotes.length > 0) {
@@ -108,7 +131,15 @@ const ChordProgressionPreview: React.FC<ChordProgressionPreviewProps> = ({
                     return `${noteName}${octave}`;
                 });
 
-                console.log(`コード ${chordName} のMIDIノート:`, midiNotes, '→ 音符:', notes);
+                // デバッグログを追加
+                addDebugLog(chordName, relativeNotes, midiNotes, notes, '正常に変換完了');
+
+                console.log(`コード ${chordName} の変換過程:`, {
+                    relativeNotes,
+                    midiNotes,
+                    toneNotes: notes
+                });
+
                 return notes;
             }
 
@@ -122,12 +153,31 @@ const ChordProgressionPreview: React.FC<ChordProgressionPreviewProps> = ({
                 'Am7b5': ['A4', 'C5', 'Eb5', 'G5'],
             };
 
-            return fallbackMap[chordName] || ['C4', 'E4', 'G4', 'A4'];
+            const fallbackNotes = fallbackMap[chordName] || ['C4', 'E4', 'G4', 'A4'];
+            const fallbackMidi = fallbackNotes.map(note => {
+                // Tone.jsの音符表記をMIDIノート番号に変換
+                const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                const octave = parseInt(note.slice(-1));
+                const noteName = note.slice(0, -1);
+                const noteIndex = noteNames.indexOf(noteName);
+                return (octave + 1) * 12 + noteIndex;
+            });
+            const fallbackRelative = fallbackMidi.map(midi => midi - 60);
+
+            addDebugLog(chordName, fallbackRelative, fallbackMidi, fallbackNotes, 'フォールバック使用');
+
+            return fallbackNotes;
         } catch (error) {
             console.error('コード解析エラー:', error);
-            return ['C4', 'E4', 'G4', 'A4'];
+            const errorNotes = ['C4', 'E4', 'G4', 'A4'];
+            const errorMidi = [60, 64, 67, 69];
+            const errorRelative = [0, 4, 7, 9];
+
+            addDebugLog(chordName, errorRelative, errorMidi, errorNotes, `エラー: ${error}`);
+
+            return errorNotes;
         }
-    }, []);
+    }, [addDebugLog]);
 
     // コード進行の再生
     const playProgression = useCallback(async () => {
@@ -180,6 +230,9 @@ const ChordProgressionPreview: React.FC<ChordProgressionPreviewProps> = ({
                         console.log('音符を発音:', note);
                         samplerRef.current!.triggerAttackRelease(note, "4n", time);
                     });
+
+                    // 発音時のデバッグログを追加
+                    addDebugLog('発音中', [], [], chord, `時刻: ${time}, Transport位置: ${Tone.Transport.position}`);
                 }
             }, events);
 
@@ -381,6 +434,47 @@ const ChordProgressionPreview: React.FC<ChordProgressionPreviewProps> = ({
                             現在の拍: {currentBeat} / 現在のコード: {progression.timeline[currentChordIndex]?.chord_name}
                         </div>
                     )}
+
+                    {/* デバッグログ表示 */}
+                    <div className="mt-4 pt-4 border-t">
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="text-sm font-semibold">音の変換デバッグログ</h4>
+                            <button
+                                onClick={() => setDebugLogs([])}
+                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                            >
+                                クリア
+                            </button>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto space-y-1">
+                            {debugLogs.map((log, index) => (
+                                <div key={index} className="text-xs bg-gray-50 p-2 rounded border">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <span className="font-medium text-blue-600">{log.chordName}</span>
+                                        <span className="text-gray-500">{log.timestamp.toLocaleTimeString()}</span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                        <div>
+                                            <div className="font-medium text-gray-600">相対ノート:</div>
+                                            <div className="text-gray-800">[{log.relativeNotes.join(', ')}]</div>
+                                        </div>
+                                        <div>
+                                            <div className="font-medium text-gray-600">MIDIノート:</div>
+                                            <div className="text-gray-800">[{log.midiNotes.join(', ')}]</div>
+                                        </div>
+                                        <div>
+                                            <div className="font-medium text-gray-600">Tone.js音符:</div>
+                                            <div className="text-gray-800">[{log.toneNotes.join(', ')}]</div>
+                                        </div>
+                                    </div>
+                                    <div className="text-gray-600 mt-1">{log.message}</div>
+                                </div>
+                            ))}
+                            {debugLogs.length === 0 && (
+                                <div className="text-gray-500 text-center py-2">デバッグログはありません</div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
