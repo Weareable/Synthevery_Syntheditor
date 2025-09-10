@@ -135,17 +135,17 @@ export function getVoicingInOneOctaveRange(chord: any, minMidi: number, maxMidi:
         }
     }
 
-    console.log('allPossibleVoicings', allPossibleVoicings);
+    console.debug('allPossibleVoicings', allPossibleVoicings);
 
-    console.log('minMidi', minMidi);
-    console.log('maxMidi', maxMidi);
-    console.log('rangeMidMidi', rangeMidMidi);
+    console.debug('minMidi', minMidi);
+    console.debug('maxMidi', maxMidi);
+    console.debug('rangeMidMidi', rangeMidMidi);
 
     // ベースノートを特定（chordNameが提供されている場合）
     let targetBassNote: string | null = null;
     if (chordName) {
         targetBassNote = extractBassNote(chordName);
-        console.log(`[getVoicingInOneOctaveRange] ベースノート特定: ${chordName} -> ${targetBassNote}`);
+        console.debug(`[getVoicingInOneOctaveRange] ベースノート特定: ${chordName} -> ${targetBassNote}`);
     }
 
     // 生成された全てのヴォイシングを評価
@@ -176,7 +176,7 @@ export function getVoicingInOneOctaveRange(chord: any, minMidi: number, maxMidi:
                 // ベースノートの音程クラスが一致する場合に高得点
                 if (bassPitchClass === targetPitchClass) {
                     currentScore += 10; // ベースノート一致
-                    console.log(`[getVoicingInOneOctaveRange] ベースノート一致ボーナス: ${bassNoteName}(${bassPitchClass}) === ${targetBassNote}(${targetPitchClass})`);
+                    console.debug(`[getVoicingInOneOctaveRange] ベースノート一致ボーナス: ${bassNoteName}(${bassPitchClass}) === ${targetBassNote}(${targetPitchClass})`);
                 }
             }
         }
@@ -185,13 +185,13 @@ export function getVoicingInOneOctaveRange(chord: any, minMidi: number, maxMidi:
         const voicingMidMidi = (Math.min(...voicing) + Math.max(...voicing)) / 2;
         currentScore -= Math.abs(voicingMidMidi - rangeMidMidi) * 0.1; // 中心から離れるほどわずかに減点
 
-        console.log('voicing', voicing);
-        console.log('inRangeCount', inRangeCount);
-        console.log('span', span);
-        console.log('isFullyInRange', isFullyInRange);
-        console.log('voicingMidMidi', voicingMidMidi);
-        console.log('rangeMidMidi', rangeMidMidi);
-        console.log('currentScore', currentScore);
+        console.debug('voicing', voicing);
+        console.debug('inRangeCount', inRangeCount);
+        console.debug('span', span);
+        console.debug('isFullyInRange', isFullyInRange);
+        console.debug('voicingMidMidi', voicingMidMidi);
+        console.debug('rangeMidMidi', rangeMidMidi);
+        console.debug('currentScore', currentScore);
 
         if (currentScore > bestScore) {
             bestScore = currentScore;
@@ -230,7 +230,7 @@ export function relativeToMidi(relativeNote: number): number {
  */
 export function chordToNotes(chordName: string, range: { min: number; max: number } = CHORD_NOTE_RANGE): number[] {
     try {
-        console.log(`[chordToNotes] 開始: ${chordName}, range:`, range);
+        console.debug(`[chordToNotes] 開始: ${chordName}, range:`, range);
 
         // 転回形の場合は元のコード名を使用
         let chordNameForTonal = chordName;
@@ -244,7 +244,7 @@ export function chordToNotes(chordName: string, range: { min: number; max: numbe
             throw new Error(`Invalid chord: ${chordNameForTonal}`);
         }
 
-        console.log(`[chordToNotes] Chord.get()結果:`, {
+        console.debug(`[chordToNotes] Chord.get()結果:`, {
             chordName,
             notes: chord.notes,
             empty: chord.empty
@@ -255,7 +255,7 @@ export function chordToNotes(chordName: string, range: { min: number; max: numbe
         const maxMidi = MIDI_BASE_NOTE + range.max;
         const voicing = getVoicingInOneOctaveRange(chord, minMidi, maxMidi, chordName);
 
-        console.log(`[chordToNotes] ヴォイシング結果:`, {
+        console.debug(`[chordToNotes] ヴォイシング結果:`, {
             voicing,
             minMidi,
             maxMidi,
@@ -263,7 +263,7 @@ export function chordToNotes(chordName: string, range: { min: number; max: numbe
         });
 
         if (voicing.length === 0) {
-            console.log(`[chordToNotes] フォールバック処理開始`);
+            console.debug(`[chordToNotes] フォールバック処理開始`);
 
             // フォールバック: 従来の方法（既に取得したchordを使用）
             const pcs: number[] = [];
@@ -273,7 +273,7 @@ export function chordToNotes(chordName: string, range: { min: number; max: numbe
                 const rel = midiAtC4 - MIDI_BASE_NOTE;
                 const pc = ((rel % 12) + 12) % 12;
                 pcs.push(pc);
-                console.log(`[chordToNotes] フォールバック: ${noteName}4 -> MIDI:${midiAtC4} -> 相対:${rel} -> PC:${pc}`);
+                console.debug(`[chordToNotes] フォールバック: ${noteName}4 -> MIDI:${midiAtC4} -> 相対:${rel} -> PC:${pc}`);
             }
 
             if (pcs.length === 0) return [];
@@ -287,16 +287,16 @@ export function chordToNotes(chordName: string, range: { min: number; max: numbe
                 while (v < prev) v += 12;
                 stacked.push(clampNoteToRange(v, range));
                 prev = v;
-                console.log(`[chordToNotes] スタック処理: PC[${i}]=${pcs[i]} -> v=${v} -> 最終=${clampNoteToRange(v, range)}`);
+                console.debug(`[chordToNotes] スタック処理: PC[${i}]=${pcs[i]} -> v=${v} -> 最終=${clampNoteToRange(v, range)}`);
             }
 
-            console.log(`[chordToNotes] フォールバック結果:`, stacked);
+            console.debug(`[chordToNotes] フォールバック結果:`, stacked);
             return stacked;
         }
 
         // ヴォイシングを相対値に変換
         const result = voicing.map(midi => midiToRelative(midi));
-        console.log(`[chordToNotes] 最終結果:`, result);
+        console.debug(`[chordToNotes] 最終結果:`, result);
         return result;
     } catch (error) {
         console.error(`Error parsing chord ${chordName}:`, error);
@@ -533,7 +533,7 @@ export function generateScalesFromChords(chordNames: string[]): string[] {
         // トップのスケールのみを返す（最初の候補）
         const topScaleName = suggestions[0].name;
 
-        console.log(`Generated top scale: ${topScaleName}`);
+        console.debug(`Generated top scale: ${topScaleName}`);
 
         return [topScaleName];
     } catch (error) {
@@ -543,41 +543,78 @@ export function generateScalesFromChords(chordNames: string[]): string[] {
 }
 
 /**
- * コードとスケールの関係を自動生成
- * @param chordName コード名
- * @param scaleName スケール名
+ * オクターブ拡張を考慮してスケール内でのオフセットを計算
+ * @param chordRoot コードのルート音（相対値）
+ * @param scaleNotes スケールのノート配列（相対値）
+ * @returns オフセット（見つからない場合は-1）
+ */
+function calculateOctaveExtendedOffset(chordRoot: number, scaleNotes: number[]): number {
+    // 12半音 = 1オクターブ
+    const octaveSize = 12;
+
+    // まず正確なマッチを検索
+    for (let octaveOffset = -3; octaveOffset <= 3; octaveOffset++) {
+        const extendedScaleNotes = scaleNotes.map(note => note + (octaveOffset * octaveSize));
+
+        // 拡張されたスケール内でコードのルート音を検索
+        const offset = extendedScaleNotes.findIndex(note => note === chordRoot);
+        if (offset !== -1) {
+            // オフセットを計算：元のスケール内での位置 + オクターブオフセット
+            return offset + (octaveOffset * scaleNotes.length);
+        }
+    }
+
+    // 正確なマッチが見つからない場合、一番近い値を検索
+    let closestOffset = 0;
+    let minDistance = Infinity;
+
+    for (let octaveOffset = -3; octaveOffset <= 3; octaveOffset++) {
+        const extendedScaleNotes = scaleNotes.map(note => note + (octaveOffset * octaveSize));
+
+        // 各スケール音との距離を計算
+        extendedScaleNotes.forEach((note, index) => {
+            const distance = Math.abs(chordRoot - note);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestOffset = index + (octaveOffset * scaleNotes.length);
+            }
+        });
+    }
+
+    console.debug(`Chord root ${chordRoot} not found in scale [${scaleNotes.join(', ')}], using closest offset: ${closestOffset} (distance: ${minDistance})`);
+    return closestOffset;
+}
+
+/**
+ * コードとスケールの関係を自動生成（実際のノート配列からオフセットを決定）
+ * @param chordNotes コードのノート配列（相対値）
+ * @param scaleNotes スケールのノート配列（相対値）
+ * @param chordId コードのID
+ * @param scaleId スケールのID
  * @returns ChordScaleRelation オブジェクト
  */
 export function generateChordScaleRelation(
-    chordName: string,
-    scaleName: string,
+    chordNotes: number[],
+    scaleNotes: number[],
     chordId: number,
     scaleId: number
 ): ChordScaleRelation | null {
     try {
-        const chord = Chord.get(chordName);
-        const scale = Scale.get(scaleName);
-
-        if (chord.empty || scale.empty) {
+        if (chordNotes.length === 0 || scaleNotes.length === 0) {
             return null;
         }
 
-        const chordRoot = chord.tonic;
-        const scaleRoot = scale.tonic;
+        // コードのルート音（最初の音）を取得
+        const chordRoot = chordNotes[0];
 
-        if (!chordRoot || !scaleRoot) {
-            return null;
+        // スケール配列の中でコードのルート音が何番目の要素かを検索
+        let rootOffset = scaleNotes.findIndex(note => note === chordRoot);
+
+        if (rootOffset === -1) {
+            // コードのルート音がスケールに含まれていない場合
+            // オクターブ拡張を考慮してオフセットを計算（一番近い値を返す）
+            rootOffset = calculateOctaveExtendedOffset(chordRoot, scaleNotes);
         }
-
-        // オクターブ情報を追加してMIDI番号を取得
-        const chordRootMidi = Note.midi(`${chordRoot}4`);
-        const scaleRootMidi = Note.midi(`${scaleRoot}4`);
-
-        if (chordRootMidi === null || scaleRootMidi === null) {
-            return null;
-        }
-
-        const rootOffset = midiToRelative(chordRootMidi) - midiToRelative(scaleRootMidi);
 
         return {
             chord_id: chordId,
@@ -613,7 +650,7 @@ export function generateChordScaleConfigWithRange(
 
     // 新しいアプローチでスケールを生成（トップのスケールのみ）
     const generatedScaleNames = generateScalesFromChords(chordNames);
-    console.log(`Generated scale names: [${generatedScaleNames.join(', ')}]`);
+    console.debug(`Generated scale names: [${generatedScaleNames.join(', ')}]`);
 
     // 生成されたスケール名からスケールオブジェクトを作成（トップのスケールのみ）
     if (generatedScaleNames.length > 0) {
@@ -638,10 +675,17 @@ export function generateChordScaleConfigWithRange(
                 const topScaleName = generatedScaleNames[0];
                 const scaleId = 0;
 
+                // スケールのノート配列を取得
+                const scaleNotesRelative = scaleToNotes(topScaleName, range);
+
+                console.log('chordName', chordName);
+                console.log('chordNotesRelative', chordNotes);
+                console.log('scaleNotesRelative', scaleNotesRelative);
+
                 // コード・スケール関係を生成
                 const relation = generateChordScaleRelation(
-                    chordName,
-                    topScaleName,
+                    chordNotes,
+                    scaleNotesRelative,
                     chordIndex,
                     scaleId
                 );
@@ -692,7 +736,7 @@ function findOrCreateConsolidatedScale(scales: ChordScale[], scaleNotes: number[
     });
 
     if (exactMatch !== -1) {
-        console.log(`完全一致: ${chordName} -> Scale ${exactMatch} (音程クラス: [${newPitchClasses.join(', ')}])`);
+        console.debug(`完全一致: ${chordName} -> Scale ${exactMatch} (音程クラス: [${newPitchClasses.join(', ')}])`);
         return exactMatch;
     }
 
@@ -702,7 +746,7 @@ function findOrCreateConsolidatedScale(scales: ChordScale[], scaleNotes: number[
         const existingPitchClasses = normalizeNotesToPitchClasses(existingScale.notes);
 
         if (newPitchClasses.every(pc => existingPitchClasses.includes(pc))) {
-            console.log(`包含関係: ${chordName} -> Scale ${i} (新しいスケールが既存スケールを含む) [${newPitchClasses.join(', ')}] ⊆ [${existingPitchClasses.join(', ')}]`);
+            console.debug(`包含関係: ${chordName} -> Scale ${i} (新しいスケールが既存スケールを含む) [${newPitchClasses.join(', ')}] ⊆ [${existingPitchClasses.join(', ')}]`);
             return i;
         }
     }
@@ -715,7 +759,7 @@ function findOrCreateConsolidatedScale(scales: ChordScale[], scaleNotes: number[
         if (existingPitchClasses.every(pc => newPitchClasses.includes(pc))) {
             // 既存スケールを新しいスケールで拡張
             scales[i] = { notes: scaleNotes };
-            console.log(`逆包含関係: ${chordName} -> Scale ${i} (既存スケールを拡張) [${existingPitchClasses.join(', ')}] ⊆ [${newPitchClasses.join(', ')}]`);
+            console.debug(`逆包含関係: ${chordName} -> Scale ${i} (既存スケールを拡張) [${existingPitchClasses.join(', ')}] ⊆ [${newPitchClasses.join(', ')}]`);
             return i;
         }
     }
@@ -742,13 +786,13 @@ function findOrCreateConsolidatedScale(scales: ChordScale[], scaleNotes: number[
         // 既存スケールを新しいスケールで置き換え（統合）
         scales[bestMatch] = { notes: scaleNotes };
         const existingPitchClasses = normalizeNotesToPitchClasses(scales[bestMatch].notes);
-        console.log(`高類似度統合: ${chordName} -> Scale ${bestMatch} (類似度: ${(bestScore * 100).toFixed(1)}%) [${newPitchClasses.join(', ')}] ≈ [${existingPitchClasses.join(', ')}]`);
+        console.debug(`高類似度統合: ${chordName} -> Scale ${bestMatch} (類似度: ${(bestScore * 100).toFixed(1)}%) [${newPitchClasses.join(', ')}] ≈ [${existingPitchClasses.join(', ')}]`);
         return bestMatch;
     }
 
     // 5. 新しいスケールを作成
     scales.push({ notes: scaleNotes });
-    console.log(`新規作成: ${chordName} -> Scale ${scales.length - 1} (音程クラス: [${newPitchClasses.join(', ')}])`);
+    console.debug(`新規作成: ${chordName} -> Scale ${scales.length - 1} (音程クラス: [${newPitchClasses.join(', ')}])`);
     return scales.length - 1;
 }
 
