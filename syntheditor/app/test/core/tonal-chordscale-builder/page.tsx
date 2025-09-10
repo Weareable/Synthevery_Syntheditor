@@ -28,7 +28,7 @@ const SimpleChordScaleBuilder: React.FC = () => {
     const [selectedDevice, setSelectedDevice] = useState<string>('');
 
     // メインの状態
-    const [chordList, setChordList] = useState<string>('Cmaj, Am, F, G');
+    const [chordList, setChordList] = useState<string>('Cmaj7, Am, F, G, C#m, D#m, Bb');
     const [generatedData, setGeneratedData] = useState<GeneratedData | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
 
@@ -475,6 +475,23 @@ const SimpleChordScaleBuilder: React.FC = () => {
                                         </div>
                                     ))}
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* コード・スケール関係の詳細 */}
+                        <div className="mb-6">
+                            <h3 className="font-semibold mb-2">コード・スケール関係 ({generatedData.config.chord_scale_relations.length})</h3>
+                            <div className="space-y-1">
+                                {generatedData.config.chord_scale_relations.map((relation, index) => (
+                                    <div key={index} className="flex justify-between items-center p-2 bg-muted rounded">
+                                        <span>
+                                            コード {relation.chord_id}: {generatedData.chordNames[relation.chord_id]}
+                                        </span>
+                                        <span className="text-sm text-muted-foreground">
+                                            スケール {relation.scale_with_root.scale_id} (オフセット: {relation.scale_with_root.root_offset})
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
