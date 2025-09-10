@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { chordToNotes, notesToNames, validateChordName, findCompatibleScales } from '@/lib/utils/tonal-chordscale';
+import { chordToNotes, notesToNames, validateChordName, getChordNotes, detectScalesFromNotes } from '@/lib/utils/tonal-chordscale';
 
 interface ChordAnalysisResult {
     chordName: string;
@@ -46,7 +46,8 @@ const ChordNameInput: React.FC<ChordNameInputProps> = ({ onAnalysisComplete, onE
             const noteNames = notesToNames(notes);
 
             // 適合するスケールを検索
-            const compatibleScales = findCompatibleScales(chordName.trim());
+            const chordNotesArray = getChordNotes(chordName.trim());
+            const compatibleScales = detectScalesFromNotes(chordNotesArray);
 
             const result: ChordAnalysisResult = {
                 chordName: chordName.trim(),
