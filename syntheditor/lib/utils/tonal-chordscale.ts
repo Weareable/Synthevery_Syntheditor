@@ -49,18 +49,46 @@ export function normalizeNotesToPitchClasses(notes: number[]): number[] {
 }
 
 /**
+ * コード名からベースノートを抽出する関数
+ * @param chordName コード名 (例: "F", "C/E")
+ * @returns ベースノート名 (例: "F", "E")
+ */
+function extractBassNote(chordName: string): string | null {
+    try {
+        // "/" が含まれている場合は転回形（例: "C/E"）
+        if (chordName.includes('/')) {
+            const parts = chordName.split('/');
+            if (parts.length >= 2) {
+                return parts[1].trim();
+            }
+        }
+
+        // 通常のコードの場合、ルートノートをベースノートとする
+        const chord = Chord.get(chordName);
+        if (!chord.empty && chord.tonic) {
+            return chord.tonic;
+        }
+
+        return null;
+    } catch (error) {
+        console.error(`Error extracting bass note from ${chordName}:`, error);
+        return null;
+    }
+}
+
+/**
  * 指定されたMIDIノート範囲に最適なコードヴォイシングを見つける関数
- * (転回形やオクターブシフトを考慮し、1オクターブ内に収めることを試みる)
+ * (転回形やオクターブシフトを考慮し、ベースノートの音程を重視する)
  * 
- * @param chordName コード名 (例: "Cmaj7", "G13")
+ * @param chord Chord.get()の結果オブジェクト
  * @param minMidi 許容されるMIDIノート番号の最小値 (例: 60 for C4)
  * @param maxMidi 許容されるMIDIノート番号の最大値 (例: 71 for B4)
+ * @param chordName コード名（ベースノート特定用）
  * @returns 最適なヴォイシングのMIDIノート番号配列。見つからない場合は空の配列。
  */
-export function getVoicingInOneOctaveRange(chordName: string, minMidi: number, maxMidi: number): number[] {
-    const chord = Chord.get(chordName);
+export function getVoicingInOneOctaveRange(chord: any, minMidi: number, maxMidi: number, chordName?: string): number[] {
     if (chord.empty) {
-        console.warn(`無効なコード名: ${chordName}`);
+        console.warn(`無効なコード: ${chord}`);
         return [];
     }
 
@@ -113,6 +141,13 @@ export function getVoicingInOneOctaveRange(chordName: string, minMidi: number, m
     console.log('maxMidi', maxMidi);
     console.log('rangeMidMidi', rangeMidMidi);
 
+    // ベースノートを特定（chordNameが提供されている場合）
+    let targetBassNote: string | null = null;
+    if (chordName) {
+        targetBassNote = extractBassNote(chordName);
+        console.log(`[getVoicingInOneOctaveRange] ベースノート特定: ${chordName} -> ${targetBassNote}`);
+    }
+
     // 生成された全てのヴォイシングを評価
     let bestVoicing: number[] = [];
     let bestScore = -1; // スコアは、より多くの音が範囲内にあるほど高くなる
@@ -129,7 +164,24 @@ export function getVoicingInOneOctaveRange(chordName: string, minMidi: number, m
         const isFullyInRange = inRangeCount === numNotes && span <= (maxMidi - minMidi);
         let currentScore = inRangeCount + (isFullyInRange ? 100 : 0); // 完全一致に高いボーナス
 
-        // 4. (オプション) ヴォイシングが範囲の中心に近いほど有利にする
+        // 4. ベースノートの音程を重視したスコアリング（新機能）
+        if (targetBassNote && voicing.length > 0) {
+            const bassMidi = voicing[0]; // 最初の音がベースノート
+            const bassNoteName = Note.fromMidi(bassMidi);
+
+            if (bassNoteName) {
+                const bassPitchClass = Note.pitchClass(bassNoteName);
+                const targetPitchClass = Note.pitchClass(targetBassNote);
+
+                // ベースノートの音程クラスが一致する場合に高得点
+                if (bassPitchClass === targetPitchClass) {
+                    currentScore += 10; // ベースノート一致
+                    console.log(`[getVoicingInOneOctaveRange] ベースノート一致ボーナス: ${bassNoteName}(${bassPitchClass}) === ${targetBassNote}(${targetPitchClass})`);
+                }
+            }
+        }
+
+        // 5. (オプション) ヴォイシングが範囲の中心に近いほど有利にする
         const voicingMidMidi = (Math.min(...voicing) + Math.max(...voicing)) / 2;
         currentScore -= Math.abs(voicingMidMidi - rangeMidMidi) * 0.1; // 中心から離れるほどわずかに減点
 
@@ -159,7 +211,7 @@ export function getVoicingInOneOctaveRange(chordName: string, minMidi: number, m
     if (bestVoicing.length > 0 && bestVoicing.filter(midi => midi >= minMidi && midi <= maxMidi).length > 0) {
         return bestVoicing;
     } else {
-        console.warn(`コード '${chordName}' は指定範囲 [${minMidi}-${maxMidi}] に最適なヴォイシングが見つかりませんでした。`);
+        console.warn(`コードは指定範囲 [${minMidi}-${maxMidi}] に最適なヴォイシングが見つかりませんでした。`);
         return [];
     }
 }
@@ -178,18 +230,42 @@ export function relativeToMidi(relativeNote: number): number {
  */
 export function chordToNotes(chordName: string, range: { min: number; max: number } = CHORD_NOTE_RANGE): number[] {
     try {
+        console.log(`[chordToNotes] 開始: ${chordName}, range:`, range);
+
+        // 転回形の場合は元のコード名を使用
+        let chordNameForTonal = chordName;
+        if (chordName.includes('/')) {
+            chordNameForTonal = chordName.split('/')[0];
+        }
+
+        // Chord.get()を一度だけ呼び出し
+        const chord = Chord.get(chordNameForTonal);
+        if (chord.empty || !chord.notes || chord.notes.length === 0) {
+            throw new Error(`Invalid chord: ${chordNameForTonal}`);
+        }
+
+        console.log(`[chordToNotes] Chord.get()結果:`, {
+            chordName,
+            notes: chord.notes,
+            empty: chord.empty
+        });
+
         // 最適なヴォイシングを取得（MIDI番号で）
         const minMidi = MIDI_BASE_NOTE + range.min;
         const maxMidi = MIDI_BASE_NOTE + range.max;
-        const voicing = getVoicingInOneOctaveRange(chordName, minMidi, maxMidi);
+        const voicing = getVoicingInOneOctaveRange(chord, minMidi, maxMidi, chordName);
+
+        console.log(`[chordToNotes] ヴォイシング結果:`, {
+            voicing,
+            minMidi,
+            maxMidi,
+            voicingLength: voicing.length
+        });
 
         if (voicing.length === 0) {
-            // フォールバック: 従来の方法
-            const chord = Chord.get(chordName);
-            if (chord.empty || !chord.notes || chord.notes.length === 0) {
-                throw new Error(`Invalid chord: ${chordName}`);
-            }
+            console.log(`[chordToNotes] フォールバック処理開始`);
 
+            // フォールバック: 従来の方法（既に取得したchordを使用）
             const pcs: number[] = [];
             for (const noteName of chord.notes) {
                 const midiAtC4 = Note.midi(`${noteName}4`);
@@ -197,6 +273,7 @@ export function chordToNotes(chordName: string, range: { min: number; max: numbe
                 const rel = midiAtC4 - MIDI_BASE_NOTE;
                 const pc = ((rel % 12) + 12) % 12;
                 pcs.push(pc);
+                console.log(`[chordToNotes] フォールバック: ${noteName}4 -> MIDI:${midiAtC4} -> 相対:${rel} -> PC:${pc}`);
             }
 
             if (pcs.length === 0) return [];
@@ -210,13 +287,17 @@ export function chordToNotes(chordName: string, range: { min: number; max: numbe
                 while (v < prev) v += 12;
                 stacked.push(clampNoteToRange(v, range));
                 prev = v;
+                console.log(`[chordToNotes] スタック処理: PC[${i}]=${pcs[i]} -> v=${v} -> 最終=${clampNoteToRange(v, range)}`);
             }
 
+            console.log(`[chordToNotes] フォールバック結果:`, stacked);
             return stacked;
         }
 
         // ヴォイシングを相対値に変換
-        return voicing.map(midi => midiToRelative(midi));
+        const result = voicing.map(midi => midiToRelative(midi));
+        console.log(`[chordToNotes] 最終結果:`, result);
+        return result;
     } catch (error) {
         console.error(`Error parsing chord ${chordName}:`, error);
         return [];
