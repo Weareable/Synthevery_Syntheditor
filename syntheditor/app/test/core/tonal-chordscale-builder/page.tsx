@@ -91,7 +91,7 @@ const SimpleChordScaleBuilder: React.FC = () => {
     // デバイス切断
     const disconnectDevice = async () => {
         try {
-            await mesh.disconnectDevice();
+            await mesh.disconnectDevice(getAddressFromString(selectedDevice));
             addEventLog('ACTION', 'デバイス切断を試行しました');
         } catch (error) {
             addEventLog('ERROR', 'デバイス切断に失敗しました', error);
@@ -204,7 +204,7 @@ const SimpleChordScaleBuilder: React.FC = () => {
             sequence.data.chord_ids = chordIds;
         } else if (field === 'scaleIds') {
             const scaleIds = value.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
-            sequence.data.scale_with_roots = scaleIds.map(scaleId => ({
+            sequence.data.scale_with_roots = scaleIds.map((scaleId: number) => ({
                 scale_id: scaleId,
                 root_offset: 0
             }));
