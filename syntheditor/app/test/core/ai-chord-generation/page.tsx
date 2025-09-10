@@ -8,6 +8,7 @@ import { sendChordScaleConfig } from '@/lib/synthevery-core/device/config';
 import { ChordScaleConfig } from '@/types/chordScale';
 import { P2PMacAddress } from '@/lib/synthevery-core/types/mesh';
 import { generateChordScaleConfigWithRange, generateScalesFromChords } from '@/lib/utils/tonal-chordscale';
+import ChordProgressionPreview from '@/components/ChordProgressionPreview';
 
 interface EventLog {
     timestamp: Date;
@@ -208,6 +209,9 @@ const AIChordGenerationPage: React.FC = () => {
     const [noteRange, setNoteRange] = useState({ min: -12, max: 24 });
     const [useVoicingAlgorithm, setUseVoicingAlgorithm] = useState(true);
     const [consolidateScales, setConsolidateScales] = useState(true);
+
+    // プレビュー機能の状態
+    const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
 
     // Gemini API設定 - 環境変数から取得
     const [apiKey, setApiKey] = useState<string>(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
@@ -807,6 +811,15 @@ const AIChordGenerationPage: React.FC = () => {
                                     </button>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* コード進行プレビュー */}
+                        <div className="mb-6">
+                            <ChordProgressionPreview
+                                progression={generatedData.aiResponse.chord_progressions[selectedPattern]}
+                                isPlaying={isPreviewPlaying}
+                                onPlayStateChange={setIsPreviewPlaying}
+                            />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
