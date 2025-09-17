@@ -7,6 +7,12 @@ export const kChunkSize = 192;
 export namespace DataTypes {
     export const kNoteBuilderConfig: number = 10;
     export const kGeneratorConfig: number = 11;
+    export const kTrackDetail: number = 12;
+    export const kBodyColorConfig: number = 13;
+    export const kLedColorConfig: number = 14;
+    export const kChordScaleConfig: number = 15;
+    export const kSettingsConfig: number = 0xA0; // 160
+    export const kSettingsConfigUpdate: number = 0xA1; // 161: Web -> Device 設定更新
 }
 
 export namespace SessionCommandID {

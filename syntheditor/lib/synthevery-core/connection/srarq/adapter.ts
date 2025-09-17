@@ -1,6 +1,6 @@
 import { P2PMacAddress } from "../../types/mesh";
 import { MESH_PACKET_TYPE_SRARQ_DATA, MESH_PACKET_TYPE_SRARQ_ACK } from "../constants";
-import { mesh } from "../mesh";
+import { Mesh } from "../mesh";
 import { PacketTransmitter, SequenceNumberOperations } from "@/lib/srarq/srarq"
 
 
@@ -54,7 +54,7 @@ export function deserializeAckPacket(buffer: Uint8Array): AckPacket | null {
     };
 }
 
-export function getMeshPacketTransmitter(sessionId: number, address: P2PMacAddress): PacketTransmitter {
+export function getMeshPacketTransmitter(mesh: Mesh, sessionId: number, address: P2PMacAddress): PacketTransmitter {
     return {
         transmitData(sequenceNumber: number, data: Uint8Array): Promise<void> {
             const packet = serializeDataPacket({ sessionId, sequenceNumber, data });

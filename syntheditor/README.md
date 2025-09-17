@@ -1,4 +1,22 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Synthevery Syntheditor
+
+Syntheveryは、メッシュネットワーク上で音楽制作デバイスを連携させるためのWebアプリケーションです。このプロジェクトはNext.jsで構築されています。
+
+## 主要機能
+
+### DeviceConfigManager
+メッシュネットワーク上のデバイスからNoteBuilderConfigを自動的に取得・管理する機能です。
+
+- **自動設定管理**: 新規デバイス接続時に自動でNoteBuilderConfigをリクエスト
+- **送信元特定**: 受信した設定がどのデバイスから送信されたかを正確に特定
+- **リアルタイム更新**: デバイス接続・切断時にリアルタイムで設定を更新
+
+詳細は [DeviceConfigManager仕様書](./docs/specification/device/device-config-manager.md) を参照してください。
+
+### メッシュネットワーク機能
+- BLE経由でのデバイス接続
+- データ転送機能
+- リアルタイム通信
 
 ## Getting Started
 

@@ -10,7 +10,7 @@ services:
       - /app/.next
     environment:
       - WATCHPACK_POLLING=true
-    command: npm run dev
+    command: npm run dev:docker
 networks:
   default:
     name: syntheditor-network

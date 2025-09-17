@@ -20,18 +20,24 @@ import { SessionList } from './session-list';
 import { DataTransferCommandClient } from './command-client';
 import { getAddressString } from '../connection/util';
 import EventEmitter from 'eventemitter3';
-import { mesh } from '../connection/mesh';
-import { commandDispatcher } from '../command/dispatcher';
+import { Mesh } from '../connection/mesh';
+import { CommandDispatcher } from '../command/dispatcher';
 import { COMMAND_CLIENT_ID_DATA_TRANSFER } from '../command/constants';
-import { srarqSessionsController } from '../connection/srarq/session';
+import { SRArqSessionsController } from '../connection/srarq/session';
 
-class DataTransferController implements TransferCommandInterface {
+export class DataTransferController implements TransferCommandInterface {
+    private mesh: Mesh;
+    private commandDispatcher: CommandDispatcher;
+    private srarqSessionsController: SRArqSessionsController;
     private senderSessions: Map<string, SessionList<SenderSession>>;
     private receiverSessions: Map<string, SessionList<ReceiverSession>>;
     private receiverPorts: Map<DataType, ReceiverPortInterface>;
     private eventEmitter: EventEmitter;
 
-    constructor() {
+    constructor(mesh: Mesh, commandDispatcher: CommandDispatcher, srarqSessionsController: SRArqSessionsController) {
+        this.mesh = mesh;
+        this.commandDispatcher = commandDispatcher;
+        this.srarqSessionsController = srarqSessionsController;
         this.senderSessions = new Map<string, SessionList<SenderSession>>();
         this.receiverSessions = new Map<string, SessionList<ReceiverSession>>();
         this.receiverPorts = new Map();
@@ -46,8 +52,9 @@ class DataTransferController implements TransferCommandInterface {
             });
         }, 500);
 
-        mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[]) => {
-            for (const device of connectedDevices) {
+        this.mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
+            // 新規追加されたデバイスのみ初期化
+            for (const device of added) {
                 this.initializeNode(device);
             }
         });
@@ -64,7 +71,7 @@ class DataTransferController implements TransferCommandInterface {
 
     private initializeNode(address: P2PMacAddress): void {
         const addressStr = getAddressString(address.address);
-        const handler = commandDispatcher.getCommandHandler(address, true);
+        const handler = this.commandDispatcher.getCommandHandler(address, true);
 
         if (!handler) {
             console.error(`Failed to get CommandHandler for address: ${addressStr}`);
@@ -83,12 +90,12 @@ class DataTransferController implements TransferCommandInterface {
 
         const senderSessionList = new SessionList<SenderSession>();
         senderSessionList.eventEmitter.on('sessionDead', (sessionId: SessionID) => {
-            srarqSessionsController.removeSenderSession(address, sessionId);
+            this.srarqSessionsController.removeSenderSession(address, sessionId);
         });
 
         const receiverSessionList = new SessionList<ReceiverSession>();
         receiverSessionList.eventEmitter.on('sessionDead', (sessionId: SessionID) => {
-            srarqSessionsController.removeReceiverSession(address, sessionId);
+            this.srarqSessionsController.removeReceiverSession(address, sessionId);
         });
 
         this.senderSessions.set(addressStr, senderSessionList);
@@ -107,7 +114,7 @@ class DataTransferController implements TransferCommandInterface {
             return null;
         }
 
-        const srarq_sender_session = srarqSessionsController.createSenderSession(receiver);
+        const srarq_sender_session = this.srarqSessionsController.createSenderSession(receiver);
         if (srarq_sender_session === null) {
             console.error("DataTransferController: sendRequest: Failed to create SRAQR sender session");
             return null;
@@ -190,7 +197,7 @@ class DataTransferController implements TransferCommandInterface {
             const response = result.responseData
 
             if (store) {
-                const srarqReceiverSession = srarqSessionsController.createReceiverSession(sender, sessionId);
+                const srarqReceiverSession = this.srarqSessionsController.createReceiverSession(sender, sessionId);
                 if (srarqReceiverSession === null) {
                     console.error("DataTransferController: onRequest: Failed to create SRAQR receiver session");
                     return;
@@ -204,7 +211,17 @@ class DataTransferController implements TransferCommandInterface {
                 //送受信のSession開始を通知
                 this.eventEmitter.emit("sessionStart", sender, sessionId, "receiver");
                 session.onRequest(data);
-
+                // 完了時に結果送信とポート終了通知
+                let resultSent = false;
+                const maybeSendResult = () => {
+                    if (!resultSent && session.getStatus() === SessionStatus.kStatusCompleted) {
+                        resultSent = true;
+                        this.sendCommand(sender, SessionCommandID.kResult, sessionId);
+                        this.receiverPorts.get(data.type)!.onFinish(session, sessionId);
+                    }
+                };
+                session.getEventEmitter().on('statusChanged', () => maybeSendResult());
+                session.getEventEmitter().on('completed', () => maybeSendResult());
                 this.receiverPorts.get(data.type)!.onStart(session, sessionId);
             }
             this.sendCommand(sender, SessionCommandID.kResponse, sessionId);
@@ -353,7 +370,7 @@ class DataTransferController implements TransferCommandInterface {
         sessionId: SessionID
     ): void {
         const commandIdType = SessionCommandID.toCommandIDType(commandType, sessionId);
-        const handler = commandDispatcher.getCommandHandler(peerAddress, false); // create = false
+        const handler = this.commandDispatcher.getCommandHandler(peerAddress, false); // create = false
 
         if (!handler) {
             console.warn(`Could not get command handler for ${peerAddress}`);
@@ -364,7 +381,8 @@ class DataTransferController implements TransferCommandInterface {
     }
 }
 
-export const dataTransferController = new DataTransferController();
+// シングルトンインスタンスの即座生成を停止
+// export const dataTransferController = new DataTransferController();
 
 export class MockReceiverDataStore implements ReceiverDataStoreInterface {
     private data: Uint8Array;
@@ -430,6 +448,3 @@ export class MockSenderDataStore implements SenderDataStoreInterface {
         return "metadata";
     }
 }
-const mockReceiverPort = new MockReceiverPort();
-
-dataTransferController.registerReceiverPort(mockReceiverPort);

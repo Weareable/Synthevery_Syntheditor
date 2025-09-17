@@ -1,14 +1,17 @@
 import { P2PMacAddress, MeshPacket } from '../types/mesh';
-import { CONNECTION_INFO_SERVICE_UUID, MESH_SERVICE_UUID, MESH_PACKET_TX_CHAR_UUID, MESH_PACKET_RX_CHAR_UUID, MESH_PACKET_TYPE_NEIGHBOR_LIST, CONNECTED_DEVICES_CHAR_UUID, APP_MAC_ADDRESS, MAC_ADDRESS_CHAR_UUID } from './constants';
+import { CONNECTION_INFO_SERVICE_UUID, MESH_SERVICE_UUID, MESH_PACKET_TX_CHAR_UUID, MESH_PACKET_RX_CHAR_UUID, MESH_PACKET_TYPE_NEIGHBOR_LIST, CONNECTED_DEVICES_CHAR_UUID, APP_MAC_ADDRESS, MAC_ADDRESS_CHAR_UUID, DEVICE_ORDER_CHAR_UUID, LEADER_MAC_ADDRESS_CHAR_UUID } from './constants';
 import { BLEDevice, SyntheveryDeviceFilter } from './ble';
-import { decodeMeshPacket, decodeConnectedDevices, encodeNeighborListData, encodeMeshPacket } from './util';
+import { decodeMeshPacket, decodeConnectedDevices, decodeDeviceOrder, decodeLeaderMacAddress, encodeNeighborListData, encodeMeshPacket } from './util';
 import EventEmitter from 'eventemitter3';
 import { getAddressString, equalsAddress } from './util';
 
 
 
+
 export interface BLEMeshDeviceEvents {
-    connectedDevicesChanged: (devices: P2PMacAddress[]) => void;
+    bleConnectedDevicesChanged: (devices: P2PMacAddress[]) => void;
+    bleDeviceOrderChanged: (devices: P2PMacAddress[]) => void;
+    bleLeaderMacAddressChanged: (leader: P2PMacAddress | null) => void;
     disconnected: () => void;
 }
 
@@ -18,6 +21,8 @@ class BLEMeshDevice {
     address: P2PMacAddress | null = null;
     bleDevice: BLEDevice | null = null;
     connectedDevices: P2PMacAddress[] = [];
+    deviceOrder: P2PMacAddress[] = [];
+    leaderMacAddress: P2PMacAddress | null = null;
     eventEmitter = new EventEmitter<BLEMeshDeviceEvents>();
     packetReceiver: (packet: MeshPacket) => void = () => { };
 
@@ -45,10 +50,20 @@ class BLEMeshDevice {
 
             await this.bleDevice.startNotify(MESH_SERVICE_UUID, MESH_PACKET_RX_CHAR_UUID, this.handleMeshPacketReceived.bind(this));
             await this.bleDevice.startNotify(CONNECTION_INFO_SERVICE_UUID, CONNECTED_DEVICES_CHAR_UUID, this.handleConnectedDevicesChanged.bind(this));
+            await this.bleDevice.startNotify(CONNECTION_INFO_SERVICE_UUID, DEVICE_ORDER_CHAR_UUID, this.handleDeviceOrderChanged.bind(this));
+            await this.bleDevice.startNotify(CONNECTION_INFO_SERVICE_UUID, LEADER_MAC_ADDRESS_CHAR_UUID, this.handleLeaderMacAddressChanged.bind(this));
 
             const connectedDevicesValue = await this.bleDevice.readCharacteristicOnce(CONNECTION_INFO_SERVICE_UUID, CONNECTED_DEVICES_CHAR_UUID);
             const connectedDevices = new Uint8Array(connectedDevicesValue.buffer);
             this.connectedDevices = decodeConnectedDevices(connectedDevices);
+
+            const deviceOrderValue = await this.bleDevice.readCharacteristicOnce(CONNECTION_INFO_SERVICE_UUID, DEVICE_ORDER_CHAR_UUID);
+            const deviceOrder = new Uint8Array(deviceOrderValue.buffer);
+            this.deviceOrder = decodeDeviceOrder(deviceOrder);
+
+            const leaderMacAddressValue = await this.bleDevice.readCharacteristicOnce(CONNECTION_INFO_SERVICE_UUID, LEADER_MAC_ADDRESS_CHAR_UUID);
+            const leaderMacAddress = new Uint8Array(leaderMacAddressValue.buffer);
+            this.leaderMacAddress = decodeLeaderMacAddress(leaderMacAddress);
 
             this.bleDevice.eventEmitter.on('disconnected', () => {
                 this.cleanup();
@@ -74,11 +89,21 @@ class BLEMeshDevice {
         this.bleDevice?.stopNotify(CONNECTION_INFO_SERVICE_UUID, CONNECTED_DEVICES_CHAR_UUID).catch((error) => {
             console.error('Error stopping notify:', error);
         });
+        this.bleDevice?.stopNotify(CONNECTION_INFO_SERVICE_UUID, DEVICE_ORDER_CHAR_UUID).catch((error) => {
+            console.error('Error stopping notify:', error);
+        });
+        this.bleDevice?.stopNotify(CONNECTION_INFO_SERVICE_UUID, LEADER_MAC_ADDRESS_CHAR_UUID).catch((error) => {
+            console.error('Error stopping notify:', error);
+        });
 
         this.bleDevice = null;
         this.connectedDevices = [];
+        this.deviceOrder = [];
+        this.leaderMacAddress = null;
         this.packetReceiver = () => { };
-        this.eventEmitter.emit('connectedDevicesChanged', []);
+        this.eventEmitter.emit('bleConnectedDevicesChanged', []);
+        this.eventEmitter.emit('bleDeviceOrderChanged', []);
+        this.eventEmitter.emit('bleLeaderMacAddressChanged', null);
     }
 
     private handleMeshPacketReceived(value: DataView): void {
@@ -93,7 +118,39 @@ class BLEMeshDevice {
     private handleConnectedDevicesChanged(value: DataView): void {
         const connectedDevices = decodeConnectedDevices(new Uint8Array(value.buffer));
         this.connectedDevices = connectedDevices;
-        this.eventEmitter.emit('connectedDevicesChanged', connectedDevices);
+        this.eventEmitter.emit('bleConnectedDevicesChanged', connectedDevices);
+    }
+
+    private handleDeviceOrderChanged(value: DataView): void {
+        try {
+            const deviceOrderData = new Uint8Array(value.buffer);
+            console.log('BLE特性: デバイス順序データ受信', {
+                size: deviceOrderData.length,
+                data: Array.from(deviceOrderData).map(b => b.toString(16).padStart(2, '0')).join(' ')
+            });
+
+            // デバイス順序を更新
+            this.deviceOrder = decodeDeviceOrder(deviceOrderData);
+            this.eventEmitter.emit('bleDeviceOrderChanged', this.deviceOrder);
+        } catch (error) {
+            console.error('Error handling device order changed:', error);
+        }
+    }
+
+    private handleLeaderMacAddressChanged(value: DataView): void {
+        try {
+            const leaderMacAddressData = new Uint8Array(value.buffer);
+            console.log('BLE特性: リーダーMACアドレスデータ受信', {
+                size: leaderMacAddressData.length,
+                data: Array.from(leaderMacAddressData).map(b => b.toString(16).padStart(2, '0')).join(' ')
+            });
+
+            // リーダーMACアドレスを更新
+            this.leaderMacAddress = decodeLeaderMacAddress(leaderMacAddressData);
+            this.eventEmitter.emit('bleLeaderMacAddressChanged', this.leaderMacAddress);
+        } catch (error) {
+            console.error('Error handling leader mac address changed:', error);
+        }
     }
 
     getAddress(): P2PMacAddress {
@@ -109,6 +166,22 @@ class BLEMeshDevice {
             return [];
         }
         return this.connectedDevices;
+    }
+
+    getDeviceOrder(): P2PMacAddress[] {
+        if (!this.bleDevice) {
+            console.error('BLE device is not connected');
+            return [];
+        }
+        return this.deviceOrder;
+    }
+
+    getLeaderMacAddress(): P2PMacAddress | null {
+        if (!this.bleDevice) {
+            console.error('BLE device is not connected');
+            return null;
+        }
+        return this.leaderMacAddress;
     }
 
     sendPacket(meshPacket: MeshPacket): void {
@@ -164,21 +237,26 @@ class BLEMeshDevice {
 
         const now = new Date();
         await this.bleDevice.writeCharacteristic(this.meshPacketTxCharacteristic, data);
-        console.log("SENT", new Date().getTime() - now.getTime(), meshPacket.type, meshPacket.data);
+        console.debug("SENT", new Date().getTime() - now.getTime(), meshPacket.type, meshPacket.data);
     }
 }
 
 export interface MeshEvents {
-    connectedDevicesChanged: (devices: P2PMacAddress[]) => void;
+    connectedDevicesChanged: (devices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => void;
     connected: (address: P2PMacAddress) => void;
     disconnected: (address: P2PMacAddress) => void;
     peerConnected: (address: P2PMacAddress) => void;
     peerDisconnected: (address: P2PMacAddress) => void;
+    deviceOrderChanged: (deviceOrder: P2PMacAddress[]) => void;
+    leaderMacAddressChanged: (leader: P2PMacAddress | null) => void;
 }
 
-class Mesh {
+export class Mesh {
     meshDevices: Map<string, BLEMeshDevice> = new Map();
     private prevConnectedDevices: P2PMacAddress[] = [];
+    // 新規追加: 前回のデータを保持して変更検知
+    private prevDeviceOrder: P2PMacAddress[] = [];
+    private prevLeaderMacAddress: P2PMacAddress | null = null;
 
     private meshPacketCallbacks: Map<number, (packet: MeshPacket) => void> = new Map();
 
@@ -220,7 +298,7 @@ class Mesh {
         });
 
         if (newDevices.length > 0 || disconnectedDevices.length > 0) {
-            this.eventEmitter.emit('connectedDevicesChanged', currentDevices);
+            this.eventEmitter.emit('connectedDevicesChanged', currentDevices, newDevices, disconnectedDevices);
         }
     }
 
@@ -234,19 +312,18 @@ class Mesh {
             this.recalculateConnectedDevices();
         });
 
-        meshDevice.eventEmitter.on('connectedDevicesChanged', () => {
+        meshDevice.eventEmitter.on('bleConnectedDevicesChanged', () => {
             this.recalculateConnectedDevices();
         });
 
-        try {
-            await device.connect(SyntheveryDeviceFilter);
-            await meshDevice.initialize(device, this.receivePacket.bind(this));
-            this.meshDevices.set(getAddressString(meshDevice.getAddress()), meshDevice);
-            this.eventEmitter.emit('peerConnected', meshDevice.getAddress());
-            this.recalculateConnectedDevices();
-        } catch (error) {
-            console.error('Error connecting to device:', error);
-        }
+        // 新規追加: BLEMeshDeviceのイベントをmeshレベルで中継
+        this.setupBLEMeshDeviceEventHandlers(meshDevice);
+
+        await device.connect(SyntheveryDeviceFilter);
+        await meshDevice.initialize(device, this.receivePacket.bind(this));
+        this.meshDevices.set(getAddressString(meshDevice.getAddress()), meshDevice);
+        this.eventEmitter.emit('peerConnected', meshDevice.getAddress());
+        this.recalculateConnectedDevices();
     }
 
     async disconnectDevice(address: P2PMacAddress): Promise<void> {
@@ -326,6 +403,42 @@ class Mesh {
         return Array.from(new Set([...Array.from(this.meshDevices.values()).flatMap(bleMeshDevice => bleMeshDevice.getConnectedDevices())]));
     }
 
+    getDeviceOrder(): P2PMacAddress[] {
+        // LeaderのdeviceOrderを返す
+        const leader = this.getLeaderMacAddress();
+        if (!leader) {
+            return [];
+        }
+        const leaderMeshDevice = this.meshDevices.get(getAddressString(leader));
+        return leaderMeshDevice?.getDeviceOrder() || [];
+    }
+
+    getLeaderMacAddress(): P2PMacAddress | null {
+        // すべてのmeshDeviceのリーダーアドレスを取得
+        const leaderAddresses = Array.from(this.meshDevices.values())
+            .map(meshDevice => meshDevice.getLeaderMacAddress())
+            .filter(leader =>
+                leader !== null &&
+                !equalsAddress(leader, { address: APP_MAC_ADDRESS })
+            );
+
+        // リーダーアドレスが1つも見つからない場合はnullを返す
+        if (leaderAddresses.length === 0) {
+            return null;
+        }
+
+        // すべてのリーダーアドレスが一致するか確認
+        const firstLeader = leaderAddresses[0];
+        if (!firstLeader) return null;
+
+        const allMatch = leaderAddresses.every(leader =>
+            leader !== null && equalsAddress(leader, firstLeader)
+        );
+
+        // すべて一致する場合のみそのリーダーアドレスを返す
+        return allMatch ? firstLeader : null;
+    }
+
     isAvailable(nodeAddress: P2PMacAddress): boolean {
         return this.getConnectedDevices().some(address => equalsAddress(address, nodeAddress));
     }
@@ -338,9 +451,86 @@ class Mesh {
         this.meshPacketCallbacks.delete(type);
     }
 
+    // 新規追加: BLEMeshDeviceのイベントをmeshレベルで中継するメソッド
+    private setupBLEMeshDeviceEventHandlers(meshDevice: BLEMeshDevice): void {
+        // デバイス順序変更の監視
+        meshDevice.eventEmitter.on('bleDeviceOrderChanged', () => {
+            this.handleDeviceOrderChanged();
+        });
+
+        // リーダーMACアドレス変更の監視
+        meshDevice.eventEmitter.on('bleLeaderMacAddressChanged', () => {
+            this.handleLeaderMacAddressChanged();
+        });
+    }
+
+    // 新規追加: デバイス順序変更の処理（変更検知付き）
+    private handleDeviceOrderChanged(): void {
+        const currentDeviceOrder = this.getDeviceOrder();
+
+        console.log('=== Mesh: Device Order Change Detected ===');
+        console.log('Current device order:', currentDeviceOrder.map(getAddressString));
+        console.log('Previous device order:', this.prevDeviceOrder.map(getAddressString));
+        console.log('Has changed:', this.hasDeviceOrderChanged(currentDeviceOrder));
+
+        // 前回のデータと比較して変更があった場合のみイベント発火
+        if (this.hasDeviceOrderChanged(currentDeviceOrder)) {
+            this.prevDeviceOrder = [...currentDeviceOrder];
+            this.eventEmitter.emit('deviceOrderChanged', currentDeviceOrder);
+            console.log('Device order changed, emitting event:', currentDeviceOrder.map(getAddressString));
+        } else {
+            console.log('Device order unchanged, no event emitted');
+        }
+    }
+
+    // 新規追加: リーダーMACアドレス変更の処理（変更検知付き）
+    private handleLeaderMacAddressChanged(): void {
+        const currentLeader = this.getLeaderMacAddress();
+
+        console.log('=== Mesh: Leader MAC Address Change Detected ===');
+        console.log('Current leader:', currentLeader ? getAddressString(currentLeader) : 'null');
+        console.log('Previous leader:', this.prevLeaderMacAddress ? getAddressString(this.prevLeaderMacAddress) : 'null');
+        console.log('Has changed:', this.hasLeaderMacAddressChanged(currentLeader));
+
+        // 前回のデータと比較して変更があった場合のみイベント発火
+        if (this.hasLeaderMacAddressChanged(currentLeader)) {
+            this.prevLeaderMacAddress = currentLeader;
+            this.eventEmitter.emit('leaderMacAddressChanged', currentLeader);
+            console.log('Leader MAC address changed, emitting event:', currentLeader ? getAddressString(currentLeader) : 'null');
+        } else {
+            console.log('Leader MAC address unchanged, no event emitted');
+        }
+    }
+
+    // 新規追加: デバイス順序の変更検知
+    private hasDeviceOrderChanged(currentOrder: P2PMacAddress[]): boolean {
+        if (this.prevDeviceOrder.length !== currentOrder.length) {
+            return true;
+        }
+
+        return currentOrder.some((device, index) => {
+            const prevDevice = this.prevDeviceOrder[index];
+            return !prevDevice || !equalsAddress(prevDevice, device);
+        });
+    }
+
+    // 新規追加: リーダーMACアドレスの変更検知
+    private hasLeaderMacAddressChanged(currentLeader: P2PMacAddress | null): boolean {
+        if (!this.prevLeaderMacAddress && !currentLeader) {
+            return false; // 両方ともnullの場合は変更なし
+        }
+
+        if (!this.prevLeaderMacAddress || !currentLeader) {
+            return true; // どちらか一方がnullの場合は変更あり
+        }
+
+        return !equalsAddress(this.prevLeaderMacAddress, currentLeader);
+    }
+
     getAddress(): P2PMacAddress {
         return { address: APP_MAC_ADDRESS };
     }
 }
 
-export const mesh = new Mesh();
+// シングルトンインスタンスの即座生成を停止
+// export const mesh = new Mesh();
