@@ -1,22 +1,14 @@
-import { type ClassValue, clsx } from "clsx"
+import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { getAddressString } from "@/lib/synthevery-core/connection/util"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/**
- * デバイスのアルファベットIDを生成
- * @param deviceOrder デバイス順序の配列
- * @param deviceAddress 対象デバイスのアドレス
- * @returns アルファベットID（A, B, C...）または '?'
- */
-export function getDeviceAlphabetId(deviceOrder: string[], deviceAddress: string): string {
-  const index = deviceOrder.findIndex(addr => addr === deviceAddress);
-
-  if (index >= 0 && index < 26) {
-    return String.fromCharCode(65 + index); // A, B, C, D...
-  }
-
-  return '?'; // 見つからない場合または26個を超える場合
+export function getDeviceAlphabetId(meshDeviceOrder: any[], address: string): string {
+  const index = meshDeviceOrder.findIndex(device =>
+    getAddressString(device) === address
+  )
+  return index >= 0 ? String.fromCharCode(65 + index) : '?'
 }
