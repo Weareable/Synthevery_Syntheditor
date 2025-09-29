@@ -84,6 +84,45 @@ export const Dto = {
             : { channel: payloadA[0], effect_id: payloadA[1], value: payloadA[2] } as EffectNote;
         return { type, pos, id, payload };
     },
+
+    // Device-form array parser for CRDTNoteMsg (C++ parity)
+    // Layout: [id, noteHash, tick, noteType, instrument/effect]
+    //   - id: [macBin(6B), ts] or { mac: Uint8Array, ts: number }
+    //   - instrument: [channel, note_num, velocity]
+    //   - effect: [channel, effect_id, value]
+    deviceNoteFromArray(a: any[]): CRDTNote {
+        const idA = a[0];
+        const tick = a[2] as number;
+        const noteType = a[3] as number; // 0 inst, 1 eff
+        const payloadA = a[4];
+
+        // id
+        let id: NoteID;
+        if (Array.isArray(idA)) {
+            const macBin = idA[0];
+            const ts = idA[1] >>> 0;
+            id = { mac: { address: new Uint8Array(macBin) }, timestamp: ts };
+        } else {
+            // object-form fallback
+            id = { mac: { address: new Uint8Array(idA.mac) }, timestamp: (idA.ts as number) >>> 0 };
+        }
+
+        if (noteType === 0) {
+            const channel = payloadA[0] as number;
+            const note_num = payloadA[1] as number;
+            const velocity = payloadA[2] as number;
+            const pos: MusicalPosition = { tick, channel, key: note_num };
+            const payload: InstrumentNote = { channel, note_num, velocity };
+            return { type: NoteType.Instrument, pos, id, payload };
+        } else {
+            const channel = payloadA[0] as number;
+            const effect_id = payloadA[1] as number;
+            const value = payloadA[2] as number;
+            const pos: MusicalPosition = { tick, channel, key: effect_id };
+            const payload: EffectNote = { channel, effect_id, value };
+            return { type: NoteType.Effect, pos, id, payload };
+        }
+    },
 };
 
 

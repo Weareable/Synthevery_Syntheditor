@@ -43,11 +43,32 @@ export class CRDTSequenceClient extends PayloadCommandClient {
                 size: data?.byteLength ?? 0
             });
             if (msg.op === 0 && msg.note) {
-                const core = Dto.toCRDTNote(msg.note);
+                // note は C++ 実装準拠の2系統に対応
+                // - Web独自array形式: [type, pos, id, payload]
+                // - Device配列形式:   [id, noteHash, tick, noteType, payload]
+                let core;
+                if (Array.isArray(msg.note)) {
+                    const a = msg.note as unknown as any[];
+                    if (a.length >= 5 && (typeof a[3] === 'number')) {
+                        core = Dto.deviceNoteFromArray(a);
+                    } else {
+                        core = Dto.noteFromArray(a);
+                    }
+                } else {
+                    core = Dto.toCRDTNote(msg.note);
+                }
                 this.onAdd(this.peer, msg.track, core);
                 return [true, new Uint8Array()];
             } else if (msg.op === 1 && msg.id) {
-                const idObj: NoteID = { mac: { address: new Uint8Array(msg.id.mac) }, timestamp: msg.id.ts };
+                // id も配列形式([macBin, ts])の場合がある
+                let idObj: NoteID;
+                if (Array.isArray(msg.id)) {
+                    const macBin = msg.id[0];
+                    const ts = msg.id[1] >>> 0;
+                    idObj = { mac: { address: new Uint8Array(macBin) }, timestamp: ts };
+                } else {
+                    idObj = { mac: { address: new Uint8Array(msg.id.mac) }, timestamp: msg.id.ts };
+                }
                 this.onRemove(this.peer, msg.track, idObj);
                 return [true, new Uint8Array()];
             }
