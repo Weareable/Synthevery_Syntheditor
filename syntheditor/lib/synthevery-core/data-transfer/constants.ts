@@ -13,6 +13,8 @@ export namespace DataTypes {
     export const kChordScaleConfig: number = 15;
     export const kSettingsConfig: number = 0xA0; // 160
     export const kSettingsConfigUpdate: number = 0xA1; // 161: Web -> Device 設定更新
+    // CRDT full projection transfer (device parity)
+    export const kCRDTFullState: number = 0xB0;
 }
 
 export namespace SessionCommandID {

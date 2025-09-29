@@ -17,6 +17,7 @@ import { TrackConfigManager } from './tracks/track-config-manager';
 import { PlayerSyncStates } from './player/states';
 import { DeviceTypeSynchronizer } from './devicetype/devicetype';
 import { SRArqSessionsController } from './connection/srarq/session';
+import { CRDTSyncManager } from './crdt/crdt-sync';
 
 /**
  * 全てのサービスインスタンスを保持するコンテナ
@@ -33,6 +34,7 @@ export interface SyntheveryServices {
     playerSyncStates: PlayerSyncStates;
     deviceTypeSynchronizer: DeviceTypeSynchronizer;
     srarqSessionsController: SRArqSessionsController;
+    crdtSyncManager: CRDTSyncManager;
 }
 
 /**
@@ -81,6 +83,27 @@ export class SyntheveryServiceContainer {
         // 7. 第6レベルの依存（mesh, deviceConfigManagerに依存）
         const trackConfigManager = new TrackConfigManager(mesh, deviceConfigManager);
 
+        // 8. CRDT同期マネージャ（mesh, commandDispatcher に依存）
+        const crdtSyncManager = new CRDTSyncManager(mesh, commandDispatcher, {
+            onAdd: (_peer, _track, _note) => { /* 上位で接続（UI層） */ },
+            onRemove: (_peer, _track, _id) => { /* 上位で接続（UI層） */ },
+            getAuditPayload: () => new Uint8Array(),
+            onReceiveAudit: (_peer, _data) => { /* ログ等 */ },
+            getFullState: () => [],
+            onReceiveFull: (_peer, _notes) => { /* 上位で接続（UI層） */ },
+        });
+
+        // 9. DataTransfer: CRDT full state receiver
+        try {
+            const { CRDTFullStateReceiverPort } = require('./data-transfer/crdt-full');
+            dataTransferController.registerReceiverPort(new CRDTFullStateReceiverPort((peer: any, notes: any[]) => {
+                crdtSyncManager.setHandlers({ onReceiveFull: (_p, _n) => { } });
+                (crdtSyncManager as any).handlerOnReceiveFull(peer, notes);
+            }));
+        } catch (e) {
+            console.warn('CRDTFullStateTransfer registration failed:', e);
+        }
+
         // 全てのサービスをまとめる
         this.services = {
             mesh,
@@ -94,6 +117,7 @@ export class SyntheveryServiceContainer {
             playerSyncStates,
             deviceTypeSynchronizer,
             srarqSessionsController,
+            crdtSyncManager,
         };
 
         this.isInitialized = true;
