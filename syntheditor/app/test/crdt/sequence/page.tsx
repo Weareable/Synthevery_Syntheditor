@@ -24,6 +24,7 @@ export default function Page() {
     const [tick, setTick] = useState(0);
     const [connecting, setConnecting] = useState(false);
     const [peers, setPeers] = useState<string[]>([]);
+    const [projection, setProjection] = useState<string[]>([]);
 
     useEffect(() => {
         const services = servicesRef.current;
@@ -38,6 +39,26 @@ export default function Page() {
             setTick(prev => {
                 const t = prev + 1;
                 api.onTick(t);
+                // compute projection list lines
+                try {
+                    const notes = api.set.buildFullProjection();
+                    const lines = notes.map(n => {
+                        const kind = n.type === 0 ? 'INST' : 'EFF';
+                        const ch = n.pos.channel;
+                        const key = n.pos.key;
+                        const tickStr = n.pos.tick;
+                        if (n.type === 0) {
+                            const vel = (n.payload as any).velocity;
+                            return `${kind} c=${ch} n=${key} t=${tickStr} v=${vel}`;
+                        } else {
+                            const val = (n.payload as any).value;
+                            return `${kind} c=${ch} id=${key} t=${tickStr} val=${val}`;
+                        }
+                    });
+                    setProjection(lines);
+                } catch (_e) {
+                    // ignore
+                }
                 return t;
             });
         }, 200);
@@ -62,6 +83,12 @@ export default function Page() {
             <div className="text-xs text-gray-600">Peers: {peers.join(', ') || 'none'}</div>
             <div className="text-xs whitespace-pre-wrap border rounded p-2 h-64 overflow-auto">
                 {ops.join('\n') || 'No ops yet. Perform actions on device to send deltas/full state.'}
+            </div>
+            <div>
+                <h3 className="text-sm font-semibold mt-2">Projection</h3>
+                <div className="text-xs whitespace-pre-wrap border rounded p-2 h-64 overflow-auto">
+                    {projection.join('\n') || 'Projection empty'}
+                </div>
             </div>
         </div>
     );
