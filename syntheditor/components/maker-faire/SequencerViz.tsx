@@ -142,7 +142,8 @@ export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tr
                 // 1 beat ごとの点線（放射線の短いダッシュ）
                 const beats = Math.max(1, Math.round(track.loopLengthTick / 480))
                 for (let b = 0; b < beats; b++) {
-                    const a = (2 * Math.PI) * (b / beats) + theta
+                    // 時計回り維持: 現在角 - 目盛角
+                    const a = theta - (2 * Math.PI) * (b / beats)
                     const x1 = cx + (r - 8) * Math.cos(a)
                     const y1 = cy + (r - 8) * Math.sin(a)
                     const x2 = cx + (r + 8) * Math.cos(a)
@@ -153,7 +154,8 @@ export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tr
                 // notes
                 track.notes.forEach(n => {
                     const noteAngle = ((n.tick % track.loopLengthTick) / track.loopLengthTick) * Math.PI * 2
-                    const currentAngle = noteAngle + theta
+                    // 右端合わせ + 時計回り: currentAngle = theta - noteAngle
+                    const currentAngle = theta - noteAngle
                     const x = cx + r * cos(currentAngle)
                     const y = cy + r * sin(currentAngle)
                     addDot(x, y, track.color)
