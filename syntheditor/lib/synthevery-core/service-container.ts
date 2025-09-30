@@ -96,10 +96,19 @@ export class SyntheveryServiceContainer {
         // 9. DataTransfer: CRDT full state receiver
         try {
             const { CRDTFullStateReceiverPort } = require('./data-transfer/crdt-full');
-            dataTransferController.registerReceiverPort(new CRDTFullStateReceiverPort((peer: any, notes: any[]) => {
-                crdtSyncManager.setHandlers({ onReceiveFull: (_p, _n) => { } });
-                (crdtSyncManager as any).handlerOnReceiveFull(peer, notes);
-            }));
+            dataTransferController.registerReceiverPort(new CRDTFullStateReceiverPort(
+                (peer: any, notes: any[]) => {
+                    crdtSyncManager.setHandlers({ onReceiveFull: (_p, _n) => { } });
+                    (crdtSyncManager as any).handlerOnReceiveFull(peer, notes);
+                },
+                () => {
+                    // 現在のフル投影は CRDT 同期マネージャのハンドラに依存
+                    // Web側では NoteOrSet の投影を保持する上位から注入する想定
+                    // ここでは空配列を返す（UI層の setupCrdtSync で上書き）
+                    return [];
+                },
+                dataTransferController
+            ));
         } catch (e) {
             console.warn('CRDTFullStateTransfer registration failed:', e);
         }

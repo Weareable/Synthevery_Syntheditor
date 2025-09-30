@@ -26,7 +26,13 @@ export class CRDTAuditClient extends PayloadCommandClient {
     }
 
     protected onHandleData(id: CommandID, data: Uint8Array): [boolean, Uint8Array] {
-        // 受信ログ（ハッシュ監査）
+        // 監査: type=0 はリーダーからの要求。addXor32, removeXor32 (LE) を応答する
+        if ((id.type >>> 0) === 0x00) {
+            const payload = this.getAuditPayload();
+            // デバイス互換: 8B (uint32 LE * 2)
+            return [true, payload instanceof Uint8Array ? payload : new Uint8Array()];
+        }
+        // それ以外は相手からの応答として扱い、上位へ通知
         console.log('[CRDT][recv][audit]', {
             from: this.peer,
             size: data?.byteLength ?? 0

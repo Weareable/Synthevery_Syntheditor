@@ -16,7 +16,7 @@ describe('setupCrdtSync', () => {
         const services: any = { crdtSyncManager: { setHandlers: (h: any) => { services._h = h; } } };
         const set = new NoteOrSet();
         const ed = new (MemEditor as any)();
-        const api = setupCrdtSync(services, ed, set);
+        const api = setupCrdtSync(services, [ed], [set]);
 
         const peer = { address: new Uint8Array([1, 2, 3, 4, 5, 6]) };
         const n: CRDTNote = { type: NoteType.Instrument, pos: { tick: 7, channel: 2, key: 61 }, id: { mac: peer as any, timestamp: 321 }, payload: { channel: 2, note_num: 61, velocity: 70 } };
@@ -27,7 +27,7 @@ describe('setupCrdtSync', () => {
         expect(ed.ops.join(',')).toContain('ai:2:61:7:70');
 
         // simulate full state
-        services._h.onReceiveFull(peer, [n]);
+        services._h.onReceiveFullMulti(peer, [{ track: 0, adds: [n], removes: [] }]);
         expect(ed.ops[ed.ops.length - 2]).toBe('clear');
     });
 });

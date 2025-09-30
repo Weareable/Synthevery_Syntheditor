@@ -24,6 +24,9 @@ export class CRDTSyncManager {
     private handlerOnReceiveAudit: (peer: P2PMacAddress, data: Uint8Array) => void = () => { };
     private handlerGetFullState: () => CRDTNote[] = () => [];
     private handlerOnReceiveFull: (peer: P2PMacAddress, notes: CRDTNote[]) => void = () => { };
+    // multi-track full-sync handlers
+    private handlerGetFullStateMulti: () => { adds: CRDTNote[]; removes: NoteID[]; }[] = () => [];
+    private handlerOnReceiveFullMulti: (peer: P2PMacAddress, tracks: { track: number; adds: CRDTNote[]; removes: NoteID[]; }[]) => void = () => { };
 
     constructor(
         mesh: Mesh,
@@ -107,6 +110,8 @@ export type CRDTSyncHandlers = {
     onReceiveAudit: (peer: P2PMacAddress, data: Uint8Array) => void,
     getFullState: () => CRDTNote[],
     onReceiveFull: (peer: P2PMacAddress, notes: CRDTNote[]) => void,
+    getFullStateMulti?: () => { adds: CRDTNote[]; removes: NoteID[]; }[],
+    onReceiveFullMulti?: (peer: P2PMacAddress, tracks: { track: number; adds: CRDTNote[]; removes: NoteID[]; }[]) => void,
 };
 
 export interface CRDTSyncManager {
@@ -121,6 +126,8 @@ export interface CRDTSyncManager {
     if (h.onReceiveAudit) this.handlerOnReceiveAudit = h.onReceiveAudit;
     if (h.getFullState) this.handlerGetFullState = h.getFullState;
     if (h.onReceiveFull) this.handlerOnReceiveFull = h.onReceiveFull;
+    if (h.getFullStateMulti) this.handlerGetFullStateMulti = h.getFullStateMulti;
+    if (h.onReceiveFullMulti) this.handlerOnReceiveFullMulti = h.onReceiveFullMulti;
 };
 
 
