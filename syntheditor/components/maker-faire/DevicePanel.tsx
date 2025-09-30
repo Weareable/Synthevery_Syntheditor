@@ -10,13 +10,26 @@ import { useSynthevery } from '@/contexts/SyntheveryContext'
 import { getAddressString } from '@/lib/synthevery-core/connection/util'
 import { useAppState } from '@/hooks/useAppState'
 import { useTrackConfig } from '@/hooks/useTrackConfig'
+import { APP_MAC_ADDRESS } from '@/lib/synthevery-core/connection/constants'
 
 export function DevicePanel() {
     const { mesh, playerSyncStates } = useSynthevery()
     const [currentTracks, setCurrentTracks] = useAppState(playerSyncStates.currentTracksState)
     const { trackDetails, isReady } = useTrackConfig()
 
-    const peers = mesh.getConnectedPeers?.() ?? []
+    // 直接接続デバイス（connectedPeers）とメッシュ経由デバイス（connectedDevices）の両方を取得
+    const connectedPeers = mesh.getConnectedPeers?.() ?? []
+    const connectedDevices = mesh.getConnectedDevices?.() ?? []
+
+    // 重複を除去してすべてのデバイスを取得し、アプリアドレスを除外
+    const allDevices = [...connectedPeers, ...connectedDevices]
+    const uniqueDevices = allDevices.filter((device, index, self) => {
+        // 重複除去
+        const isUnique = index === self.findIndex(d => getAddressString(d) === getAddressString(device))
+        // アプリアドレス除外
+        const isNotAppAddress = getAddressString(device) !== getAddressString({ address: APP_MAC_ADDRESS })
+        return isUnique && isNotAppAddress
+    })
 
     const setTrack = (mac: string, index: number) => {
         const next = new Map(currentTracks)
@@ -32,14 +45,17 @@ export function DevicePanel() {
         setTrack(mac, newIndex)
     }
 
-    console.log('DevicePanel peers:', peers.length, peers.map(p => getAddressString(p)))
+    console.log('DevicePanel - Connected peers:', connectedPeers.length, connectedPeers.map(p => getAddressString(p)))
+    console.log('DevicePanel - Connected devices:', connectedDevices.length, connectedDevices.map(p => getAddressString(p)))
+    console.log('DevicePanel - All unique devices (excluding app address):', uniqueDevices.length, uniqueDevices.map(p => getAddressString(p)))
+    console.log('DevicePanel - App address:', getAddressString({ address: APP_MAC_ADDRESS }))
 
     return (
         <div className="flex gap-4 overflow-x-auto">
-            {peers.length === 0 && (
+            {uniqueDevices.length === 0 && (
                 <div className="text-sm text-muted-foreground">No devices connected</div>
             )}
-            {peers.map((mac) => {
+            {uniqueDevices.map((mac) => {
                 const macStr = getAddressString(mac)
                 const trackIndex = currentTracks.get(macStr) ?? 0
                 return (

@@ -32,7 +32,7 @@ export default function Page() {
         // subscribe mesh events to list peers
         const mesh = services.mesh as any;
         const onChanged = (devices: any) => {
-			setPeers((devices || []).map((d: any) => Array.from<number>(d.address as Iterable<number>).map(b => b.toString(16).padStart(2, '0')).reverse().join(':')));
+            setPeers((devices || []).map((d: any) => Array.from<number>(d.address as Iterable<number>).map(b => b.toString(16).padStart(2, '0')).reverse().join(':')));
         };
         mesh.eventEmitter.on('connectedDevicesChanged', onChanged);
         const timer = setInterval(() => {
