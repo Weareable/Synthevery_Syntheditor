@@ -7,9 +7,9 @@ import useTickClock from '@/hooks/useTickClock'
 import type { TrackState } from '@/lib/synthevery-core/types/player'
 
 interface MockNote { tick: number; color: string }
-interface TrackViz { color: string; loopLengthTick: number; notes: MockNote[] }
+interface TrackViz { color: string; loopLengthTick: number; notes: MockNote[]; muted?: boolean }
 
-type TrackProjectionInput = { loopLengthTick: number; noteTicks: number[] }
+type TrackProjectionInput = { loopLengthTick: number; noteTicks: number[]; muted?: boolean }
 
 function generateMockNotes(ticks: number, color: string, count: number): MockNote[] {
     return Array.from({ length: count }).map((_, i) => ({
@@ -50,11 +50,11 @@ export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tr
         if (byService) {
             return tracksProjection!.map((tp, idx) => {
                 const color = palette[idx % palette.length]
-                const ticks = Math.max(120, tp.loopLengthTick || 1920)
                 return {
                     color,
-                    loopLengthTick: ticks,
+                    loopLengthTick: trackStates[idx]?.loopLengthTick ?? 1920,
                     notes: tp.noteTicks.map(t => ({ tick: t, color })),
+                    muted: tp.muted === true,
                 }
             })
         }
@@ -62,7 +62,7 @@ export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tr
         return trackStates.map((ts, idx) => {
             const color = palette[idx % palette.length]
             const ticks = Math.max(120, ts.loopLengthTick || 1920)
-            return { color, loopLengthTick: ticks, notes: generateMockNotes(ticks, color, 5) }
+            return { color, loopLengthTick: ticks, notes: generateMockNotes(ticks, color, 5), muted: ts.mute === true }
         })
     }, [trackStates, tracksProjection])
 
@@ -119,7 +119,7 @@ export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tr
 
             // 角速度統一: 1小節=1920tick基準で計算
             const ticksPerSecond = (bpm / 60) * 480 // 1秒あたりのティック数
-            const addCircle = (cx_: number, r: number, color: string) => {
+            const addCircle = (cx_: number, r: number, color: string, opacity: number = 1) => {
                 const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
                 c.setAttribute('cx', String(cx_))
                 c.setAttribute('cy', String(cy))
@@ -127,14 +127,22 @@ export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tr
                 c.setAttribute('fill', 'none')
                 c.setAttribute('stroke', color)
                 c.setAttribute('stroke-width', '2')
+                if (opacity < 1) c.setAttribute('stroke-opacity', String(opacity))
                 g.appendChild(c)
             }
-            const addDot = (x: number, y: number, color: string) => {
+            const addDot = (x: number, y: number, color: string, muted: boolean = false) => {
                 const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
                 c.setAttribute('cx', String(x))
                 c.setAttribute('cy', String(y))
-                c.setAttribute('r', '5')
-                c.setAttribute('fill', color)
+                if (muted) {
+                    c.setAttribute('r', '8')
+                    c.setAttribute('fill', 'none')
+                    c.setAttribute('stroke', color)
+                    c.setAttribute('stroke-width', '2.5')
+                } else {
+                    c.setAttribute('r', '8')
+                    c.setAttribute('fill', color)
+                }
                 g.appendChild(c)
             }
             const addDash = (x1: number, y1: number, x2: number, y2: number) => {
@@ -155,7 +163,8 @@ export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tr
             tracks.forEach((track) => {
                 const r = (track.loopLengthTick / 1920) * baseR1920
                 const cx = w - paddingRight - r + visualEpsilon // 右端に接するように各円の中心を調整
-                addCircle(cx, r, '#334155')
+                const circleOpacity = track.muted ? 0.35 : 1
+                addCircle(cx, r, '#334155', circleOpacity)
 
                 // 角速度統一: BPM による周速度一定（ω = 2π * TPS / loopLengthTick）
                 const theta = (2 * Math.PI) * ((currentTick % track.loopLengthTick) / track.loopLengthTick)
@@ -180,14 +189,14 @@ export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tr
                     const currentAngle = theta - noteAngle
                     const x = cx + r * cos(currentAngle)
                     const y = cy + r * sin(currentAngle)
-                    addDot(x, y, track.color)
+                    addDot(x, y, track.color, track.muted === true)
 
                     // 右端到達判定（位相が0に近い時）
                     const angleDiff = Math.abs(currentAngle)
                     const threshold = 0.1 // 約5.7度の範囲
                     const noteKey = `${track.color}-${n.tick}`
 
-                    if ((angleDiff < threshold || angleDiff > (2 * Math.PI - threshold)) && !lastTriggeredNotes.current.has(noteKey)) {
+                    if (!track.muted && (angleDiff < threshold || angleDiff > (2 * Math.PI - threshold)) && !lastTriggeredNotes.current.has(noteKey)) {
                         // リップルアニメーション生成
                         const rippleId = `ripple-${rippleIdRef.current++}`
                         const now = performance.now()
