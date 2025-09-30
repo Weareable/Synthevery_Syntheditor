@@ -18,6 +18,7 @@ import { PlayerSyncStates } from './player/states';
 import { DeviceTypeSynchronizer } from './devicetype/devicetype';
 import { SRArqSessionsController } from './connection/srarq/session';
 import { CRDTSyncManager } from './crdt/crdt-sync';
+import { CrdtProjectionStore } from './crdt/projection-store';
 
 /**
  * 全てのサービスインスタンスを保持するコンテナ
@@ -35,6 +36,7 @@ export interface SyntheveryServices {
     deviceTypeSynchronizer: DeviceTypeSynchronizer;
     srarqSessionsController: SRArqSessionsController;
     crdtSyncManager: CRDTSyncManager;
+    crdtProjectionStore: CrdtProjectionStore;
 }
 
 /**
@@ -84,13 +86,30 @@ export class SyntheveryServiceContainer {
         const trackConfigManager = new TrackConfigManager(mesh, deviceConfigManager);
 
         // 8. CRDT同期マネージャ（mesh, commandDispatcher に依存）
+        // CRDT 投影ストア（トラック数は TrackState の既定長に合わせる）
+        const defaultTrackCount = 8;
+        const crdtProjectionStore = new CrdtProjectionStore(defaultTrackCount);
         const crdtSyncManager = new CRDTSyncManager(mesh, commandDispatcher, {
-            onAdd: (_peer, _track, _note) => { /* 上位で接続（UI層） */ },
-            onRemove: (_peer, _track, _id) => { /* 上位で接続（UI層） */ },
-            getAuditPayload: () => new Uint8Array(),
-            onReceiveAudit: (_peer, _data) => { /* ログ等 */ },
-            getFullState: () => [],
-            onReceiveFull: (_peer, _notes) => { /* 上位で接続（UI層） */ },
+            onAdd: (_peer, track, note) => { crdtProjectionStore.onAdd(track, note); },
+            onRemove: (_peer, track, id) => { crdtProjectionStore.onRemove(track, id); },
+            getAuditPayload: () => {
+                // XOR ハッシュは NoteOrSet から集約
+                let add = 0 >>> 0;
+                let rem = 0 >>> 0;
+                for (const s of crdtProjectionStore.getSets()) {
+                    add = (add ^ (s.addHashXor() >>> 0)) >>> 0;
+                    rem = (rem ^ (s.removeHashXor() >>> 0)) >>> 0;
+                }
+                const out = new Uint8Array(8);
+                out[0] = add & 0xff; out[1] = (add >>> 8) & 0xff; out[2] = (add >>> 16) & 0xff; out[3] = (add >>> 24) & 0xff;
+                out[4] = rem & 0xff; out[5] = (rem >>> 8) & 0xff; out[6] = (rem >>> 16) & 0xff; out[7] = (rem >>> 24) & 0xff;
+                return out;
+            },
+            onReceiveAudit: (_peer, _data) => { /* optional logging */ },
+            getFullState: () => crdtProjectionStore.getFullStateSingle(),
+            onReceiveFull: (_peer, notes) => { crdtProjectionStore.onReceiveFullSingle(notes); },
+            getFullStateMulti: () => crdtProjectionStore.getFullStateMulti(),
+            onReceiveFullMulti: (_peer: any, tracks: { track: number; adds: any[]; removes: any[] }[]) => { crdtProjectionStore.onReceiveFullMulti(tracks as any); },
         });
 
         // 9. DataTransfer: CRDT full state receiver
@@ -102,10 +121,8 @@ export class SyntheveryServiceContainer {
                     (crdtSyncManager as any).handlerOnReceiveFull(peer, notes);
                 },
                 () => {
-                    // 現在のフル投影は CRDT 同期マネージャのハンドラに依存
-                    // Web側では NoteOrSet の投影を保持する上位から注入する想定
-                    // ここでは空配列を返す（UI層の setupCrdtSync で上書き）
-                    return [];
+                    // 現在のフル投影は投影ストアから取得
+                    return crdtProjectionStore.getFullStateSingle();
                 },
                 dataTransferController
             ));
@@ -127,6 +144,7 @@ export class SyntheveryServiceContainer {
             deviceTypeSynchronizer,
             srarqSessionsController,
             crdtSyncManager,
+            crdtProjectionStore,
         };
 
         this.isInitialized = true;

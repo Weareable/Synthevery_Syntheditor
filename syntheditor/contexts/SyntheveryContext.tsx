@@ -14,6 +14,7 @@ interface SyntheveryContextType {
     deviceTypeSynchronizer: SyntheveryServices['deviceTypeSynchronizer']
     srarqSessionsController: SyntheveryServices['srarqSessionsController']
     timeSyncService: SyntheveryServices['timeSyncService']
+    crdtProjectionStore: SyntheveryServices['crdtProjectionStore']
 }
 
 const SyntheveryContext = createContext<SyntheveryContextType | undefined>(undefined)

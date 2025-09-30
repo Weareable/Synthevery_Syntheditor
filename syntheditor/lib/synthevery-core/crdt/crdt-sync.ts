@@ -31,14 +31,7 @@ export class CRDTSyncManager {
     constructor(
         mesh: Mesh,
         dispatcher: CommandDispatcher,
-        hooks: {
-            onAdd: (peer: P2PMacAddress, track: number, note: CRDTNote) => void,
-            onRemove: (peer: P2PMacAddress, track: number, id: NoteID) => void,
-            getAuditPayload: () => Uint8Array,
-            onReceiveAudit: (peer: P2PMacAddress, data: Uint8Array) => void,
-            getFullState: () => CRDTNote[],
-            onReceiveFull: (peer: P2PMacAddress, notes: CRDTNote[]) => void,
-        }
+        hooks: Partial<CRDTSyncHandlers>
     ) {
         this.mesh = mesh;
         this.dispatcher = dispatcher;

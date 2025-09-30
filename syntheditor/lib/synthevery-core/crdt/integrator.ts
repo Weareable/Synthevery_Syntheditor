@@ -2,7 +2,7 @@ import { NoteOrSet } from '../../../lib/crdt/orset';
 import { ScoreEditor, CRDTScoreBridgeWeb } from '../../../lib/crdt/score-bridge';
 import { CRDTNote, NoteID } from '../../../lib/crdt/types';
 import { CrdtApplyHook } from '../../../lib/crdt/apply-hook';
-import { P2PMacAddress } from '../../types/mesh';
+import { P2PMacAddress } from '../types/mesh';
 
 // High-level wiring used by UI and tests to connect CRDT deltas to a ScoreEditor
 export class CRDTWebSequencerSync {

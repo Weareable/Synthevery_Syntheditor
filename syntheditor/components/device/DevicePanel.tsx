@@ -78,7 +78,7 @@ export const DevicePanel: React.FC<DevicePanelProps> = ({
     // 変更: useMeshフックから取得したデバイスを使用
     // 直接接続デバイス（connectedPeers）とメッシュ経由デバイス（connectedDevices）の両方を考慮
     const connectedDevices = meshDevices.map(addr => getAddressFromString(addr));
-    const connectedPeers = mesh.connectedPeers || [];
+    const connectedPeers = mesh.getConnectedPeers();
 
     // デバイス順序の優先順位: useMesh > useDeviceOrder
     // メッシュ経由のデバイスも含めて表示するため、connectedDevicesとdeviceOrderを組み合わせる
@@ -87,7 +87,7 @@ export const DevicePanel: React.FC<DevicePanelProps> = ({
         // 直接接続デバイスとメッシュ経由デバイスの両方を含める
         const allConnectedDevices = [
             ...connectedDevices,
-            ...connectedPeers.map(addr => getAddressFromString(addr))
+            ...connectedPeers
         ];
 
         // 重複を削除

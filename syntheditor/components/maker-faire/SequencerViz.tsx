@@ -9,6 +9,8 @@ import type { TrackState } from '@/lib/synthevery-core/types/player'
 interface MockNote { tick: number; color: string }
 interface TrackViz { color: string; loopLengthTick: number; notes: MockNote[] }
 
+type TrackProjectionInput = { loopLengthTick: number; noteTicks: number[] }
+
 function generateMockNotes(ticks: number, color: string, count: number): MockNote[] {
     return Array.from({ length: count }).map((_, i) => ({
         tick: Math.floor((i + 1) * (ticks / (count + 1))),
@@ -16,7 +18,7 @@ function generateMockNotes(ticks: number, color: string, count: number): MockNot
     }))
 }
 
-export function SequencerViz({ bpm = 120 }: { bpm?: number }) {
+export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tracksProjection?: TrackProjectionInput[] }) {
     const canvasRef = useRef<SVGSVGElement | null>(null)
     const { playerSyncStates } = useSynthevery()
     const [trackStates] = useAppState<TrackState[]>(playerSyncStates.trackStates)
@@ -36,17 +38,25 @@ export function SequencerViz({ bpm = 120 }: { bpm?: number }) {
     const palette = ['#e11d48', '#0ea5e9', '#22c55e', '#a78bfa', '#f59e0b', '#10b981', '#f43f5e', '#8b5cf6']
 
     const tracks: TrackViz[] = useMemo(() => {
+        const byService = Array.isArray(tracksProjection) && tracksProjection.length > 0
+        if (byService) {
+            return tracksProjection!.map((tp, idx) => {
+                const color = palette[idx % palette.length]
+                const ticks = Math.max(120, tp.loopLengthTick || 1920)
+                return {
+                    color,
+                    loopLengthTick: ticks,
+                    notes: tp.noteTicks.map(t => ({ tick: t, color })),
+                }
+            })
+        }
         if (!Array.isArray(trackStates) || trackStates.length === 0) return []
         return trackStates.map((ts, idx) => {
             const color = palette[idx % palette.length]
             const ticks = Math.max(120, ts.loopLengthTick || 1920)
-            return {
-                color,
-                loopLengthTick: ticks,
-                notes: generateMockNotes(ticks, color, 5),
-            }
+            return { color, loopLengthTick: ticks, notes: generateMockNotes(ticks, color, 5) }
         })
-    }, [trackStates])
+    }, [trackStates, tracksProjection])
 
     useEffect(() => {
         const svg = canvasRef.current
