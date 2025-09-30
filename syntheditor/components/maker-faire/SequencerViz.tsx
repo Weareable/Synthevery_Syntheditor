@@ -26,6 +26,14 @@ export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tr
     const tickRef = useRef(0)
     useEffect(() => { tickRef.current = tick }, [tick])
 
+    // リップルアニメーション管理
+    const rippleRef = useRef<Array<{ id: string; cx: number; cy: number; startTime: number; color: string; maxRadius: number }>>([])
+    const rippleIdRef = useRef(0)
+    const lastTriggeredNotes = useRef<Set<string>>(new Set())
+
+    // 背景フラッシュ管理
+    const bgFlashRef = useRef<Array<{ startTime: number; intensity: number }>>([])
+
     // パン・ズーム状態を永続化
     const panZoomRef = useRef({
         scale: 1,
@@ -69,6 +77,7 @@ export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tr
         let dragStartX = 0
         let dragStartY = 0
 
+
         const render = () => {
             // tickClockに同期（最新tickはrefから取得）
             const currentTick = tickRef.current
@@ -94,6 +103,19 @@ export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tr
                 scene.appendChild(g)
             }
             g.innerHTML = ''
+
+            // 背景レイヤ（最背面）- パン・ズーム変換を適用しない
+            let bg = svg.querySelector('rect#bg') as SVGRectElement | null
+            if (!bg) {
+                bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect') as SVGRectElement
+                bg.setAttribute('id', 'bg')
+                svg.insertBefore(bg, scene)
+            }
+            bg.setAttribute('x', '0')
+            bg.setAttribute('y', '0')
+            bg.setAttribute('width', String(w))
+            bg.setAttribute('height', String(h))
+            // fill は下のフラッシュ合成で毎フレーム更新
 
             // 角速度統一: 1小節=1920tick基準で計算
             const ticksPerSecond = (bpm / 60) * 480 // 1秒あたりのティック数
@@ -159,6 +181,35 @@ export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tr
                     const x = cx + r * cos(currentAngle)
                     const y = cy + r * sin(currentAngle)
                     addDot(x, y, track.color)
+
+                    // 右端到達判定（位相が0に近い時）
+                    const angleDiff = Math.abs(currentAngle)
+                    const threshold = 0.1 // 約5.7度の範囲
+                    const noteKey = `${track.color}-${n.tick}`
+
+                    if ((angleDiff < threshold || angleDiff > (2 * Math.PI - threshold)) && !lastTriggeredNotes.current.has(noteKey)) {
+                        // リップルアニメーション生成
+                        const rippleId = `ripple-${rippleIdRef.current++}`
+                        const now = performance.now()
+                        rippleRef.current.push({
+                            id: rippleId,
+                            // 中心は厳密に円の右端
+                            cx: cx + r,
+                            cy: cy,
+                            startTime: now,
+                            color: track.color,
+                            // より大きく（各トラック半径に比例）
+                            maxRadius: r * 1.5
+                        })
+                        // 背景フラッシュを追加
+                        bgFlashRef.current.push({ startTime: now, intensity: 1 })
+                        lastTriggeredNotes.current.add(noteKey)
+                    }
+
+                    // ノートが右端から離れたらトリガー状態をリセット
+                    if (angleDiff > threshold && angleDiff < (2 * Math.PI - threshold)) {
+                        lastTriggeredNotes.current.delete(noteKey)
+                    }
                 })
             })
 
@@ -172,6 +223,60 @@ export function SequencerViz({ bpm = 120, tracksProjection }: { bpm?: number, tr
             dash.setAttribute('stroke-width', '2')
             dash.setAttribute('stroke-dasharray', '8 8')
             g.appendChild(dash)
+
+            // 背景フラッシュ描画（合成）
+            const now = performance.now()
+            const bgFlashDuration = 220 // ぱっと光ってすぐ消える
+
+            // 古いフラッシュをクリア
+            bgFlashRef.current = bgFlashRef.current.filter(f => (now - f.startTime) < bgFlashDuration)
+            // 残存フラッシュを合成（最大強度）
+            let flashAlpha = 0
+            for (const f of bgFlashRef.current) {
+                const progress = Math.min((now - f.startTime) / bgFlashDuration, 1)
+                const local = (1 - progress) * f.intensity
+                flashAlpha = Math.max(flashAlpha, local)
+            }
+
+            // 背景色をTailwindクラスで指定（フラッシュ時は明度を上げる）
+            if (flashAlpha > 0) {
+                // フラッシュ時: 明るい背景（白っぽく）
+                bg.setAttribute('fill', 'white')
+                bg.setAttribute('opacity', String(0.05 * flashAlpha))
+            } else {
+                // 通常時: 透明（親の背景をそのまま表示）
+                bg.setAttribute('fill', 'transparent')
+                bg.setAttribute('opacity', '1')
+            }
+
+            // リップルアニメーション描画
+
+            const rippleDuration = 600 // より高速に（0.6秒）
+
+            // 古いリップルを削除
+            rippleRef.current = rippleRef.current.filter(ripple => {
+                const elapsed = now - ripple.startTime
+                return elapsed < rippleDuration
+            })
+
+            // アクティブなリップルを描画
+            rippleRef.current.forEach(ripple => {
+                const elapsed = now - ripple.startTime
+                const progress = Math.min(elapsed / rippleDuration, 1)
+                const radius = progress * (ripple.maxRadius ?? 160)
+                const opacity = 1 - progress // フェードアウト
+
+                const rippleCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+                rippleCircle.setAttribute('cx', String(ripple.cx))
+                rippleCircle.setAttribute('cy', String(ripple.cy))
+                rippleCircle.setAttribute('r', String(radius))
+                rippleCircle.setAttribute('fill', 'none')
+                rippleCircle.setAttribute('stroke', ripple.color)
+                rippleCircle.setAttribute('stroke-width', '2.5')
+                rippleCircle.setAttribute('opacity', String(opacity))
+                rippleCircle.setAttribute('stroke-dasharray', '5 5')
+                g.appendChild(rippleCircle)
+            })
 
             // 初期表示: 右端が中央、かつ 1920tick の円がしっかり収まるスケールに
             if (!panZoom.initialized) {

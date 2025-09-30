@@ -16,9 +16,9 @@ export type TrackProjection = {
 }
 
 export class CrdtProjectionStore {
-    private readonly sets: NoteOrSet[]
-    private readonly editors: ScoreEditor[]
-    private readonly presentMaps: Map<string, true>[]
+    private sets: NoteOrSet[]
+    private editors: ScoreEditor[]
+    private presentMaps: Map<string, true>[]
     public readonly eventEmitter = new EventEmitter()
 
     constructor(trackCount: number) {
@@ -32,6 +32,7 @@ export class CrdtProjectionStore {
 
     // CRDTSyncManager ハンドラから利用
     onAdd(track: number, note: CRDTNote): void {
+        this.ensureTrackIndex(track)
         const set = this.sets[track]
         if (!set) return
         set.add(note)
@@ -40,6 +41,7 @@ export class CrdtProjectionStore {
     }
 
     onRemove(track: number, id: CRDTNote['id']): void {
+        this.ensureTrackIndex(track)
         const set = this.sets[track]
         if (!set) return
         set.remove(id)
@@ -50,6 +52,7 @@ export class CrdtProjectionStore {
     onReceiveFullMulti(tracks: { track: number; adds: CRDTNote[]; removes: CRDTNote['id'][] }[]): void {
         for (const t of tracks) {
             const ti = t.track >>> 0
+            this.ensureTrackIndex(ti)
             const set = this.sets[ti]
             const ed = this.editors[ti]
             if (!set || !ed) continue
@@ -115,6 +118,15 @@ export class CrdtProjectionStore {
         const deltas = set.popProjectionDeltas()
         if (deltas.length > 0) {
             CRDTScoreBridgeWeb.applyDeltas(editor, deltas)
+        }
+    }
+
+    private ensureTrackIndex(index: number): void {
+        while (this.sets.length <= index) {
+            this.sets.push(new NoteOrSet())
+            const m = new Map<string, true>()
+            this.presentMaps.push(m)
+            this.editors.push(this.createEditorForMap(m, this.editors.length))
         }
     }
 }
