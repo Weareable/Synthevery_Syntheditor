@@ -10,24 +10,25 @@ import { useSynthevery } from '@/contexts/SyntheveryContext'
 import { getAddressString } from '@/lib/synthevery-core/connection/util'
 import { useAppState } from '@/hooks/useAppState'
 import { useTrackConfig } from '@/hooks/useTrackConfig'
+import useMesh from '@/hooks/useMesh'
 import { APP_MAC_ADDRESS } from '@/lib/synthevery-core/connection/constants'
+import { getAddressFromString } from '@/lib/synthevery-core/connection/util'
 
 export function DevicePanel() {
-    const { mesh, playerSyncStates } = useSynthevery()
+    const { playerSyncStates } = useSynthevery()
     const [currentTracks, setCurrentTracks] = useAppState(playerSyncStates.currentTracksState)
     const { trackDetails, isReady } = useTrackConfig()
 
-    // 直接接続デバイス（connectedPeers）とメッシュ経由デバイス（connectedDevices）の両方を取得
-    const connectedPeers = mesh.getConnectedPeers?.() ?? []
-    const connectedDevices = mesh.getConnectedDevices?.() ?? []
+    // useMeshフックからデバイス接続状態を取得
+    const { connectedDevices, connectedPeers } = useMesh()
 
     // 重複を除去してすべてのデバイスを取得し、アプリアドレスを除外
     const allDevices = [...connectedPeers, ...connectedDevices]
-    const uniqueDevices = allDevices.filter((device, index, self) => {
+    const uniqueDevices = allDevices.filter((macStr, index, self) => {
         // 重複除去
-        const isUnique = index === self.findIndex(d => getAddressString(d) === getAddressString(device))
+        const isUnique = index === self.findIndex(d => d === macStr)
         // アプリアドレス除外
-        const isNotAppAddress = getAddressString(device) !== getAddressString({ address: APP_MAC_ADDRESS })
+        const isNotAppAddress = macStr !== getAddressString({ address: APP_MAC_ADDRESS })
         return isUnique && isNotAppAddress
     })
 
@@ -45,9 +46,9 @@ export function DevicePanel() {
         setTrack(mac, newIndex)
     }
 
-    console.log('DevicePanel - Connected peers:', connectedPeers.length, connectedPeers.map(p => getAddressString(p)))
-    console.log('DevicePanel - Connected devices:', connectedDevices.length, connectedDevices.map(p => getAddressString(p)))
-    console.log('DevicePanel - All unique devices (excluding app address):', uniqueDevices.length, uniqueDevices.map(p => getAddressString(p)))
+    console.log('DevicePanel - Connected peers:', connectedPeers.length, connectedPeers)
+    console.log('DevicePanel - Connected devices:', connectedDevices.length, connectedDevices)
+    console.log('DevicePanel - All unique devices (excluding app address):', uniqueDevices.length, uniqueDevices)
     console.log('DevicePanel - App address:', getAddressString({ address: APP_MAC_ADDRESS }))
 
     return (
@@ -55,8 +56,7 @@ export function DevicePanel() {
             {uniqueDevices.length === 0 && (
                 <div className="text-sm text-muted-foreground">No devices connected</div>
             )}
-            {uniqueDevices.map((mac) => {
-                const macStr = getAddressString(mac)
+            {uniqueDevices.map((macStr) => {
                 const trackIndex = currentTracks.get(macStr) ?? 0
                 return (
                     <Popover key={macStr} modal={true}>
