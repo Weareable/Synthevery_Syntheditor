@@ -19,6 +19,7 @@ import {
 } from "./config";
 import { DeviceController } from "./controller";
 import { getAddressString } from "../connection/util";
+import { sendGeneratorConfig, sendNoteBuilderConfig, sendTrackDetail, sendGeneratorConfigForTrack, sendNoteBuilderConfigForTrack } from "./config";
 
 interface DeviceConfigManagerEvents {
     deviceConnected: (device: P2PMacAddress) => void;
@@ -144,6 +145,54 @@ export class DeviceConfigManager {
                 console.log('NoteBuilderConfig session started from:', getAddressString(peer), 'sessionId:', sessionId);
             }
         });
+    }
+
+    // ---------------------
+    // Broadcast helpers (App -> Devices)
+    // ---------------------
+    broadcastNoteBuilderConfigForTrack(trackIndex: number, config: NoteBuilderConfig) {
+        const peers = this.mesh.getConnectedPeers();
+        const my = this.mesh.getAddress();
+        for (const p of peers) {
+            if (getAddressString(p) === getAddressString(my)) continue;
+            sendNoteBuilderConfigForTrack(this.dataTransferController, p, trackIndex, config);
+        }
+    }
+
+    broadcastGeneratorConfigForTrack(trackIndex: number, config: GeneratorConfig) {
+        const peers = this.mesh.getConnectedPeers();
+        const my = this.mesh.getAddress();
+        for (const p of peers) {
+            if (getAddressString(p) === getAddressString(my)) continue;
+            sendGeneratorConfigForTrack(this.dataTransferController, p, trackIndex, config);
+        }
+    }
+
+    broadcastAllNoteBuilderConfigs(configs: NoteBuilderConfig[]) {
+        const peers = this.mesh.getConnectedPeers();
+        const my = this.mesh.getAddress();
+        for (const p of peers) {
+            if (getAddressString(p) === getAddressString(my)) continue;
+            sendNoteBuilderConfig(this.dataTransferController, p, configs);
+        }
+    }
+
+    broadcastAllGeneratorConfigs(configs: GeneratorConfig[]) {
+        const peers = this.mesh.getConnectedPeers();
+        const my = this.mesh.getAddress();
+        for (const p of peers) {
+            if (getAddressString(p) === getAddressString(my)) continue;
+            sendGeneratorConfig(this.dataTransferController, p, configs);
+        }
+    }
+
+    broadcastAllTrackDetails(trackDetails: TrackDetail[]) {
+        const peers = this.mesh.getConnectedPeers();
+        const my = this.mesh.getAddress();
+        for (const p of peers) {
+            if (getAddressString(p) === getAddressString(my)) continue;
+            sendTrackDetail(this.dataTransferController, p, trackDetails);
+        }
     }
 
     private registerReceiverPort(): void {

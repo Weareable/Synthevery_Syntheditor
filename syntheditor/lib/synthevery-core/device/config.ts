@@ -124,6 +124,25 @@ export function sendGeneratorConfig(dataTransferController: DataTransferControll
     return true;
 }
 
+// --- Per-track partial updates ---
+export function sendNoteBuilderConfigForTrack(dataTransferController: DataTransferController, receiver: P2PMacAddress, trackIndex: number, config: NoteBuilderConfig): boolean {
+    const store = new JsonSenderDataStore(config, DataTypes.kNoteBuilderConfigTrack, String(trackIndex));
+    const result = dataTransferController.sendRequest(receiver, store, []);
+    if (result === null) {
+        return false;
+    }
+    return true;
+}
+
+export function sendGeneratorConfigForTrack(dataTransferController: DataTransferController, receiver: P2PMacAddress, trackIndex: number, config: GeneratorConfig): boolean {
+    const store = new JsonSenderDataStore(config, DataTypes.kGeneratorConfigTrack, String(trackIndex));
+    const result = dataTransferController.sendRequest(receiver, store, []);
+    if (result === null) {
+        return false;
+    }
+    return true;
+}
+
 export function sendTrackDetail(dataTransferController: DataTransferController, receiver: P2PMacAddress, trackDetails: TrackDetail[]): boolean {
     const store = new JsonSenderDataStore(trackDetails, DataTypes.kTrackDetail, "");
     const result = dataTransferController.sendRequest(receiver, store, []);

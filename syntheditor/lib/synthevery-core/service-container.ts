@@ -14,6 +14,8 @@ import { DataTransferController } from './data-transfer/data-transfer-controller
 import { TimeSyncService } from './time/time-sync-service';
 import { DeviceConfigManager } from './device/device-config-manager';
 import { TrackConfigManager } from './tracks/track-config-manager';
+import { InstrumentRepository } from './instruments/instrument-repository';
+import { InstrumentService } from './instruments/instrument-service';
 import { PlayerSyncStates } from './player/states';
 import { DeviceTypeSynchronizer } from './devicetype/devicetype';
 import { SRArqSessionsController } from './connection/srarq/session';
@@ -32,6 +34,8 @@ export interface SyntheveryServices {
     timeSyncService: TimeSyncService;
     deviceConfigManager: DeviceConfigManager;
     trackConfigManager: TrackConfigManager;
+    instrumentRepository: InstrumentRepository;
+    instrumentService: InstrumentService;
     playerSyncStates: PlayerSyncStates;
     deviceTypeSynchronizer: DeviceTypeSynchronizer;
     srarqSessionsController: SRArqSessionsController;
@@ -89,6 +93,8 @@ export class SyntheveryServiceContainer {
 
         // 8. 第6レベルの依存（mesh, deviceConfigManagerに依存）
         const trackConfigManager = new TrackConfigManager(mesh, deviceConfigManager);
+        const instrumentRepository = new InstrumentRepository();
+        const instrumentService = new InstrumentService(instrumentRepository, trackConfigManager, dataTransferController, mesh, deviceConfigManager);
         const crdtSyncManager = new CRDTSyncManager(mesh, commandDispatcher, {
             onAdd: (_peer, track, note) => { crdtProjectionStore.onAdd(track, note); },
             onRemove: (_peer, track, id) => { crdtProjectionStore.onRemove(track, id); },
@@ -140,6 +146,8 @@ export class SyntheveryServiceContainer {
             timeSyncService,
             deviceConfigManager,
             trackConfigManager,
+            instrumentRepository,
+            instrumentService,
             playerSyncStates,
             deviceTypeSynchronizer,
             srarqSessionsController,

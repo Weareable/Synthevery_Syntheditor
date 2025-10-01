@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { useSynthevery } from '@/contexts/SyntheveryContext'
+import { InstrumentPicker } from '@/components/instrument/InstrumentPicker'
 import { useAppState } from '@/hooks/useAppState'
 import useDeviceControl from '@/hooks/useDeviceControl'
 import { Button } from '@/components/ui/button'
@@ -56,7 +57,7 @@ export function TrackEditor() {
             <Card className="p-4 flex-1 grid grid-cols-2 gap-6 items-start">
                 <div>
                     <Label className="text-sm">Instrument</Label>
-                    <div className="text-xs text-muted-foreground">将来追加（当面表示のみ）</div>
+                    <InstrumentPicker trackIndex={selected} />
                 </div>
                 <div>
                     <Label className="text-sm">Loop Length (1/16)</Label>

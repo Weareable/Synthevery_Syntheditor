@@ -236,8 +236,7 @@ export class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
             generator: false
         });
 
-        // 既存のコンフィグがあれば、即座に同期
-        this.syncConfigToDevice(device);
+        // 接続直後は受信のみ（即時同期は行わない）
     }
 
     /**
@@ -355,15 +354,20 @@ export class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
      * デバイスにコンフィグを同期
      */
     private syncConfigToDevice(device: P2PMacAddress): void {
-        // 既存のアプリコンフィグがあれば、デバイスに送信
-        if (this.appTrackDetails.length > 0) {
-            // TODO: deviceConfigManagerを通じてデバイスに送信
-            console.log('Syncing configs to device:', getAddressString(device));
-            console.warn('TrackConfigManager: syncConfigToDevice called, but not implemented');
-
-            // コンフィグ同期完了イベントを発火
-            this.emit('configSyncCompleted', device);
+        if (this.appTrackDetails.length === 0 && this.appNoteBuilderConfigs.length === 0 && this.appGeneratorConfigs.length === 0) return;
+        console.log('Syncing configs to device:', getAddressString(device));
+        // 全体同期は現状の受信仕様に合わせてまとめて送る
+        const sender = (this.deviceConfigManager as any);
+        if (this.appTrackDetails.length > 0 && sender.broadcastAllTrackDetails) {
+            sender.broadcastAllTrackDetails(this.appTrackDetails);
         }
+        if (this.appNoteBuilderConfigs.length > 0 && sender.broadcastAllNoteBuilderConfigs) {
+            sender.broadcastAllNoteBuilderConfigs(this.appNoteBuilderConfigs);
+        }
+        if (this.appGeneratorConfigs.length > 0 && sender.broadcastAllGeneratorConfigs) {
+            sender.broadcastAllGeneratorConfigs(this.appGeneratorConfigs);
+        }
+        this.emit('configSyncCompleted', device);
     }
 
     /**
@@ -441,8 +445,17 @@ export class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
      * アプリコンフィグを全デバイスに同期
      */
     private syncAppConfigToAllDevices(): void {
-        // TODO: deviceConfigManagerを通じて全デバイスに送信
         console.log('Syncing app configs to all devices');
+        const sender = (this.deviceConfigManager as any);
+        if (this.appTrackDetails.length > 0 && sender.broadcastAllTrackDetails) {
+            sender.broadcastAllTrackDetails(this.appTrackDetails);
+        }
+        if (this.appNoteBuilderConfigs.length > 0 && sender.broadcastAllNoteBuilderConfigs) {
+            sender.broadcastAllNoteBuilderConfigs(this.appNoteBuilderConfigs);
+        }
+        if (this.appGeneratorConfigs.length > 0 && sender.broadcastAllGeneratorConfigs) {
+            sender.broadcastAllGeneratorConfigs(this.appGeneratorConfigs);
+        }
     }
 
     /**

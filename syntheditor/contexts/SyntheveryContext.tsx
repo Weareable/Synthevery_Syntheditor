@@ -9,6 +9,8 @@ interface SyntheveryContextType {
     deviceConfigManager: SyntheveryServices['deviceConfigManager']
     dataTransferController: SyntheveryServices['dataTransferController']
     trackConfigManager: SyntheveryServices['trackConfigManager']
+    instrumentRepository: SyntheveryServices['instrumentRepository']
+    instrumentService: SyntheveryServices['instrumentService']
     playerSyncStates: SyntheveryServices['playerSyncStates']
     appStateSyncConnector: SyntheveryServices['appStateSyncConnector']
     deviceTypeSynchronizer: SyntheveryServices['deviceTypeSynchronizer']
