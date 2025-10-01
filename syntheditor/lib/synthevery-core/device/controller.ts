@@ -184,11 +184,31 @@ export class DeviceController {
         // Clear CRDT state for this track
         this.crdtProjectionStore.clearTrack(trackIndexZeroBased);
 
-        // Send command to device
-        this.sendCommand({
-            client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
-            type: DeviceCommandClient.COMMAND_TYPE_RESET_TRACK_BASE + trackIndexZeroBased,
-        });
+        // メッシュ内の全デバイスへクリアコマンドを送信（直接ピアだけでなく全ノード）
+        const devices = this.mesh.getConnectedDevices();
+        if (devices.length === 0) {
+            console.warn("resetTrack() : no connected devices");
+            return;
+        }
+
+        // 重複アドレスを排除
+        const unique = new Map<string, P2PMacAddress>();
+        for (const d of devices) {
+            const key = getAddressString(d.address);
+            unique.set(key, d);
+        }
+
+        for (const device of unique.values()) {
+            const handler = this.commandDispatcher.getCommandHandler(device, false);
+            if (!handler) {
+                console.warn("resetTrack() : handler unavailable for", getAddressString(device.address));
+                continue;
+            }
+            handler.pushCommand({
+                client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+                type: DeviceCommandClient.COMMAND_TYPE_RESET_TRACK_BASE + trackIndexZeroBased,
+            });
+        }
     }
 
     requestNoteBuilderConfig(peer: P2PMacAddress): void {
