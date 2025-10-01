@@ -76,6 +76,19 @@ export class CrdtProjectionStore {
 
     getFullStateSingle(): CRDTNote[] { return this.sets[0] ? this.sets[0].getAllAdds() : [] }
 
+    clearTrack(trackIndex: number): void {
+        this.ensureTrackIndex(trackIndex)
+        const set = this.sets[trackIndex]
+        const editor = this.editors[trackIndex]
+        if (!set || !editor) return
+        
+        // Clear the CRDT set
+        set.clear()
+        // Clear the projection map
+        editor.clearAll()
+        this.eventEmitter.emit('updated')
+    }
+
     getTrackProjections(): TrackProjection[] {
         return this.presentMaps.map((m, idx) => ({
             trackIndex: idx,

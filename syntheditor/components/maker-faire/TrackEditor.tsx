@@ -8,6 +8,8 @@ import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { useSynthevery } from '@/contexts/SyntheveryContext'
 import { useAppState } from '@/hooks/useAppState'
+import useDeviceControl from '@/hooks/useDeviceControl'
+import { Button } from '@/components/ui/button'
 
 const LOOP_OPTIONS = [4, 8, 16, 32, 64] // steps of 1/16 notes
 
@@ -15,6 +17,7 @@ export function TrackEditor() {
     const { playerSyncStates } = useSynthevery()
     const [trackStates, setTrackStates] = useAppState(playerSyncStates.trackStates)
     const [selected, setSelected] = useState(0)
+    const { resetTrack } = useDeviceControl()
 
     const ts = trackStates[selected]
 
@@ -32,6 +35,9 @@ export function TrackEditor() {
         const next = trackStates.slice()
         next[selected] = { ...ts, mute: m }
         setTrackStates(next)
+    }
+    const handleClearSequence = () => {
+        resetTrack(selected + 1) // resetTrack expects 1-based track index
     }
 
     return (
@@ -73,6 +79,17 @@ export function TrackEditor() {
                         <Switch checked={ts.mute} onCheckedChange={setMute} />
                         <span className="text-sm text-muted-foreground">{ts.mute ? 'ON' : 'OFF'}</span>
                     </div>
+                </div>
+                <div className="col-span-2">
+                    <Label className="text-sm">Sequence</Label>
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleClearSequence}
+                        className="mt-2"
+                    >
+                        Clear Track Sequence
+                    </Button>
                 </div>
             </Card>
         </div>

@@ -76,19 +76,19 @@ export class SyntheveryServiceContainer {
         // 4. 第3レベルの依存（appStateSyncConnectorに依存）
         const playerSyncStates = new PlayerSyncStates(appStateSyncConnector);
 
-        // 5. 第4レベルの依存（mesh, commandDispatcher, playerSyncStatesに依存）
-        const deviceController = new DeviceController(mesh, commandDispatcher, playerSyncStates);
-
-        // 6. 第5レベルの依存（mesh, dataTransferController, deviceControllerに依存）
-        const deviceConfigManager = new DeviceConfigManager(mesh, dataTransferController, deviceController);
-
-        // 7. 第6レベルの依存（mesh, deviceConfigManagerに依存）
-        const trackConfigManager = new TrackConfigManager(mesh, deviceConfigManager);
-
-        // 8. CRDT同期マネージャ（mesh, commandDispatcher に依存）
+        // 5. CRDT同期マネージャ（mesh, commandDispatcher に依存）
         // CRDT 投影ストア（トラック数は TrackState の既定長に合わせる）
         const defaultTrackCount = 8;
         const crdtProjectionStore = new CrdtProjectionStore(defaultTrackCount);
+
+        // 6. 第4レベルの依存（mesh, commandDispatcher, playerSyncStates, crdtProjectionStoreに依存）
+        const deviceController = new DeviceController(mesh, commandDispatcher, playerSyncStates, crdtProjectionStore);
+
+        // 7. 第5レベルの依存（mesh, dataTransferController, deviceControllerに依存）
+        const deviceConfigManager = new DeviceConfigManager(mesh, dataTransferController, deviceController);
+
+        // 8. 第6レベルの依存（mesh, deviceConfigManagerに依存）
+        const trackConfigManager = new TrackConfigManager(mesh, deviceConfigManager);
         const crdtSyncManager = new CRDTSyncManager(mesh, commandDispatcher, {
             onAdd: (_peer, track, note) => { crdtProjectionStore.onAdd(track, note); },
             onRemove: (_peer, track, id) => { crdtProjectionStore.onRemove(track, id); },
