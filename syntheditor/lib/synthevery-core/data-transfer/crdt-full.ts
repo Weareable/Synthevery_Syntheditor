@@ -79,7 +79,7 @@ export class CRDTFullStateReceiverPort implements ReceiverPortInterface {
                 }
                 tracksPayload.push({ track: ti, adds, removes: removesArr });
             }
-            // CRDTSyncManagerのmultiハンドラがあればそちらを優先
+            // CRDTSyncManagerのmultiハンドラでのみ処理
             try {
                 const { syntheveryServiceContainer } = require('../service-container');
                 const services = syntheveryServiceContainer?.getServices?.();
@@ -93,10 +93,7 @@ export class CRDTFullStateReceiverPort implements ReceiverPortInterface {
                     }));
                     (services.crdtSyncManager as any).handlerOnReceiveFullMulti(sender, fullTracks);
                 } else {
-                    // 後方互換: 既存APIへaddsのみ統合して流す
-                    const mergedAdds: CRDTNote[] = [];
-                    for (const t of tracksPayload) mergedAdds.push(...t.adds);
-                    this.onReceiveFull(sender, mergedAdds);
+                    console.warn('[CRDT][recv][full-state] missing handlerOnReceiveFullMulti; ignoring payload');
                 }
             } catch { }
 
@@ -128,23 +125,6 @@ export class CRDTFullStateReceiverPort implements ReceiverPortInterface {
                             return [adds, removes];
                         });
                         packed = encode(tracksArr);
-                    } else if (this.getFullState) {
-                        // 後方互換: 単一トラック（addsのみ）
-                        const addsOnly = this.getFullState();
-                        const arr = [[
-                            addsOnly.map((n: CRDTNote) => {
-                                const id = [n.id.mac.address, n.id.timestamp >>> 0];
-                                const noteHash = 0 >>> 0;
-                                const tick = n.pos.tick >>> 0;
-                                const noteType = (n.type === 0 ? 0 : 1) >>> 0;
-                                const payload = n.type === 0
-                                    ? [(n.payload as any).channel, (n.payload as any).note_num, (n.payload as any).velocity]
-                                    : [(n.payload as any).channel, (n.payload as any).effect_id, (n.payload as any).value];
-                                return [id, noteHash, tick, noteType, payload];
-                            }),
-                            []
-                        ]];
-                        packed = encode(arr);
                     }
                 } catch (e) {
                     console.warn('[CRDT][full-state][reply][pack][warn]', e);
