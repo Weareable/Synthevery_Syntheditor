@@ -236,7 +236,8 @@ export class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
             generator: false
         });
 
-        // 接続直後は受信のみ（即時同期は行わない）
+        // 接続直後に、アプリが保持する統合コンフィグがあれば当該デバイスへ同期
+        this.syncConfigToPeer(device);
     }
 
     /**
@@ -366,6 +367,31 @@ export class TrackConfigManager extends EventEmitter<TrackConfigManagerEvents> {
         }
         if (this.appGeneratorConfigs.length > 0 && sender.broadcastAllGeneratorConfigs) {
             sender.broadcastAllGeneratorConfigs(this.appGeneratorConfigs);
+        }
+        this.emit('configSyncCompleted', device);
+    }
+
+    /**
+     * 単一デバイスへアプリ保持コンフィグを同期（ピア向け）
+     */
+    private syncConfigToPeer(device: P2PMacAddress): void {
+        if (this.appTrackDetails.length === 0 && this.appNoteBuilderConfigs.length === 0 && this.appGeneratorConfigs.length === 0) return;
+        console.log('Syncing configs to peer:', getAddressString(device));
+        const sender = (this.deviceConfigManager as any);
+        if (this.appTrackDetails.length > 0 && sender.sendAllTrackDetailsToPeer) {
+            console.log('Syncing track details to peer:', getAddressString(device));
+            console.log('appTrackDetails:', this.appTrackDetails);
+            sender.sendAllTrackDetailsToPeer(device, this.appTrackDetails);
+        }
+        if (this.appNoteBuilderConfigs.length > 0 && sender.sendAllNoteBuilderConfigsToPeer) {
+            console.log('Syncing note builder configs to peer:', getAddressString(device));
+            console.log('appNoteBuilderConfigs:', this.appNoteBuilderConfigs);
+            sender.sendAllNoteBuilderConfigsToPeer(device, this.appNoteBuilderConfigs);
+        }
+        if (this.appGeneratorConfigs.length > 0 && sender.sendAllGeneratorConfigsToPeer) {
+            console.log('Syncing generator configs to peer:', getAddressString(device));
+            console.log('appGeneratorConfigs:', this.appGeneratorConfigs);
+            sender.sendAllGeneratorConfigsToPeer(device, this.appGeneratorConfigs);
         }
         this.emit('configSyncCompleted', device);
     }

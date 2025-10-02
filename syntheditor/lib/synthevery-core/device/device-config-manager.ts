@@ -195,6 +195,25 @@ export class DeviceConfigManager {
         }
     }
 
+    // Send helpers (App -> Specific Device)
+    sendAllNoteBuilderConfigsToPeer(receiver: P2PMacAddress, configs: NoteBuilderConfig[]) {
+        const my = this.mesh.getAddress();
+        if (getAddressString(receiver) === getAddressString(my)) return;
+        sendNoteBuilderConfig(this.dataTransferController, receiver, configs);
+    }
+
+    sendAllGeneratorConfigsToPeer(receiver: P2PMacAddress, configs: GeneratorConfig[]) {
+        const my = this.mesh.getAddress();
+        if (getAddressString(receiver) === getAddressString(my)) return;
+        sendGeneratorConfig(this.dataTransferController, receiver, configs);
+    }
+
+    sendAllTrackDetailsToPeer(receiver: P2PMacAddress, trackDetails: TrackDetail[]) {
+        const my = this.mesh.getAddress();
+        if (getAddressString(receiver) === getAddressString(my)) return;
+        sendTrackDetail(this.dataTransferController, receiver, trackDetails);
+    }
+
     private registerReceiverPort(): void {
         this.dataTransferController.registerReceiverPort(this.noteBuilderConfigReceiverPort);
         this.dataTransferController.registerReceiverPort(this.generatorConfigReceiverPort);
