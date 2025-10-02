@@ -19,7 +19,7 @@ import {
 } from "./config";
 import { DeviceController } from "./controller";
 import { getAddressString } from "../connection/util";
-import { sendGeneratorConfig, sendNoteBuilderConfig, sendTrackDetail, sendGeneratorConfigForTrack, sendNoteBuilderConfigForTrack } from "./config";
+import { sendTrackDetail, sendInstrumentConfigForTrack } from "./config";
 
 interface DeviceConfigManagerEvents {
     deviceConnected: (device: P2PMacAddress) => void;
@@ -150,41 +150,16 @@ export class DeviceConfigManager {
     // ---------------------
     // Broadcast helpers (App -> Devices)
     // ---------------------
-    broadcastNoteBuilderConfigForTrack(trackIndex: number, config: NoteBuilderConfig) {
+    broadcastInstrumentConfigForTrack(trackIndex: number, nb: NoteBuilderConfig, gen: GeneratorConfig) {
         const peers = this.mesh.getConnectedPeers();
         const my = this.mesh.getAddress();
         for (const p of peers) {
             if (getAddressString(p) === getAddressString(my)) continue;
-            sendNoteBuilderConfigForTrack(this.dataTransferController, p, trackIndex, config);
+            sendInstrumentConfigForTrack(this.dataTransferController, p, trackIndex, nb, gen);
         }
     }
 
-    broadcastGeneratorConfigForTrack(trackIndex: number, config: GeneratorConfig) {
-        const peers = this.mesh.getConnectedPeers();
-        const my = this.mesh.getAddress();
-        for (const p of peers) {
-            if (getAddressString(p) === getAddressString(my)) continue;
-            sendGeneratorConfigForTrack(this.dataTransferController, p, trackIndex, config);
-        }
-    }
-
-    broadcastAllNoteBuilderConfigs(configs: NoteBuilderConfig[]) {
-        const peers = this.mesh.getConnectedPeers();
-        const my = this.mesh.getAddress();
-        for (const p of peers) {
-            if (getAddressString(p) === getAddressString(my)) continue;
-            sendNoteBuilderConfig(this.dataTransferController, p, configs);
-        }
-    }
-
-    broadcastAllGeneratorConfigs(configs: GeneratorConfig[]) {
-        const peers = this.mesh.getConnectedPeers();
-        const my = this.mesh.getAddress();
-        for (const p of peers) {
-            if (getAddressString(p) === getAddressString(my)) continue;
-            sendGeneratorConfig(this.dataTransferController, p, configs);
-        }
-    }
+    // Removed legacy broadcastAllNoteBuilderConfigs / broadcastAllGeneratorConfigs
 
     broadcastAllTrackDetails(trackDetails: TrackDetail[]) {
         const peers = this.mesh.getConnectedPeers();
@@ -196,17 +171,7 @@ export class DeviceConfigManager {
     }
 
     // Send helpers (App -> Specific Device)
-    sendAllNoteBuilderConfigsToPeer(receiver: P2PMacAddress, configs: NoteBuilderConfig[]) {
-        const my = this.mesh.getAddress();
-        if (getAddressString(receiver) === getAddressString(my)) return;
-        sendNoteBuilderConfig(this.dataTransferController, receiver, configs);
-    }
-
-    sendAllGeneratorConfigsToPeer(receiver: P2PMacAddress, configs: GeneratorConfig[]) {
-        const my = this.mesh.getAddress();
-        if (getAddressString(receiver) === getAddressString(my)) return;
-        sendGeneratorConfig(this.dataTransferController, receiver, configs);
-    }
+    // Removed legacy sendAllNoteBuilderConfigsToPeer / sendAllGeneratorConfigsToPeer
 
     sendAllTrackDetailsToPeer(receiver: P2PMacAddress, trackDetails: TrackDetail[]) {
         const my = this.mesh.getAddress();

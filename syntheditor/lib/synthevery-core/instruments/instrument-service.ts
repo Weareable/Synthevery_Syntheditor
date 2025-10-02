@@ -6,7 +6,7 @@ import { DataTransferController } from '../data-transfer/data-transfer-controlle
 import { Mesh } from '../connection/mesh'
 import { P2PMacAddress } from '../types/mesh'
 import { NoteBuilderConfig, GeneratorConfig } from '../types/player'
-import { sendNoteBuilderConfigForTrack, sendGeneratorConfigForTrack } from '../device/config'
+import { sendInstrumentConfigForTrack } from '../device/config'
 
 export class InstrumentService {
     constructor(
@@ -42,15 +42,15 @@ export class InstrumentService {
         })
         for (const peer of peers) {
             try {
-                sendNoteBuilderConfigForTrack(this.dataTransferController, peer, trackIndex, preset.noteBuilderConfig as NoteBuilderConfig)
-                sendGeneratorConfigForTrack(this.dataTransferController, peer, trackIndex, preset.generatorConfig as GeneratorConfig)
-
-                // 成功ログ
-                // ここでは詳細は送らず相手先とトラック/プリセット識別子を記録
-                // SRArqセッションは DataTransferController 側でログ済み
-
+                sendInstrumentConfigForTrack(
+                    this.dataTransferController,
+                    peer,
+                    trackIndex,
+                    preset.noteBuilderConfig as NoteBuilderConfig,
+                    preset.generatorConfig as GeneratorConfig,
+                )
             } catch (e) {
-                console.error('InstrumentService.setInstrument: failed to send configs', { peer, trackIndex, presetId: preset.id, error: e })
+                console.error('InstrumentService.setInstrument: failed to send combined config', { peer, trackIndex, presetId: preset.id, error: e })
             }
         }
     }

@@ -9,8 +9,9 @@ export namespace DataTypes {
     export const kGeneratorConfig: number = 11;
     export const kTrackDetail: number = 12;
     // Per-track partial updates
-    export const kNoteBuilderConfigTrack: number = 0x30;
-    export const kGeneratorConfigTrack: number = 0x31;
+    export const kNoteBuilderConfigTrack: number = 0x30; // deprecated
+    export const kGeneratorConfigTrack: number = 0x31; // deprecated
+    export const kInstrumentConfigTrack: number = 0x32; // NB+GEN セット送信
     export const kBodyColorConfig: number = 13;
     export const kLedColorConfig: number = 14;
     export const kChordScaleConfig: number = 15;

@@ -11,7 +11,8 @@ export const builtinPresets: InstrumentPreset[] = [
         },
         generatorConfig: {
             class: "sf",
-            params: { filename: "/ukg_drum.sf2", preset_index: 0, is_drum: true }
+            params: { filename: "/ukg_drum.sf2", preset_index: 0, is_drum: true },
+            note_number_converter: { type: "empty" }
         },
         tags: ["drum"],
         category: "drums"
@@ -23,7 +24,8 @@ export const builtinPresets: InstrumentPreset[] = [
         noteBuilderConfig: { type: "piano" },
         generatorConfig: {
             class: "sf",
-            params: { filename: "/hl1mgm.sf2", preset_index: 0, is_drum: false }
+            params: { filename: "/hl1mgm.sf2", preset_index: 0, is_drum: false },
+            note_number_converter: { type: "chord_sequence" }
         },
         tags: ["keys"],
         category: "keys"
@@ -35,7 +37,8 @@ export const builtinPresets: InstrumentPreset[] = [
         noteBuilderConfig: { type: "arpeggio" },
         generatorConfig: {
             class: "sf",
-            params: { filename: "/hl1mgm.sf2", preset_index: 81, is_drum: false }
+            params: { filename: "/hl1mgm.sf2", preset_index: 81, is_drum: false },
+            note_number_converter: { type: "scale_sequence" }
         },
         tags: ["arp"],
         category: "synth"
@@ -47,7 +50,8 @@ export const builtinPresets: InstrumentPreset[] = [
         noteBuilderConfig: { type: "trap_drum" },
         generatorConfig: {
             class: "sf",
-            params: { filename: "/rock_drum.sf2", preset_index: 9, is_drum: true }
+            params: { filename: "/rock_drum.sf2", preset_index: 9, is_drum: true },
+            note_number_converter: { type: "empty" }
         },
         tags: ["drum"],
         category: "drums"
@@ -59,7 +63,8 @@ export const builtinPresets: InstrumentPreset[] = [
         noteBuilderConfig: { type: "yaw_drum" },
         generatorConfig: {
             class: "sf",
-            params: { filename: "/percussions.sf2", preset_index: 0, is_drum: true }
+            params: { filename: "/percussions.sf2", preset_index: 0, is_drum: true },
+            note_number_converter: { type: "empty" }
         },
         tags: ["motion"],
         category: "drums"

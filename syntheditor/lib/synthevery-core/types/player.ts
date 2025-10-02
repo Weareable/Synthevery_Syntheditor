@@ -29,6 +29,7 @@ export interface NoteBuilderConfig {
 export interface GeneratorConfig {
     class: string;
     params: Record<string, any>;
+    note_number_converter?: NoteNumberConverterConfig;
     // 基本的な音声生成設定
     instrumentType?: InstrumentType;     // 楽器タイプ
     volume?: number;                      // 音量（0.0 - 1.0）
@@ -41,6 +42,11 @@ export interface GeneratorConfig {
     // 演奏設定
     articulation?: ArticulationConfig;    // アーティキュレーション設定
     dynamics?: DynamicsConfig;            // ダイナミクス設定
+}
+
+export interface NoteNumberConverterConfig {
+    type: string;
+    params?: Record<string, any>;
 }
 
 export interface SoundFontGeneratorConfig extends GeneratorConfig {

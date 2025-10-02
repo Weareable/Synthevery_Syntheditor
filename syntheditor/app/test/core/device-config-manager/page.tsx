@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSynthevery } from '@/contexts/SyntheveryContext';
 import { getAddressFromString, getAddressString } from '@/lib/synthevery-core/connection/util';
-import { sendNoteBuilderConfig, sendGeneratorConfig, sendTrackDetail, sendBodyColorConfig, sendLedColorConfig } from '@/lib/synthevery-core/device/config';
+import { sendTrackDetail, sendBodyColorConfig, sendLedColorConfig } from '@/lib/synthevery-core/device/config';
 import { NoteBuilderConfig, GeneratorConfig, TrackDetail, BodyColorConfig, LedColorConfig } from '@/lib/synthevery-core/types/player';
 import { P2PMacAddress } from '@/lib/synthevery-core/types/mesh';
 
@@ -71,24 +71,7 @@ const DeviceConfigManagerTestPage: React.FC = () => {
 
         try {
             switch (configType) {
-                case 'noteBuilder':
-                    const noteBuilderConfig: NoteBuilderConfig[] = [
-                        { type: "bongo" },
-                        { type: "drum" },
-                        { type: "synth" }
-                    ];
-                    sendNoteBuilderConfig(dataTransferController, peerAddress, noteBuilderConfig);
-                    addEventLog('SEND', `${peer}にNoteBuilderConfigを送信しました`, noteBuilderConfig);
-                    break;
-
-                case 'generator':
-                    const generatorConfig: GeneratorConfig[] = [
-                        { class: "sf", params: { filename: "/rock_drum.sf2", preset_index: 9, is_drum: true } },
-                        { class: "sf", params: { filename: "/piano.sf2", preset_index: 0, is_drum: false } }
-                    ];
-                    sendGeneratorConfig(dataTransferController, peerAddress, generatorConfig);
-                    addEventLog('SEND', `${peer}にGeneratorConfigを送信しました`, generatorConfig);
-                    break;
+                // Removed legacy full NB/GEN send cases
 
                 case 'trackDetail':
                     const trackDetail: TrackDetail[] = [

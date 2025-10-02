@@ -1,6 +1,5 @@
 import { InstrumentPreset, NoteBuilderConfig, GeneratorConfig } from "../types/player";
-
-const STORAGE_KEY = "synthevery.instrumentPresets.v1";
+import { builtinPresets } from "./builtin";
 
 export class InstrumentRepository {
     private cache: Map<string, InstrumentPreset> = new Map();
@@ -10,26 +9,18 @@ export class InstrumentRepository {
     }
 
     private load() {
-        try {
-            const raw = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
-            if (!raw) return;
-            const list: InstrumentPreset[] = JSON.parse(raw);
-            this.cache.clear();
-            for (const p of list) {
-                if (p && p.id && p.noteBuilderConfig && p.generatorConfig) {
-                    this.cache.set(p.id, p);
-                }
+        // ローカルストレージは使用せず、builtin.ts のみをロード
+        this.cache.clear();
+        for (const p of builtinPresets) {
+            if (p && p.id && p.noteBuilderConfig && p.generatorConfig) {
+                this.cache.set(p.id, p);
             }
-        } catch { }
+        }
     }
 
     private save() {
-        try {
-            const list = Array.from(this.cache.values());
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-            }
-        } catch { }
+        // 一時的に永続化を無効化
+        return;
     }
 
     list(): InstrumentPreset[] {
@@ -60,6 +51,7 @@ export class InstrumentRepository {
     }
 
     import(list: InstrumentPreset[], replace = false): void {
+        // ストレージ無効化中は import もキャッシュのみ更新
         if (replace) this.cache.clear();
         for (const p of list) {
             if (p && p.id && p.noteBuilderConfig && p.generatorConfig) {
