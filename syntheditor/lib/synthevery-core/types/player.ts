@@ -24,6 +24,8 @@ export interface NoteBuilderConfig {
     // 高度な設定
     gestureRecognition?: GestureConfig;  // ジェスチャー認識設定
     timingConfig?: TimingConfig;         // タイミング設定
+    // ノートビルダー固有の追加プロパティ（例: drum_pattern.patterns など）
+    [key: string]: any;
 }
 
 export interface GeneratorConfig {
