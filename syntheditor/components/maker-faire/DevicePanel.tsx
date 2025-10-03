@@ -17,10 +17,44 @@ import { getAddressFromString } from '@/lib/synthevery-core/connection/util'
 export function DevicePanel() {
     const { playerSyncStates } = useSynthevery()
     const [currentTracks, setCurrentTracks] = useAppState(playerSyncStates.currentTracksState)
+    const currentTracksRef = React.useRef(currentTracks)
+    React.useEffect(() => {
+        currentTracksRef.current = currentTracks
+    }, [currentTracks])
     const { trackDetails, isReady } = useTrackConfig()
 
     // useMeshフックからデバイス接続状態を取得
     const { connectedDevices, connectedPeers } = useMesh()
+
+    // デバウンス用のタイマー保持（デバイスごと）
+    const trackUpdateTimers = React.useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+    // デバウンス付きのトラック設定
+    const setTrackDebounced = (mac: string, index: number, delayMs: number = 500) => {
+        const timers = trackUpdateTimers.current
+        const existing = timers.get(mac)
+        if (existing) {
+            clearTimeout(existing)
+        }
+        const timer = setTimeout(() => {
+            const base = currentTracksRef.current as Map<string, number>
+            const next = new Map(base)
+            next.set(mac, index)
+            setCurrentTracks(next)
+            timers.delete(mac)
+        }, delayMs)
+        timers.set(mac, timer)
+    }
+
+    // アンマウント時にタイマーをクリア
+    React.useEffect(() => {
+        return () => {
+            for (const t of trackUpdateTimers.current.values()) {
+                clearTimeout(t)
+            }
+            trackUpdateTimers.current.clear()
+        }
+    }, [])
 
     // 重複を除去してすべてのデバイスを取得し、アプリアドレスを除外
     const allDevices = [...connectedPeers, ...connectedDevices]
@@ -33,9 +67,7 @@ export function DevicePanel() {
     })
 
     const setTrack = (mac: string, index: number) => {
-        const next = new Map(currentTracks)
-        next.set(mac, index)
-        setCurrentTracks(next)
+        setTrackDebounced(mac, index)
     }
 
     const changeTrack = (mac: string, direction: 'prev' | 'next') => {
