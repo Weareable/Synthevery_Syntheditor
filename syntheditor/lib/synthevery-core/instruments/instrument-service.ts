@@ -29,9 +29,15 @@ export class InstrumentService {
         // update app state
         this.trackConfigManager.updateAppConfig('noteBuilder', trackIndex, preset.noteBuilderConfig, false)
         this.trackConfigManager.updateAppConfig('generator', trackIndex, preset.generatorConfig, false)
-        // also reflect selection to TrackDetail.instrumentPresetId in app store
+        // also reflect selection to TrackDetail with proper displayName/icon and instrumentPresetId
         const curDetail = this.trackConfigManager.getAppTrackDetail(trackIndex) || { displayName: '', icon: '', instrumentPresetId: '' }
-        this.trackConfigManager.updateAppConfig('trackDetail', trackIndex, { ...curDetail, instrumentPresetId: preset.id }, false)
+        const nextDetail = {
+            displayName: preset.displayName || curDetail.displayName,
+            icon: preset.icon || curDetail.icon,
+            instrumentPresetId: preset.id,
+        }
+        // syncToDevices=true -> broadcast updated TrackDetail to devices
+        this.trackConfigManager.updateAppConfig('trackDetail', trackIndex, nextDetail as any, true)
 
         // broadcast per-track
         const peers: P2PMacAddress[] = this.mesh.getConnectedPeers()

@@ -1,8 +1,10 @@
 import { InstrumentPreset, NoteBuilderConfig, GeneratorConfig } from "../types/player";
 import { builtinPresets } from "./builtin";
+import EventEmitter from 'eventemitter3'
 
 export class InstrumentRepository {
     private cache: Map<string, InstrumentPreset> = new Map();
+    public eventEmitter: EventEmitter = new EventEmitter();
 
     constructor() {
         this.load();
@@ -16,6 +18,7 @@ export class InstrumentRepository {
                 this.cache.set(p.id, p);
             }
         }
+        this.eventEmitter.emit('change');
     }
 
     private save() {
@@ -35,6 +38,7 @@ export class InstrumentRepository {
         if (!preset || !preset.id) throw new Error("invalid preset");
         this.cache.set(preset.id, preset);
         this.save();
+        this.eventEmitter.emit('change');
     }
 
     update(id: string, patch: Partial<InstrumentPreset>): void {
@@ -43,11 +47,13 @@ export class InstrumentRepository {
         const next: InstrumentPreset = { ...cur, ...patch } as InstrumentPreset;
         this.cache.set(id, next);
         this.save();
+        this.eventEmitter.emit('change');
     }
 
     remove(id: string): void {
         this.cache.delete(id);
         this.save();
+        this.eventEmitter.emit('change');
     }
 
     import(list: InstrumentPreset[], replace = false): void {
@@ -59,6 +65,7 @@ export class InstrumentRepository {
             }
         }
         this.save();
+        this.eventEmitter.emit('change');
     }
 
     export(): InstrumentPreset[] {

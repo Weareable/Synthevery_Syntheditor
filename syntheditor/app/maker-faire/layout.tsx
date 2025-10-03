@@ -10,9 +10,11 @@ import { DeviceConnectionModal } from '@/components/maker-faire/DeviceConnection
 import { useSynthevery } from '@/contexts/SyntheveryContext'
 
 export default function MakerFaireLayout({ children }: { children: React.ReactNode }) {
-    const { mesh } = useSynthevery()
+    const { mesh, trackConfigManager } = useSynthevery() as any
     const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false)
     const [isConnecting, setIsConnecting] = useState(false)
+    // アプリ側コンフィグの変更で DevicePanel を含むUIを再描画
+    const [appConfigRev, setAppConfigRev] = useState(0)
 
     // デバイス接続状態を監視
     useEffect(() => {
@@ -61,6 +63,16 @@ export default function MakerFaireLayout({ children }: { children: React.ReactNo
             mesh.eventEmitter?.off('disconnected', handleDisconnected)
         }
     }, [mesh])
+
+    // TrackConfigManager のアプリ側設定変更イベントを監視して再描画
+    useEffect(() => {
+        if (!trackConfigManager?.eventEmitter) return
+        const onAppConfigChanged = () => setAppConfigRev((n) => n + 1)
+        trackConfigManager.eventEmitter.on('appConfigChanged', onAppConfigChanged)
+        return () => {
+            trackConfigManager.eventEmitter.off('appConfigChanged', onAppConfigChanged)
+        }
+    }, [trackConfigManager])
 
     const handleConnect = async () => {
         setIsConnecting(true)
