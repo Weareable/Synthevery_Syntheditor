@@ -11,6 +11,7 @@ const links = [
     { href: '/maker-faire/chord', label: 'Chord' },
     { href: '/maker-faire/devices', label: 'Devices' },
     { href: '/maker-faire/settings', label: 'Settings' },
+    { href: '/maker-faire/ai-chord-generation', label: 'AI Chord' },
 ]
 
 export function SidebarNav() {

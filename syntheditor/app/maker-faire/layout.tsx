@@ -8,9 +8,12 @@ import { TrackPanel } from '@/components/maker-faire/TrackPanel'
 import { DevicePanel } from '@/components/maker-faire/DevicePanel'
 import { DeviceConnectionModal } from '@/components/maker-faire/DeviceConnectionModal'
 import { useSynthevery } from '@/contexts/SyntheveryContext'
+import { usePathname } from 'next/navigation'
 
 export default function MakerFaireLayout({ children }: { children: React.ReactNode }) {
     const { mesh, trackConfigManager } = useSynthevery() as any
+    const pathname = usePathname()
+    const isDashboard = pathname === '/maker-faire'
     const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false)
     const [isConnecting, setIsConnecting] = useState(false)
     // アプリ側コンフィグの変更で DevicePanel を含むUIを再描画
@@ -24,7 +27,7 @@ export default function MakerFaireLayout({ children }: { children: React.ReactNo
 
             console.log('MakerFaireLayout: checkConnection', {
                 devicesCount: devices.length,
-                devices: devices.map(d => d.toString()),
+                devices: devices.map((d: any) => d.toString()),
                 isDisconnected,
                 currentModalState: isConnectionModalOpen
             })
@@ -106,8 +109,8 @@ export default function MakerFaireLayout({ children }: { children: React.ReactNo
                                 <TransportBar />
                             </div>
                         </section>
-                        <section className="col-span-1 min-h-0 h-full rounded border bg-card p-2">
-                            <TrackPanel />
+                        <section className="col-span-1 min-h-0 h-full rounded border bg-card p-2 overflow-auto">
+                            {isDashboard ? <TrackPanel /> : children}
                         </section>
                     </div>
                     <section className="rounded border bg-card p-2 h-40 overflow-x-auto overflow-y-visible">
