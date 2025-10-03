@@ -1,6 +1,8 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useSynthevery } from '@/contexts/SyntheveryContext';
 import { P2PMacAddress } from '@/lib/synthevery-core/types/mesh';
+import { getAddressString } from '@/lib/synthevery-core/connection/util';
+import { DEVICE_COLOR_CONFIG } from '@/config/deviceColors';
 
 export interface UseDeviceColorsReturn {
     /**
@@ -63,32 +65,44 @@ export function useDeviceColors(): UseDeviceColorsReturn {
 
     // デバイス本体色を取得
     const getDeviceBodyColor = useCallback((deviceAddr: P2PMacAddress): string => {
-        if (!deviceConfigManager) {
-            return DEFAULT_BODY_COLOR;
+        // 1) Web側コンフィグで上書き
+        const macStr = getAddressString(deviceAddr);
+        const webConfig = DEVICE_COLOR_CONFIG[macStr];
+        if (webConfig?.bodyColor) {
+            return webConfig.bodyColor;
         }
 
-        const bodyColorConfig = deviceConfigManager.getBodyColorConfig(deviceAddr);
-        if (bodyColorConfig?.body_color) {
-            return bodyColorConfig.body_color;
+        // 2) デバイスからのBodyColor設定
+        if (deviceConfigManager) {
+            const bodyColorConfig = deviceConfigManager.getBodyColorConfig(deviceAddr);
+            if (bodyColorConfig?.body_color) {
+                return bodyColorConfig.body_color;
+            }
         }
 
+        // 3) デフォルト
         return DEFAULT_BODY_COLOR;
     }, [deviceConfigManager]);
 
     // デバイスLED色を取得
     const getDeviceLedColor = useCallback((deviceAddr: P2PMacAddress): string => {
-        if (!deviceConfigManager) {
-            return DEFAULT_LED_COLOR;
+        // 1) Web側コンフィグ（LED色）
+        const macStr = getAddressString(deviceAddr);
+        const webConfig = DEVICE_COLOR_CONFIG[macStr];
+        if (webConfig?.ledColor) {
+            return webConfig.ledColor;
         }
 
-        const ledColorConfig = deviceConfigManager.getLedColorConfig(deviceAddr);
-        if (ledColorConfig?.base_led_color) {
-            return ledColorConfig.base_led_color;
+        // 2) デバイスからのLED色設定
+        if (deviceConfigManager) {
+            const ledColorConfig = deviceConfigManager.getLedColorConfig(deviceAddr);
+            if (ledColorConfig?.base_led_color) {
+                return ledColorConfig.base_led_color;
+            }
         }
 
-        // LED設定がない場合は本体色を使用
-        const bodyColor = getDeviceBodyColor(deviceAddr);
-        return bodyColor;
+        // 3) LED未指定のときは本体色（Web側を含む）を使用
+        return getDeviceBodyColor(deviceAddr);
     }, [deviceConfigManager, getDeviceBodyColor]);
 
     // デバイスLED状態を取得
