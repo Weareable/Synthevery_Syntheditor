@@ -31,7 +31,7 @@ export class TimeSyncService {
 
     constructor(mesh: Mesh) {
         this.mesh = mesh;
-        this.node = new TimeSyncNode(mesh, this.synchronizer, this.base, 8);
+        this.node = new TimeSyncNode(mesh, this.synchronizer, this.base, 12, 9);
 
         // 自動開始: デバイス順序が更新されたら先頭と同期
         this.mesh.eventEmitter.on('deviceOrderChanged', () => {

@@ -22,12 +22,14 @@ export class TimeSyncNode {
     private retryCount: number = 0
     private static readonly TIMEOUT_MS = 1000
     private static readonly MAX_RETRY = 3
+    private readonly minSuccess: number
 
-    constructor(mesh: Mesh, synchronizer: TimeSynchronizer, base: TimeBase, numCommands: number = 8) {
+    constructor(mesh: Mesh, synchronizer: TimeSynchronizer, base: TimeBase, numCommands: number = 8, minSuccess: number = 6) {
         this.mesh = mesh;
         this.synchronizer = synchronizer
         this.base = base
         this.numCommands = numCommands
+        this.minSuccess = Math.max(1, Math.min(numCommands, minSuccess))
 
         this.mesh.setCallback(MESH_PACKET_TYPE_TIME_SYNC, (packet) => {
             this.receiveData(packet.source, packet.data)
@@ -110,7 +112,7 @@ export class TimeSyncNode {
             this.samples[this.currentCommandIndex].t3 = receivedTime
 
             this.currentCommandIndex++
-            if (this.currentCommandIndex >= this.numCommands) {
+            if (this.shouldCompleteEarly() || this.currentCommandIndex >= this.numCommands) {
                 this.synchronizer.updateOffset(this.samples, baseOffset)
                 const finalOffset = this.synchronizer.getSyncTime().getOffset() >>> 0
                 const doneTarget = this.syncingTarget
@@ -126,6 +128,15 @@ export class TimeSyncNode {
         if (data.length !== 1 && data.length !== 13) {
             console.debug('[TimeSync] RX unexpected length=', data.length)
         }
+    }
+
+    private shouldCompleteEarly(): boolean {
+        let valid = 0
+        for (let i = 0; i < this.samples.length; i++) {
+            const s = this.samples[i]
+            if ((s.t1 | s.t2 | s.t3) !== 0) valid++
+        }
+        return valid >= this.minSuccess
     }
 
     private reset(): void {
