@@ -66,6 +66,9 @@ export function DevicePanel() {
         return isUnique && isNotAppAddress
     })
 
+    // MACアドレスの文字列で昇順に固定
+    const sortedDevices = [...uniqueDevices].sort((a, b) => a.toUpperCase().localeCompare(b.toUpperCase()))
+
     const setTrack = (mac: string, index: number) => {
         setTrackDebounced(mac, index)
     }
@@ -88,7 +91,7 @@ export function DevicePanel() {
             {uniqueDevices.length === 0 && (
                 <div className="text-sm text-muted-foreground">No devices connected</div>
             )}
-            {uniqueDevices.map((macStr) => {
+            {sortedDevices.map((macStr) => {
                 const trackIndex = currentTracks.get(macStr) ?? 0
                 return (
                     <Popover key={macStr} modal={true}>
