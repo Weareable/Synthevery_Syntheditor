@@ -13,6 +13,7 @@ import { useTrackConfig } from '@/hooks/useTrackConfig'
 import useMesh from '@/hooks/useMesh'
 import { APP_MAC_ADDRESS } from '@/lib/synthevery-core/connection/constants'
 import { getAddressFromString } from '@/lib/synthevery-core/connection/util'
+import { useDeviceColors } from '@/hooks/useDeviceColors'
 
 export function DevicePanel() {
     const { playerSyncStates } = useSynthevery()
@@ -22,6 +23,9 @@ export function DevicePanel() {
         currentTracksRef.current = currentTracks
     }, [currentTracks])
     const { trackDetails, isReady } = useTrackConfig()
+
+    // デバイス色取得フック
+    const { getDeviceBodyColor, getDeviceLedColor, getDeviceLedStatus } = useDeviceColors()
 
     // useMeshフックからデバイス接続状態を取得
     const { connectedDevices, connectedPeers } = useMesh()
@@ -93,6 +97,10 @@ export function DevicePanel() {
             )}
             {sortedDevices.map((macStr) => {
                 const trackIndex = currentTracks.get(macStr) ?? 0
+                const deviceAddr = getAddressFromString(macStr)
+                const bodyColor = getDeviceBodyColor(deviceAddr)
+                const ledColor = getDeviceLedColor(deviceAddr)
+                const ledStatus = getDeviceLedStatus(deviceAddr)
                 return (
                     <Popover key={macStr} modal={true}>
                         <PopoverTrigger className="w-56 h-full p-3 cursor-pointer grid gap-2 place-items-center hover:bg-accent/50 transition-colors rounded-lg border bg-card">
@@ -110,8 +118,8 @@ export function DevicePanel() {
                                 </Button>
                                 <div className="flex flex-col items-center gap-2">
                                     <svg width="40" height="64">
-                                        <rect x="4" y="2" width="32" height="60" rx="4" fill="#64748b" />
-                                        <circle cx="20" cy="32" r="8" fill="#e11d48" />
+                                        <rect x="4" y="2" width="32" height="60" rx="4" fill={bodyColor} />
+                                        <circle cx="20" cy="32" r="8" fill={ledColor} />
                                     </svg>
                                     <div className="text-sm">Track {trackIndex + 1}</div>
                                     <div className="text-xs text-muted-foreground text-center">
