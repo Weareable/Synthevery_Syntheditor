@@ -73,7 +73,12 @@ export class CRDTSyncManager {
         }
     }
 
+    private static readonly CRDT_SHARE_SEND_MASK: boolean[] = [true, true, true, true, true, true, true, true];
+    private static readonly CRDT_SHARE_RECV_MASK: boolean[] = [true, true, true, true, true, true, true, true];
+    private static readonly CRDT_AUDIT_ENABLED: boolean = true;
+
     broadcastAdd(track: number, note: CRDTNote): void {
+        if (!CRDTSyncManager.CRDT_SHARE_SEND_MASK[track >>> 0]) return;
         for (const [k, client] of this.seqClients.entries()) {
             const parts = k.split(':').map(x => parseInt(x, 10));
             const peer: P2PMacAddress = { address: new Uint8Array(parts) };
@@ -85,6 +90,7 @@ export class CRDTSyncManager {
     }
 
     broadcastRemove(track: number, id: NoteID): void {
+        if (!CRDTSyncManager.CRDT_SHARE_SEND_MASK[track >>> 0]) return;
         for (const [k, client] of this.seqClients.entries()) {
             const parts = k.split(':').map(x => parseInt(x, 10));
             const peer: P2PMacAddress = { address: new Uint8Array(parts) };

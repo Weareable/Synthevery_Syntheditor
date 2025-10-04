@@ -95,6 +95,9 @@ export class SyntheveryServiceContainer {
         const trackConfigManager = new TrackConfigManager(mesh, deviceConfigManager);
         const instrumentRepository = new InstrumentRepository();
         const instrumentService = new InstrumentService(instrumentRepository, trackConfigManager, dataTransferController, mesh, deviceConfigManager);
+        const CRDT_SHARE_SEND_MASK: boolean[] = [true, true, true, true, true, true, true, true];
+        const CRDT_SHARE_RECV_MASK: boolean[] = [true, true, true, true, true, true, true, true];
+        const CRDT_AUDIT_ENABLED: boolean = true;
         const crdtSyncManager = new CRDTSyncManager(mesh, commandDispatcher, {
             onAdd: (_peer, track, note) => { crdtProjectionStore.onAdd(track, note); },
             onRemove: (_peer, track, id) => { crdtProjectionStore.onRemove(track, id); },
@@ -102,9 +105,14 @@ export class SyntheveryServiceContainer {
                 // XOR ハッシュは NoteOrSet から集約
                 let add = 0 >>> 0;
                 let rem = 0 >>> 0;
-                for (const s of crdtProjectionStore.getSets()) {
-                    add = (add ^ (s.addHashXor() >>> 0)) >>> 0;
-                    rem = (rem ^ (s.removeHashXor() >>> 0)) >>> 0;
+                if (CRDT_AUDIT_ENABLED) {
+                    const sets = crdtProjectionStore.getSets();
+                    for (let i = 0; i < sets.length; i++) {
+                        if (!CRDT_SHARE_SEND_MASK[i]) continue;
+                        const s = sets[i];
+                        add = (add ^ (s.addHashXor() >>> 0)) >>> 0;
+                        rem = (rem ^ (s.removeHashXor() >>> 0)) >>> 0;
+                    }
                 }
                 const out = new Uint8Array(8);
                 out[0] = add & 0xff; out[1] = (add >>> 8) & 0xff; out[2] = (add >>> 16) & 0xff; out[3] = (add >>> 24) & 0xff;
@@ -114,8 +122,14 @@ export class SyntheveryServiceContainer {
             onReceiveAudit: (_peer, _data) => { /* optional logging */ },
             getFullState: () => crdtProjectionStore.getFullStateSingle(),
             onReceiveFull: (_peer, notes) => { crdtProjectionStore.onReceiveFullSingle(notes); },
-            getFullStateMulti: () => crdtProjectionStore.getFullStateMulti(),
-            onReceiveFullMulti: (_peer: any, tracks: { track: number; adds: any[]; removes: any[] }[]) => { crdtProjectionStore.onReceiveFullMulti(tracks as any); },
+            getFullStateMulti: () => {
+                const full = crdtProjectionStore.getFullStateMulti();
+                return full.map((t, i) => (CRDT_SHARE_SEND_MASK[i] ? t : { adds: [], removes: [] }));
+            },
+            onReceiveFullMulti: (_peer: any, tracks: { track: number; adds: any[]; removes: any[] }[]) => {
+                const filtered = tracks.filter(t => (CRDT_SHARE_RECV_MASK[t.track >>> 0]));
+                crdtProjectionStore.onReceiveFullMulti(filtered as any);
+            },
         });
 
         // 9. DataTransfer: CRDT full state receiver
