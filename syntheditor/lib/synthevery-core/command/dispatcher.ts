@@ -5,8 +5,8 @@ import { Mesh } from '../connection/mesh';
 import { getAddressString } from '../connection/util';
 import { MESH_PACKET_TYPE_COMMAND } from '../connection/constants';
 import { MeshPacket } from '../types/mesh';
-const COMMAND_TIMEOUT = 1000;
-const COMMAND_RETRY_COUNT = 3;
+const COMMAND_TIMEOUT = 300;
+const COMMAND_RETRY_COUNT = 12;
 
 export class CommandDispatcher {
     private commandHandlers: Map<string, CommandHandler> = new Map();
