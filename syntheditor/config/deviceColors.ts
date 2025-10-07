@@ -6,8 +6,8 @@ export const DEVICE_COLOR_CONFIG: Record<string, { bodyColor?: string; ledColor?
     "8c:bf:ea:8e:58:fd": { bodyColor: "orange", ledColor: "white" },
     "98:3d:ae:60:47:91": { bodyColor: "pink", ledColor: "white" },
     "d8:3b:da:74:28:a1": { bodyColor: "red", ledColor: "white" },
-    "d8:3b:da:74:70:19": { bodyColor: "purple", ledColor: "white" },
-    "d8:3b:da:74:72:45": { bodyColor: "green", ledColor: "white" },
+    "d8:3b:da:74:70:19": { bodyColor: "green", ledColor: "white" },
+    "d8:3b:da:74:72:45": { bodyColor: "purple", ledColor: "white" },
 };
 
 

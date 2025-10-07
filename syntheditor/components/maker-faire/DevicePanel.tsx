@@ -14,6 +14,7 @@ import useMesh from '@/hooks/useMesh'
 import { APP_MAC_ADDRESS } from '@/lib/synthevery-core/connection/constants'
 import { getAddressFromString } from '@/lib/synthevery-core/connection/util'
 import { useDeviceColors } from '@/hooks/useDeviceColors'
+import { InstrumentIcon } from '@/components/icons/InstrumentIcon'
 
 export function DevicePanel() {
     const { playerSyncStates } = useSynthevery()
@@ -103,7 +104,7 @@ export function DevicePanel() {
                 const ledStatus = getDeviceLedStatus(deviceAddr)
                 return (
                     <Popover key={macStr} modal={true}>
-                        <PopoverTrigger className="w-56 h-full p-3 cursor-pointer grid gap-2 place-items-center hover:bg-accent/50 transition-colors rounded-lg border bg-card">
+                        <PopoverTrigger className="w-56 h-full p-3 cursor-pointer flex flex-col justify-between items-center hover:bg-accent/50 transition-colors rounded-lg border bg-card">
                             <div className="flex items-center justify-between w-full">
                                 <Button
                                     variant="ghost"
@@ -122,11 +123,6 @@ export function DevicePanel() {
                                         <circle cx="20" cy="32" r="8" fill={ledColor} />
                                     </svg>
                                     <div className="text-sm">Track {trackIndex + 1}</div>
-                                    <div className="text-xs text-muted-foreground text-center">
-                                        {isReady && trackDetails[trackIndex]
-                                            ? trackDetails[trackIndex].displayName
-                                            : 'Piano'}
-                                    </div>
                                 </div>
                                 <Button
                                     variant="ghost"
@@ -140,20 +136,48 @@ export function DevicePanel() {
                                     ›
                                 </Button>
                             </div>
+                            <div className="w-full flex flex-col items-center gap-2">
+                                <div className="w-16 h-16 text-foreground/90">
+                                    <InstrumentIcon
+                                        icon={isReady && trackDetails[trackIndex] ? trackDetails[trackIndex].icon : 'piano'}
+                                        className="w-full h-full"
+                                    />
+                                </div>
+                                <div className="text-xs text-muted-foreground text-center">
+                                    {isReady && trackDetails[trackIndex]
+                                        ? trackDetails[trackIndex].displayName
+                                        : 'Piano'}
+                                </div>
+                            </div>
                         </PopoverTrigger>
                         <PopoverContent className="w-64 z-50" side="top" align="center">
                             <div className="text-xs text-muted-foreground mb-2">{macStr}</div>
                             <div className="space-y-3">
                                 <div>
-                                    <div className="text-sm mb-1">Selected Track</div>
-                                    <Select value={String(trackIndex)} onValueChange={(v) => setTrack(macStr, Number(v))}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            {Array.from({ length: 8 }).map((_, i) => (
-                                                <SelectItem key={i} value={String(i)}>{i + 1}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="text-sm mb-2">Tracks</div>
+                                    <div className="grid grid-cols-1 gap-1 max-h-64 overflow-auto pr-1">
+                                        {Array.from({ length: 8 }).map((_, i) => {
+                                            const detail = isReady && trackDetails[i] ? trackDetails[i] : undefined
+                                            const name = detail ? detail.displayName : `Track ${i + 1}`
+                                            const icon = detail ? detail.icon : 'piano'
+                                            const isCurrent = i === trackIndex
+                                            return (
+                                                <button
+                                                    key={i}
+                                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded border text-left ${isCurrent ? 'bg-accent/50 border-accent' : 'hover:bg-accent/30 border-transparent'}`}
+                                                    onClick={() => setTrackDebounced(macStr, i, 0)}
+                                                >
+                                                    <div className="w-5 h-5 text-foreground/90">
+                                                        <InstrumentIcon icon={icon} className="w-full h-full" />
+                                                    </div>
+                                                    <div className="flex-1 text-sm truncate">{name}</div>
+                                                    {isCurrent && (
+                                                        <div className="text-xs text-muted-foreground">selected</div>
+                                                    )}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
                                 </div>
                                 <div>
                                     <div className="text-sm mb-1">Master Volume (UI only)</div>

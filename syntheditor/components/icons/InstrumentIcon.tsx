@@ -38,25 +38,54 @@ export const InstrumentIcon: React.FC<InstrumentIconProps> = ({
             case 'guitar':
                 return (
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-                        {/* ギターのアイコン */}
-                        <ellipse cx="12" cy="16" rx="8" ry="4" fill="none" stroke="currentColor" strokeWidth="1.5" />
-                        <rect x="11" y="4" width="2" height="12" fill="currentColor" />
-                        <circle cx="12" cy="6" r="1" fill="currentColor" />
-                        <circle cx="12" cy="9" r="1" fill="currentColor" />
-                        <circle cx="12" cy="12" r="1" fill="currentColor" />
+                        {/* ギターボディ */}
+                        <ellipse cx="9" cy="16" rx="5.5" ry="4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                        <circle cx="9" cy="16" r="1.2" fill="currentColor" opacity="0.35" />
+                        {/* ネック（斜めの四角形） */}
+                        <path d="M12 12 L20 4 L21.2 5.2 L13.2 13.2 Z" fill="currentColor" />
+                        {/* ヘッド部のペグ */}
+                        <circle cx="20.4" cy="3.8" r="0.6" fill="currentColor" />
+                        <circle cx="21.6" cy="5.0" r="0.6" fill="currentColor" />
+                        <circle cx="20.8" cy="6.2" r="0.6" fill="currentColor" />
+                        {/* 弦（ストラム方向を示す斜めライン） */}
+                        <line x1="6" y1="13.5" x2="18" y2="1.5" stroke="currentColor" strokeWidth="0.8" opacity="0.8" />
+                        <line x1="6" y1="15" x2="18.5" y2="3" stroke="currentColor" strokeWidth="0.7" opacity="0.7" />
+                        <line x1="6" y1="16.5" x2="19" y2="4.5" stroke="currentColor" strokeWidth="0.7" opacity="0.7" />
                     </svg>
                 );
 
+            case 'drum':
             case 'drums':
                 return (
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-                        {/* ドラムのアイコン */}
-                        <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.5" />
-                        <circle cx="12" cy="12" r="4" fill="currentColor" opacity="0.2" />
-                        <circle cx="12" cy="12" r="1" fill="currentColor" />
+                        {/* スネアドラム */}
+                        <ellipse cx="12" cy="14" rx="7" ry="4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                        <ellipse cx="12" cy="13" rx="7" ry="3" fill="currentColor" opacity="0.15" />
                         {/* ドラムスティック */}
-                        <line x1="4" y1="4" x2="8" y2="8" stroke="currentColor" strokeWidth="1.5" />
-                        <line x1="20" y1="20" x2="16" y2="16" stroke="currentColor" strokeWidth="1.5" />
+                        <line x1="5" y1="6" x2="11" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                        <line x1="19" y1="6" x2="13" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                    </svg>
+                );
+            case 'bongo':
+                return (
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+                        {/* ボンゴ2連 */}
+                        <ellipse cx="8.5" cy="12.5" rx="4" ry="3" fill="none" stroke="currentColor" strokeWidth="1.3" />
+                        <ellipse cx="15.5" cy="12.5" rx="4" ry="3" fill="none" stroke="currentColor" strokeWidth="1.3" />
+                        <ellipse cx="8.5" cy="12.2" rx="3.7" ry="2.6" fill="currentColor" opacity="0.15" />
+                        <ellipse cx="15.5" cy="12.2" rx="3.7" ry="2.6" fill="currentColor" opacity="0.15" />
+                        <rect x="8.5" y="15" width="7" height="0.8" fill="currentColor" opacity="0.9" />
+                    </svg>
+                );
+            case 'trap_drum':
+            case 'yaw_drum':
+                return (
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+                        {/* バスドラム + ペダル風 */}
+                        <circle cx="12" cy="13" r="6" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                        <circle cx="12" cy="13" r="3.5" fill="currentColor" opacity="0.15" />
+                        <line x1="16" y1="17" x2="20" y2="20" stroke="currentColor" strokeWidth="1" />
+                        <circle cx="20.5" cy="20.5" r="0.9" fill="currentColor" />
                     </svg>
                 );
 

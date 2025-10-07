@@ -9,6 +9,7 @@ import { DevicePanel } from '@/components/maker-faire/DevicePanel'
 import { DeviceConnectionModal } from '@/components/maker-faire/DeviceConnectionModal'
 import { useSynthevery } from '@/contexts/SyntheveryContext'
 import { usePathname } from 'next/navigation'
+import { Button } from '@/components/ui/button'
 
 export default function MakerFaireLayout({ children }: { children: React.ReactNode }) {
     const { mesh, trackConfigManager } = useSynthevery() as any
@@ -92,8 +93,20 @@ export default function MakerFaireLayout({ children }: { children: React.ReactNo
         <>
             <div className="flex h-[calc(100vh-0px)]">
                 {/* Sidebar */}
-                <aside className="w-56 border-r bg-card h-full">
-                    <SidebarNav />
+                <aside className="w-56 border-r bg-card h-full flex flex-col">
+                    <div className="flex-1 overflow-auto">
+                        <SidebarNav />
+                    </div>
+                    <div className="p-2 border-t">
+                        <Button
+                            className="w-full"
+                            variant="default"
+                            disabled={isConnecting}
+                            onClick={() => setIsConnectionModalOpen(true)}
+                        >
+                            {isConnecting ? '接続中…' : 'デバイス接続'}
+                        </Button>
+                    </div>
                 </aside>
 
                 {/* Main area */}
@@ -113,7 +126,7 @@ export default function MakerFaireLayout({ children }: { children: React.ReactNo
                             {isDashboard ? <TrackPanel /> : children}
                         </section>
                     </div>
-                    <section className="rounded border bg-card p-2 h-40 overflow-x-auto overflow-y-visible">
+                    <section className="rounded border bg-card p-2 h-64 overflow-x-auto overflow-y-visible">
                         <DevicePanel />
                     </section>
                 </main>
