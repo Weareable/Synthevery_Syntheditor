@@ -13,6 +13,7 @@ import { useTrackConfig } from '@/hooks/useTrackConfig'
 import useMesh from '@/hooks/useMesh'
 import { APP_MAC_ADDRESS } from '@/lib/synthevery-core/connection/constants'
 import { getAddressFromString } from '@/lib/synthevery-core/connection/util'
+import { trackMask, primaryTrackIndex } from '@/lib/synthevery-core/player/track-edit-mask'
 
 export function DevicePanel() {
     const { playerSyncStates } = useSynthevery()
@@ -34,12 +35,12 @@ export function DevicePanel() {
 
     const setTrack = (mac: string, index: number) => {
         const next = new Map(currentTracks)
-        next.set(mac, index)
+        next.set(mac, trackMask(index))
         setCurrentTracks(next)
     }
 
     const changeTrack = (mac: string, direction: 'prev' | 'next') => {
-        const currentIndex = currentTracks.get(mac) ?? 0
+        const currentIndex = primaryTrackIndex(currentTracks.get(mac) ?? 0) ?? 0
         const newIndex = direction === 'next'
             ? (currentIndex + 1) % 8
             : (currentIndex + 7) % 8 // +7 is equivalent to -1 mod 8
@@ -57,7 +58,7 @@ export function DevicePanel() {
                 <div className="text-sm text-muted-foreground">No devices connected</div>
             )}
             {uniqueDevices.map((macStr) => {
-                const trackIndex = currentTracks.get(macStr) ?? 0
+                const trackIndex = primaryTrackIndex(currentTracks.get(macStr) ?? 0) ?? 0
                 return (
                     <Popover key={macStr} modal={true}>
                         <PopoverTrigger className="w-56 h-full p-3 cursor-pointer grid gap-2 place-items-center hover:bg-accent/50 transition-colors rounded-lg border bg-card">

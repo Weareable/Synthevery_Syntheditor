@@ -74,13 +74,38 @@ interface TrackState {
 }
 ```
 
-## 6. トラック選択状態（CurrentTracksState）
-- 各デバイスが現在どのトラックを選択しているかを管理
-- 例: TypeScriptインターフェース
+## 6. トラック選択状態（CurrentTracksState / TrackEditMask v2）
+
+> **破壊的変更（2026-06-05）**: 値の意味が **単一 index → uint8 ビットフラグ** に変更。FW v2 と **同時デプロイ**必須。  
+> 詳細: ファーム `synthevery/docs/appstate/current_tracks_state_v2.md`
+
+各デバイスが **編集対象に含めるトラック集合** を管理する。1 デバイスあたり複数トラック同時編集可。
+
 ```typescript
-// 実装に合わせたCurrentTracksState
-// Map型で管理
- type CurrentTracksState = Map<string, number>; // deviceIdごとに選択中のトラック番号
+/** bit N = 1 → トラック N を編集対象に含む */
+type TrackEditMask = number;
+
+/** deviceId (MAC) → TrackEditMask */
+type CurrentTracksState = Map<string, TrackEditMask>;
+```
+
+**例**: `0x05` (`0b00000101`) = トラック 0 と 2。Studio 排他選択 = `1 << index`（1 bit のみ）。
+
+**Web UI 移行**
+
+| コンポーネント | v1 | v2 |
+|----------------|----|----|
+| TrackSelectPanel（全 dev を Track N） | `set(device, N)` | `set(device, 1 << N)` |
+| DevicePanel 表示 | `Track {index+1}` | `primaryTrackIndex(mask)` 等 |
+| 同一トラック判定 | `v === trackIndex` | `v === (1 << trackIndex)` |
+
+**推奨ヘルパー**（`lib/synthevery-core/player/track-edit-mask.ts` 予定）:
+
+```typescript
+export const trackMask = (i: number) => 1 << i;
+export const isTrackInMask = (m: number, i: number) => (m & trackMask(i)) !== 0;
+export const primaryTrackIndex = (m: number) =>
+  m === 0 ? undefined : Math.log2(m & -m) | 0;
 ```
 
 ## 7. 運用例・ユースケース

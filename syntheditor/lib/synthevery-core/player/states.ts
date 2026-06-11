@@ -2,14 +2,15 @@ import { SyncState, ReadOnlySyncState, AppStateStore, serializeBoolean, deserial
 import { AppStateSyncConnector } from "../appstate/sync";
 import { APPSTATE_ID_PLAYER_METRONOME, APPSTATE_ID_PLAYER_RECORDER, APPSTATE_ID_PLAYER_QUANTIZER, APPSTATE_ID_PLAYER_CURRENT_TRACKS, APPSTATE_ID_PLAYER_TRACK_STATES, APPSTATE_ID_PLAYER_DEVICE_POSITIONS, APPSTATE_ID_PLAYER_TICK_CLOCK } from "../appstate/constants";
 import { serializeTickClockState, deserializeTickClockState, serializeTrackState, deserializeTrackState } from "./util";
-import { TickClockState, TrackState } from "../types/player";
+import { TickClockState, TrackState, TrackEditMask } from "../types/player";
 
 export class PlayerSyncStates {
     metronomeState: SyncState<boolean>;
     tickClockState: ReadOnlySyncState<TickClockState>;
     recorderState: SyncState<boolean>;
     quantizerState: SyncState<boolean>;
-    currentTracksState: SyncState<Map<string, number>>;
+    /** v2 TrackEditMask per device (bit N = track N in edit focus). */
+    currentTracksState: SyncState<Map<string, TrackEditMask>>;
     trackStates: SyncState<Array<TrackState>>;
     devicePositions: SyncState<Map<string, number>>;
 

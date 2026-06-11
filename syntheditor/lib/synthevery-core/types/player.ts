@@ -86,9 +86,25 @@ export interface TrackDetail {
 }
 
 /**
- * トラック選択状態
+ * トラック編集対象 mask（TrackEditMask）
+ *
+ * v2（2026-06-05）: Map の value は **uint8 ビットフラグ**。
+ * bit N = 1 → デバイスがトラック N を編集対象に含む。
+ *
+ * @see synthevery/docs/appstate/current_tracks_state_v2.md（FW リポ）
+ * @deprecated v1 解釈（単一 track index）は廃止。FW v2 と同時デプロイ必須。
  */
-export type CurrentTracksState = Map<string, number>; // deviceIdごとに選択中のトラック番号
+export type TrackEditMask = number;
+
+/** deviceId (MAC string) → TrackEditMask */
+export type CurrentTracksState = Map<string, TrackEditMask>;
+
+export {
+  trackMask,
+  isTrackInMask,
+  setTrackInMask,
+  primaryTrackIndex,
+} from '../player/track-edit-mask';
 
 // 補助的な型定義
 

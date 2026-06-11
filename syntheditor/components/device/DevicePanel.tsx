@@ -11,6 +11,7 @@ import { useSynthevery } from '@/contexts/SyntheveryContext';
 import { P2PMacAddress } from '@/lib/synthevery-core/types/mesh';
 import { getAddressString, getAddressFromString } from '@/lib/synthevery-core/connection/util';
 import useMesh from '@/hooks/useMesh';
+import { primaryTrackIndex, trackMask } from '@/lib/synthevery-core/player/track-edit-mask';
 
 export interface DevicePanelProps {
     /**
@@ -112,7 +113,8 @@ export const DevicePanel: React.FC<DevicePanelProps> = ({
     // 特定デバイスのトラック情報を取得
     const getDeviceTrackInfo = useCallback((deviceAddr: P2PMacAddress) => {
         const deviceKey = getAddressString(deviceAddr);
-        const trackIndex = currentTracks.get(deviceKey) ?? 0;
+        const mask = currentTracks.get(deviceKey) ?? trackMask(0);
+        const trackIndex = primaryTrackIndex(mask) ?? 0;
         const trackDetail = trackDetails[trackIndex];
 
         return {

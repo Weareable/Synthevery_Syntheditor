@@ -24,7 +24,7 @@ export default function MakerFaireLayout({ children }: { children: React.ReactNo
 
             console.log('MakerFaireLayout: checkConnection', {
                 devicesCount: devices.length,
-                devices: devices.map(d => d.toString()),
+                devices: devices.map((d: { toString(): string }) => d.toString()),
                 isDisconnected,
                 currentModalState: isConnectionModalOpen
             })

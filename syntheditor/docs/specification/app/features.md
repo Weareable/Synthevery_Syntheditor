@@ -33,11 +33,12 @@ Syntheveryアプリケーションは、複数のSyntheveryデバイスを制御
       volume: number;         // 音量
     }
     ```
-  - 各デバイスが現在どのトラックを選択しているかを管理します。
+  - 各デバイスが編集対象に含めるトラック集合を **TrackEditMask**（uint8 ビットフラグ）で管理します（v2、2026-06-05）。
     ```typescript
-    // 実装に合わせたCurrentTracksState
-    type CurrentTracksState = Map<string, number>; // deviceIdごとに選択中のトラック番号
+    type TrackEditMask = number; // bit N = track N
+    type CurrentTracksState = Map<string, TrackEditMask>;
     ```
+    **破壊的変更**: 旧 v1 は value = 単一 track index。FW v2 と同時デプロイ必須。詳細は FW リポ `docs/appstate/current_tracks_state_v2.md`。
   - 音色選択・シーケンス編集等は未実装（将来対応予定）
 
 - **演奏制御・同期**
@@ -93,7 +94,7 @@ Syntheveryアプリケーションは、複数のSyntheveryデバイスを制御
 ### 5. トラック管理機能
 
 - 各デバイスは8つのトラックを持ち、トラックごとにミュート・音量・ループ長などを個別に設定できます（TrackState）。
-- 演奏時は、各デバイスがどのトラックを選択しているかをCurrentTracksStateで管理します。
+- 演奏時は、各デバイスが **編集対象トラック集合**（TrackEditMask / CurrentTracksState v2）で管理します。
 - 詳細仕様は [app/tracks.md](../tracks.md) を参照。
 
 ### 6. Position管理機能

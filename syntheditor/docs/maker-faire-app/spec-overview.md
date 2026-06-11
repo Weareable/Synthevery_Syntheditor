@@ -25,7 +25,7 @@
   - `tickClockState` 読み取り（`playing`, `bpm`）
   - `metronomeState`, `quantizerState`, `recorderState` の読み書き
   - `trackStates: TrackState[]`（`loopLengthTick`, `mute`, `volume`）
-  - `currentTracksState: Map<string, number>`（デバイス→選択トラック）
+  - `currentTracksState: Map<string, TrackEditMask>`（デバイス→編集対象 mask。v2: bit N = track N。**FW v2 同時デプロイ**）
 - トランスポート: `DeviceController.setPlayingState('play'|'pause'|'stop')`, `setBpm(number)` を使用。
 - 接続/同期の初期化は既存サービス初期化（`SyntheveryServiceContainer`）に依存。
 
@@ -42,7 +42,8 @@
 
 ### データモデル（抜粋）
 ```ts
-type CurrentTracksState = Map<string, number>; // deviceMac -> trackIndex(0..7)
+type TrackEditMask = number; // v2: bit N = track N
+type CurrentTracksState = Map<string, TrackEditMask>;
 
 interface TrackState {
   loopLengthTick: number; // 例: 1920
