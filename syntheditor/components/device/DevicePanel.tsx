@@ -11,6 +11,7 @@ import { useSynthevery } from '@/contexts/SyntheveryContext';
 import { P2PMacAddress } from '@/lib/synthevery-core/types/mesh';
 import { getAddressString, getAddressFromString } from '@/lib/synthevery-core/connection/util';
 import useMesh from '@/hooks/useMesh';
+import { primaryTrackIndex, trackMask } from '@/lib/synthevery-core/player/track-edit-mask';
 
 export interface DevicePanelProps {
     /**
@@ -76,15 +77,44 @@ export const DevicePanel: React.FC<DevicePanelProps> = ({
     }, []);
 
     // 変更: useMeshフックから取得したデバイスを使用
+    // 直接接続デバイス（connectedPeers）とメッシュ経由デバイス（connectedDevices）の両方を考慮
     const connectedDevices = meshDevices.map(addr => getAddressFromString(addr));
+    const connectedPeers = mesh.getConnectedPeers();
 
     // デバイス順序の優先順位: useMesh > useDeviceOrder
-    const finalDeviceOrder = meshDeviceOrder.length > 0 ? meshDeviceOrder.map(addr => getAddressFromString(addr)) : [];
+    // メッシュ経由のデバイスも含めて表示するため、connectedDevicesとdeviceOrderを組み合わせる
+    const finalDeviceOrder = (() => {
+        // まず、接続されているすべてのデバイスを取得
+        // 直接接続デバイスとメッシュ経由デバイスの両方を含める
+        const allConnectedDevices = [
+            ...connectedDevices,
+            ...connectedPeers
+        ];
+
+        // 重複を削除
+        const uniqueDevices = Array.from(new Set(
+            allConnectedDevices.map(device => getAddressString(device))
+        )).map(addr => getAddressFromString(addr));
+
+        if (meshDeviceOrder.length > 0) {
+            // デバイス順序が設定されている場合は、それを使用
+            const orderedDevices = meshDeviceOrder.map(addr => getAddressFromString(addr));
+            // 順序に含まれていない接続デバイスも追加
+            const unorderedDevices = uniqueDevices.filter(device =>
+                !orderedDevices.some(ordered => getAddressString(ordered) === getAddressString(device))
+            );
+            return [...orderedDevices, ...unorderedDevices];
+        } else {
+            // デバイス順序が設定されていない場合は、接続デバイスをそのまま使用
+            return uniqueDevices;
+        }
+    })();
 
     // 特定デバイスのトラック情報を取得
     const getDeviceTrackInfo = useCallback((deviceAddr: P2PMacAddress) => {
         const deviceKey = getAddressString(deviceAddr);
-        const trackIndex = currentTracks.get(deviceKey) ?? 0;
+        const mask = currentTracks.get(deviceKey) ?? trackMask(0);
+        const trackIndex = primaryTrackIndex(mask) ?? 0;
         const trackDetail = trackDetails[trackIndex];
 
         return {
@@ -124,11 +154,17 @@ export const DevicePanel: React.FC<DevicePanelProps> = ({
             isPositionsReady,
             isTrackConfigReady,
             isMeshReady,
+            meshDevices: meshDevices,
+            meshDeviceOrder: meshDeviceOrder,
+            connectedDevices: connectedDevices.map(addr => getAddressString(addr)),
+            connectedPeers: connectedPeers.map(addr => getAddressString(addr)),
+            finalDeviceOrder: finalDeviceOrder.map(addr => getAddressString(addr)),
             meshDeviceOrderLength: meshDeviceOrder.length,
             finalDeviceOrderLength: finalDeviceOrder.length,
-            connectedDevicesLength: connectedDevices.length
+            connectedDevicesLength: connectedDevices.length,
+            connectedPeersLength: connectedPeers.length
         });
-    }, [isPositionsReady, isTrackConfigReady, isMeshReady, meshDeviceOrder.length, finalDeviceOrder.length, connectedDevices.length]);
+    }, [isPositionsReady, isTrackConfigReady, isMeshReady, meshDevices, meshDeviceOrder, connectedDevices, connectedPeers, finalDeviceOrder]);
 
     // ローディング表示
     if (!isReady) {

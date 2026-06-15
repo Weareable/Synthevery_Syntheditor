@@ -5,12 +5,18 @@ import { P2PMacAddress } from "@/lib/synthevery-core/types/mesh";
 
 export default function useMesh() {
     const { mesh } = useSynthevery();
-    const [connectedDevices, setConnectedDevices] = useState<string[]>(() =>
-        mesh.getConnectedDevices().map((device) => getAddressString(device))
-    );
-    const [connectedPeers, setConnectedPeers] = useState<string[]>(() =>
-        mesh.getConnectedPeers().map((device) => getAddressString(device))
-    );
+    const [connectedDevices, setConnectedDevices] = useState<string[]>(() => {
+        const devices = mesh.getConnectedDevices().map((device) => getAddressString(device));
+        console.log('=== useMesh: Initial connectedDevices ===');
+        console.log('Devices:', devices);
+        return devices;
+    });
+    const [connectedPeers, setConnectedPeers] = useState<string[]>(() => {
+        const peers = mesh.getConnectedPeers().map((device) => getAddressString(device));
+        console.log('=== useMesh: Initial connectedPeers ===');
+        console.log('Peers:', peers);
+        return peers;
+    });
     // デバイス順序とリーダーMACアドレス
     const [deviceOrder, setDeviceOrder] = useState<string[]>(() =>
         mesh.getDeviceOrder().map((device) => getAddressString(device))
@@ -52,6 +58,8 @@ export default function useMesh() {
             console.log('Devices:', devices.map(getAddressString));
             console.log('Added:', added.map(getAddressString));
             console.log('Removed:', removed.map(getAddressString));
+            console.log('Current meshDevices count:', mesh.meshDevices.size);
+            console.log('Current meshDevices keys:', Array.from(mesh.meshDevices.keys()));
 
             setConnectedDevices(devices.map((device) => getAddressString(device)));
 

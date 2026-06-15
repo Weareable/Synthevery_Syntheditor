@@ -14,9 +14,13 @@ import { DataTransferController } from './data-transfer/data-transfer-controller
 import { TimeSyncService } from './time/time-sync-service';
 import { DeviceConfigManager } from './device/device-config-manager';
 import { TrackConfigManager } from './tracks/track-config-manager';
+import { InstrumentRepository } from './instruments/instrument-repository';
+import { InstrumentService } from './instruments/instrument-service';
 import { PlayerSyncStates } from './player/states';
 import { DeviceTypeSynchronizer } from './devicetype/devicetype';
 import { SRArqSessionsController } from './connection/srarq/session';
+import { CRDTSyncManager } from './crdt/crdt-sync';
+import { CrdtProjectionStore } from './crdt/projection-store';
 
 /**
  * 全てのサービスインスタンスを保持するコンテナ
@@ -30,9 +34,13 @@ export interface SyntheveryServices {
     timeSyncService: TimeSyncService;
     deviceConfigManager: DeviceConfigManager;
     trackConfigManager: TrackConfigManager;
+    instrumentRepository: InstrumentRepository;
+    instrumentService: InstrumentService;
     playerSyncStates: PlayerSyncStates;
     deviceTypeSynchronizer: DeviceTypeSynchronizer;
     srarqSessionsController: SRArqSessionsController;
+    crdtSyncManager: CRDTSyncManager;
+    crdtProjectionStore: CrdtProjectionStore;
 }
 
 /**
@@ -72,14 +80,61 @@ export class SyntheveryServiceContainer {
         // 4. 第3レベルの依存（appStateSyncConnectorに依存）
         const playerSyncStates = new PlayerSyncStates(appStateSyncConnector);
 
-        // 5. 第4レベルの依存（mesh, commandDispatcher, playerSyncStatesに依存）
-        const deviceController = new DeviceController(mesh, commandDispatcher, playerSyncStates);
+        // 5. CRDT同期マネージャ（mesh, commandDispatcher に依存）
+        // CRDT 投影ストア（トラック数は TrackState の既定長に合わせる）
+        const defaultTrackCount = 8;
+        const crdtProjectionStore = new CrdtProjectionStore(defaultTrackCount);
 
-        // 6. 第5レベルの依存（mesh, dataTransferController, deviceControllerに依存）
+        // 6. 第4レベルの依存（mesh, commandDispatcher, playerSyncStates, crdtProjectionStoreに依存）
+        const deviceController = new DeviceController(mesh, commandDispatcher, playerSyncStates, crdtProjectionStore);
+
+        // 7. 第5レベルの依存（mesh, dataTransferController, deviceControllerに依存）
         const deviceConfigManager = new DeviceConfigManager(mesh, dataTransferController, deviceController);
 
-        // 7. 第6レベルの依存（mesh, deviceConfigManagerに依存）
+        // 8. 第6レベルの依存（mesh, deviceConfigManagerに依存）
         const trackConfigManager = new TrackConfigManager(mesh, deviceConfigManager);
+        const instrumentRepository = new InstrumentRepository();
+        const instrumentService = new InstrumentService(instrumentRepository, trackConfigManager, dataTransferController, mesh, deviceConfigManager);
+        const crdtSyncManager = new CRDTSyncManager(mesh, commandDispatcher, {
+            onAdd: (_peer, track, note) => { crdtProjectionStore.onAdd(track, note); },
+            onRemove: (_peer, track, id) => { crdtProjectionStore.onRemove(track, id); },
+            getAuditPayload: () => {
+                // XOR ハッシュは NoteOrSet から集約
+                let add = 0 >>> 0;
+                let rem = 0 >>> 0;
+                for (const s of crdtProjectionStore.getSets()) {
+                    add = (add ^ (s.addHashXor() >>> 0)) >>> 0;
+                    rem = (rem ^ (s.removeHashXor() >>> 0)) >>> 0;
+                }
+                const out = new Uint8Array(8);
+                out[0] = add & 0xff; out[1] = (add >>> 8) & 0xff; out[2] = (add >>> 16) & 0xff; out[3] = (add >>> 24) & 0xff;
+                out[4] = rem & 0xff; out[5] = (rem >>> 8) & 0xff; out[6] = (rem >>> 16) & 0xff; out[7] = (rem >>> 24) & 0xff;
+                return out;
+            },
+            onReceiveAudit: (_peer, _data) => { /* optional logging */ },
+            getFullState: () => crdtProjectionStore.getFullStateSingle(),
+            onReceiveFull: (_peer, notes) => { crdtProjectionStore.onReceiveFullSingle(notes); },
+            getFullStateMulti: () => crdtProjectionStore.getFullStateMulti(),
+            onReceiveFullMulti: (_peer: any, tracks: { track: number; adds: any[]; removes: any[] }[]) => { crdtProjectionStore.onReceiveFullMulti(tracks as any); },
+        });
+
+        // 9. DataTransfer: CRDT full state receiver
+        try {
+            const { CRDTFullStateReceiverPort } = require('./data-transfer/crdt-full');
+            dataTransferController.registerReceiverPort(new CRDTFullStateReceiverPort(
+                (peer: any, notes: any[]) => {
+                    crdtSyncManager.setHandlers({ onReceiveFull: (_p, _n) => { } });
+                    (crdtSyncManager as any).handlerOnReceiveFull(peer, notes);
+                },
+                () => {
+                    // 現在のフル投影は投影ストアから取得
+                    return crdtProjectionStore.getFullStateSingle();
+                },
+                dataTransferController
+            ));
+        } catch (e) {
+            console.warn('CRDTFullStateTransfer registration failed:', e);
+        }
 
         // 全てのサービスをまとめる
         this.services = {
@@ -91,9 +146,13 @@ export class SyntheveryServiceContainer {
             timeSyncService,
             deviceConfigManager,
             trackConfigManager,
+            instrumentRepository,
+            instrumentService,
             playerSyncStates,
             deviceTypeSynchronizer,
             srarqSessionsController,
+            crdtSyncManager,
+            crdtProjectionStore,
         };
 
         this.isInitialized = true;

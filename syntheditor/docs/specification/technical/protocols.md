@@ -493,7 +493,7 @@ interface PlayerStates {
     tickClockState: ReadOnlySyncState<TickClockState>; // クロック状態
     recorderState: SyncState<boolean>;            // 録音状態
     quantizerState: SyncState<boolean>;           // クオンタイザー状態
-    currentTracksState: SyncState<Map<string, number>>; // 現在のトラック
+    currentTracksState: SyncState<Map<string, number>>; // TrackEditMask v2: value = uint8 bitmask (bit N = track N)
     trackStates: SyncState<Array<TrackState>>;    // トラック状態
     devicePositions: SyncState<Map<string, number>>; // デバイス位置
 }

@@ -8,11 +8,17 @@ export namespace DataTypes {
     export const kNoteBuilderConfig: number = 10;
     export const kGeneratorConfig: number = 11;
     export const kTrackDetail: number = 12;
+    // Per-track partial updates
+    export const kNoteBuilderConfigTrack: number = 0x30; // deprecated
+    export const kGeneratorConfigTrack: number = 0x31; // deprecated
+    export const kInstrumentConfigTrack: number = 0x32; // NB+GEN セット送信
     export const kBodyColorConfig: number = 13;
     export const kLedColorConfig: number = 14;
     export const kChordScaleConfig: number = 15;
     export const kSettingsConfig: number = 0xA0; // 160
     export const kSettingsConfigUpdate: number = 0xA1; // 161: Web -> Device 設定更新
+    // CRDT full projection transfer (device parity)
+    export const kCRDTFullState: number = 0xB0;
 }
 
 export namespace SessionCommandID {

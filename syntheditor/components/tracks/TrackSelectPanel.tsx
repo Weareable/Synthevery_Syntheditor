@@ -6,6 +6,7 @@ import { AddTrackButton } from './add-track-button';
 import { useTrackConfig } from '@/hooks/useTrackConfig';
 import { useAppState } from '@/hooks/useAppState';
 import { useSynthevery } from '@/contexts/SyntheveryContext';
+import { trackMask, isTrackInMask, primaryTrackIndex } from '@/lib/synthevery-core/player/track-edit-mask';
 
 export interface TrackSelectPanelProps {
     onEditTrack?: (trackIndex: number) => void;
@@ -38,9 +39,10 @@ export const TrackSelectPanel: React.FC<TrackSelectPanelProps> = ({
         }
 
         // currentTracksの全要素を当該トラックに変更
+        const mask = trackMask(trackIndex);
         const newCurrentTracks = new Map();
         currentTracks.forEach((_, deviceId) => {
-            newCurrentTracks.set(deviceId, trackIndex);
+            newCurrentTracks.set(deviceId, mask);
         });
 
         // 全デバイスを同じトラックに設定
@@ -67,7 +69,10 @@ export const TrackSelectPanel: React.FC<TrackSelectPanelProps> = ({
         if (currentTracks.size === 0) return false;
 
         // 全デバイスが同じトラックを選択しているかチェック
-        const allSameTrack = Array.from(currentTracks.values()).every(track => track === trackIndex);
+        const targetMask = trackMask(trackIndex);
+        const allSameTrack = Array.from(currentTracks.values()).every(
+            mask => mask === targetMask
+        );
         return allSameTrack;
     }, [currentTracks]);
 
@@ -75,8 +80,8 @@ export const TrackSelectPanel: React.FC<TrackSelectPanelProps> = ({
     const getDeviceCountForTrack = useCallback((trackIndex: number): number => {
         // currentTracksで選択されているデバイス数をカウント
         let count = 0;
-        currentTracks.forEach((selectedTrack) => {
-            if (selectedTrack === trackIndex) {
+        currentTracks.forEach((mask) => {
+            if (isTrackInMask(mask, trackIndex)) {
                 count++;
             }
         });
@@ -92,8 +97,8 @@ export const TrackSelectPanel: React.FC<TrackSelectPanelProps> = ({
 
         // 全デバイスが同じトラックを選択している場合は単一選択
         const tracks = Array.from(currentTracks.values());
-        const firstTrack = tracks[0];
-        const allSameTrack = tracks.every(track => track === firstTrack);
+        const firstMask = tracks[0];
+        const allSameTrack = tracks.every(mask => mask === firstMask);
 
         return !allSameTrack; // 異なるトラックを選択している場合は複数選択
     }, [currentTracks]);

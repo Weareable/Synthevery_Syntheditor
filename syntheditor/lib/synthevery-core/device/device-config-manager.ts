@@ -19,6 +19,7 @@ import {
 } from "./config";
 import { DeviceController } from "./controller";
 import { getAddressString } from "../connection/util";
+import { sendTrackDetail, sendInstrumentConfigForTrack } from "./config";
 
 interface DeviceConfigManagerEvents {
     deviceConnected: (device: P2PMacAddress) => void;
@@ -75,8 +76,18 @@ export class DeviceConfigManager {
 
     private setupEventListeners(): void {
         // connectedDevicesChangedで初期化完了を確認（メイン処理）
+        // 直接接続ピアのみを対象とするため、connectedPeersChangedイベントを使用
         this.mesh.eventEmitter.on('connectedDevicesChanged', (devices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
-            this.handleDevicesChanged(devices, added, removed);
+            // 直接接続ピアのみをフィルタリング
+            const connectedPeers = this.mesh.getConnectedPeers();
+            const addedPeers = added.filter(device =>
+                connectedPeers.some(peer => getAddressString(device) === getAddressString(peer))
+            );
+            const removedPeers = removed.filter(device =>
+                connectedPeers.some(peer => getAddressString(device) === getAddressString(peer))
+            );
+
+            this.handleDevicesChanged(devices, addedPeers, removedPeers);
         });
 
         // NoteBuilderConfig受信時の処理
@@ -134,6 +145,38 @@ export class DeviceConfigManager {
                 console.log('NoteBuilderConfig session started from:', getAddressString(peer), 'sessionId:', sessionId);
             }
         });
+    }
+
+    // ---------------------
+    // Broadcast helpers (App -> Devices)
+    // ---------------------
+    broadcastInstrumentConfigForTrack(trackIndex: number, nb: NoteBuilderConfig, gen: GeneratorConfig) {
+        const peers = this.mesh.getConnectedPeers();
+        const my = this.mesh.getAddress();
+        for (const p of peers) {
+            if (getAddressString(p) === getAddressString(my)) continue;
+            sendInstrumentConfigForTrack(this.dataTransferController, p, trackIndex, nb, gen);
+        }
+    }
+
+    // Removed legacy broadcastAllNoteBuilderConfigs / broadcastAllGeneratorConfigs
+
+    broadcastAllTrackDetails(trackDetails: TrackDetail[]) {
+        const peers = this.mesh.getConnectedPeers();
+        const my = this.mesh.getAddress();
+        for (const p of peers) {
+            if (getAddressString(p) === getAddressString(my)) continue;
+            sendTrackDetail(this.dataTransferController, p, trackDetails);
+        }
+    }
+
+    // Send helpers (App -> Specific Device)
+    // Removed legacy sendAllNoteBuilderConfigsToPeer / sendAllGeneratorConfigsToPeer
+
+    sendAllTrackDetailsToPeer(receiver: P2PMacAddress, trackDetails: TrackDetail[]) {
+        const my = this.mesh.getAddress();
+        if (getAddressString(receiver) === getAddressString(my)) return;
+        sendTrackDetail(this.dataTransferController, receiver, trackDetails);
     }
 
     private registerReceiverPort(): void {
@@ -355,11 +398,11 @@ export class DeviceConfigManager {
     }
 
     private initializeExistingDevices(): void {
-        // 初期化時に既存の接続デバイスに対してNoteBuilderConfigをリクエスト
-        const existingDevices = this.mesh.getConnectedDevices();
+        // 初期化時に直接接続ピアのみに対して設定をリクエスト
+        const connectedPeers = this.mesh.getConnectedPeers();
         const myAddress = this.mesh.getAddress();
 
-        existingDevices.forEach(device => {
+        connectedPeers.forEach(device => {
             // webアプリ（自分自身）にはリクエストを送信しない
             if (getAddressString(device) !== getAddressString(myAddress)) {
                 this.requestNoteBuilderConfig(device);
@@ -371,7 +414,7 @@ export class DeviceConfigManager {
                 this.requestChordScaleConfig(device);
             }
         });
-        console.log('Initialized with existing devices:', existingDevices.map(d => getAddressString(d)));
+        console.log('Initialized with connected peers:', connectedPeers.map(d => getAddressString(d)));
     }
 
     getConfig(device: P2PMacAddress): NoteBuilderConfig[] | undefined {

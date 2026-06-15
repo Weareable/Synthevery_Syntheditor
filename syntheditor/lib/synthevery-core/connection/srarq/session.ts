@@ -63,55 +63,70 @@ export class SRArqSessionsController {
     }
 
     createSenderSession(address: P2PMacAddress): { session: SRArqSenderSession, sessionId: number } | null {
-        let senderSession = this.senderSessions.get(getAddressString(address));
+        const addressStr = getAddressString(address);
+        console.debug("SRArqSessionsController.createSenderSession: start", { address: addressStr });
+        let senderSession = this.senderSessions.get(addressStr);
         if (senderSession === undefined) {
+            console.debug("SRArqSessionsController.createSenderSession: init session map", { address: addressStr });
             senderSession = new Map();
-            this.senderSessions.set(getAddressString(address), senderSession);
+            this.senderSessions.set(addressStr, senderSession);
         }
 
         const sessionId = this.getNextSenderSessionId(address);
         if (sessionId === SessionIdOperations.INVALID_SESSION_ID) {
+            console.error("SRArqSessionsController.createSenderSession: failed to allocate sessionId", { address: addressStr });
             return null;
         }
 
+        console.debug("SRArqSessionsController.createSenderSession: allocated sessionId", { address: addressStr, sessionId });
         const session = new SRArqSenderSession(this.mesh, address, sessionId);
         senderSession.set(sessionId, session);
 
+        console.debug("SRArqSessionsController.createSenderSession: success", { address: addressStr, sessionId });
         return { session, sessionId };
     }
 
     createReceiverSession(address: P2PMacAddress, sessionId: number): SRArqReceiverSession | null {
-        let receiverSession = this.receiverSessions.get(getAddressString(address));
+        const addressStr = getAddressString(address);
+        console.debug("SRArqSessionsController.createReceiverSession: start", { address: addressStr, sessionId });
+        let receiverSession = this.receiverSessions.get(addressStr);
         if (receiverSession === undefined) {
+            console.debug("SRArqSessionsController.createReceiverSession: init session map", { address: addressStr });
             receiverSession = new Map();
-            this.receiverSessions.set(getAddressString(address), receiverSession);
+            this.receiverSessions.set(addressStr, receiverSession);
         }
 
         if (receiverSession.has(sessionId)) {
             // すでにセッションが存在する
+            console.warn("SRArqSessionsController.createReceiverSession: session already exists", { address: addressStr, sessionId });
             return null;
         }
 
         const session = new SRArqReceiverSession(this.mesh, address, sessionId);
         receiverSession.set(sessionId, session);
 
+        console.debug("SRArqSessionsController.createReceiverSession: success", { address: addressStr, sessionId });
         return session;
     }
 
     removeSenderSession(address: P2PMacAddress, sessionId: number): void {
-        const senderSession = this.senderSessions.get(getAddressString(address));
+        const addressStr = getAddressString(address);
+        const senderSession = this.senderSessions.get(addressStr);
         if (senderSession === undefined) {
             return;
         }
         senderSession.delete(sessionId);
+        console.debug("SRArqSessionsController.removeSenderSession", { address: addressStr, sessionId });
     }
 
     removeReceiverSession(address: P2PMacAddress, sessionId: number): void {
-        const receiverSession = this.receiverSessions.get(getAddressString(address));
+        const addressStr = getAddressString(address);
+        const receiverSession = this.receiverSessions.get(addressStr);
         if (receiverSession === undefined) {
             return;
         }
         receiverSession.delete(sessionId);
+        console.debug("SRArqSessionsController.removeReceiverSession", { address: addressStr, sessionId });
     }
 
     getSenderSession(address: P2PMacAddress, sessionId: number): SRArqSenderSession | null {
@@ -186,14 +201,16 @@ export class SRArqSessionsController {
             return SessionIdOperations.INVALID_SESSION_ID;
         }
 
-        if (this.lastSessionId.has(getAddressString(address))) {
-            this.lastSessionId.set(getAddressString(address), -1);
+        const addressStr = getAddressString(address);
+        if (!this.lastSessionId.has(addressStr)) {
+            // 初回は -1 に初期化
+            this.lastSessionId.set(addressStr, -1);
         }
 
         for (let i = 0; i < SessionIdOperations.NUM_SESSION_IDS; i++) {
-            const sessionId = SessionIdOperations.wrap(this.lastSessionId.get(getAddressString(address))! + 1);
+            const sessionId = SessionIdOperations.wrap(this.lastSessionId.get(addressStr)! + 1);
             if (!senderSession.has(sessionId)) {
-                this.lastSessionId.set(getAddressString(address), sessionId);
+                this.lastSessionId.set(addressStr, sessionId);
                 return sessionId;
             }
         }

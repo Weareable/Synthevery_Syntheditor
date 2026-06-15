@@ -8,6 +8,7 @@ import { CommandDispatcher } from "../command/dispatcher";
 import { serializeBoolean, serializeFloat32 } from "../appstate/appstates";
 import { PayloadCommandClient } from "../command/payload-command-client";
 import { getAddressString } from "../connection/util";
+import { CrdtProjectionStore } from "../crdt/projection-store";
 
 class DeviceCommandClient implements CommandClientInterface {
     static readonly COMMAND_TYPE_PLAYING_STATE = 0x00;
@@ -116,12 +117,14 @@ export class DeviceController {
     private mesh: Mesh;
     private commandDispatcher: CommandDispatcher;
     private playerSyncStates: PlayerSyncStates;
+    private crdtProjectionStore: CrdtProjectionStore;
     private settingsClients: Map<string, PayloadCommandClient> = new Map();
 
-    constructor(mesh: Mesh, commandDispatcher: CommandDispatcher, playerSyncStates: PlayerSyncStates) {
+    constructor(mesh: Mesh, commandDispatcher: CommandDispatcher, playerSyncStates: PlayerSyncStates, crdtProjectionStore: CrdtProjectionStore) {
         this.mesh = mesh;
         this.commandDispatcher = commandDispatcher;
         this.playerSyncStates = playerSyncStates;
+        this.crdtProjectionStore = crdtProjectionStore;
 
         this.mesh.eventEmitter.on('connectedDevicesChanged', (connectedDevices: P2PMacAddress[], added: P2PMacAddress[], removed: P2PMacAddress[]) => {
             // 新規追加されたデバイスのみ初期化
@@ -177,10 +180,35 @@ export class DeviceController {
             console.warn("resetTrack() : invalid track index, must be 0-7");
             return;
         }
-        this.sendCommand({
-            client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
-            type: DeviceCommandClient.COMMAND_TYPE_RESET_TRACK_BASE + trackIndexZeroBased,
-        });
+
+        // Clear CRDT state for this track
+        this.crdtProjectionStore.clearTrack(trackIndexZeroBased);
+
+        // メッシュ内の全デバイスへクリアコマンドを送信（直接ピアだけでなく全ノード）
+        const devices = this.mesh.getConnectedDevices();
+        if (devices.length === 0) {
+            console.warn("resetTrack() : no connected devices");
+            return;
+        }
+
+        // 重複アドレスを排除
+        const unique = new Map<string, P2PMacAddress>();
+        for (const d of devices) {
+            const key = getAddressString(d.address);
+            unique.set(key, d);
+        }
+
+        for (const device of unique.values()) {
+            const handler = this.commandDispatcher.getCommandHandler(device, false);
+            if (!handler) {
+                console.warn("resetTrack() : handler unavailable for", getAddressString(device.address));
+                continue;
+            }
+            handler.pushCommand({
+                client_id: COMMAND_CLIENT_ID_DEVICE_CONTROL,
+                type: DeviceCommandClient.COMMAND_TYPE_RESET_TRACK_BASE + trackIndexZeroBased,
+            });
+        }
     }
 
     requestNoteBuilderConfig(peer: P2PMacAddress): void {

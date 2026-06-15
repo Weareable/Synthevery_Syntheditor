@@ -24,11 +24,14 @@ export interface NoteBuilderConfig {
     // 高度な設定
     gestureRecognition?: GestureConfig;  // ジェスチャー認識設定
     timingConfig?: TimingConfig;         // タイミング設定
+    // ノートビルダー固有の追加プロパティ（例: drum_pattern.patterns など）
+    [key: string]: any;
 }
 
 export interface GeneratorConfig {
     class: string;
     params: Record<string, any>;
+    note_number_converter?: NoteNumberConverterConfig;
     // 基本的な音声生成設定
     instrumentType?: InstrumentType;     // 楽器タイプ
     volume?: number;                      // 音量（0.0 - 1.0）
@@ -41,6 +44,11 @@ export interface GeneratorConfig {
     // 演奏設定
     articulation?: ArticulationConfig;    // アーティキュレーション設定
     dynamics?: DynamicsConfig;            // ダイナミクス設定
+}
+
+export interface NoteNumberConverterConfig {
+    type: string;
+    params?: Record<string, any>;
 }
 
 export interface SoundFontGeneratorConfig extends GeneratorConfig {
@@ -78,9 +86,25 @@ export interface TrackDetail {
 }
 
 /**
- * トラック選択状態
+ * トラック編集対象 mask（TrackEditMask）
+ *
+ * v2（2026-06-05）: Map の value は **uint8 ビットフラグ**。
+ * bit N = 1 → デバイスがトラック N を編集対象に含む。
+ *
+ * @see synthevery/docs/appstate/current_tracks_state_v2.md（FW リポ）
+ * @deprecated v1 解釈（単一 track index）は廃止。FW v2 と同時デプロイ必須。
  */
-export type CurrentTracksState = Map<string, number>; // deviceIdごとに選択中のトラック番号
+export type TrackEditMask = number;
+
+/** deviceId (MAC string) → TrackEditMask */
+export type CurrentTracksState = Map<string, TrackEditMask>;
+
+export {
+  trackMask,
+  isTrackInMask,
+  setTrackInMask,
+  primaryTrackIndex,
+} from '../player/track-edit-mask';
 
 // 補助的な型定義
 

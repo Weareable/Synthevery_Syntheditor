@@ -108,6 +108,12 @@ export class DataTransferController implements TransferCommandInterface {
         chainNodes: P2PMacAddress[]
     ): { sessionId: SessionID; session: SenderSession } | null {
         const receiverStr = getAddressString(receiver.address);
+        console.debug("DTC.sendRequest: start", {
+            receiver: receiverStr,
+            dataType: store.type ? (store as any).type() : 'unknown',
+            size: store.size ? (store as any).size() : 'unknown',
+            chainLen: chainNodes?.length || 0,
+        });
 
         if (!this.senderSessions.has(receiverStr)) {
             console.error("DataTransferController: sendRequest: Invalid peer address");
@@ -116,7 +122,7 @@ export class DataTransferController implements TransferCommandInterface {
 
         const srarq_sender_session = this.srarqSessionsController.createSenderSession(receiver);
         if (srarq_sender_session === null) {
-            console.error("DataTransferController: sendRequest: Failed to create SRAQR sender session");
+            console.error("DataTransferController: sendRequest: Failed to create SRAQR sender session", { receiver: receiverStr });
             return null;
         }
 
@@ -132,6 +138,7 @@ export class DataTransferController implements TransferCommandInterface {
         //送受信のSession開始を通知
         this.eventEmitter.emit("sessionStart", receiver, srarq_sender_session.sessionId, "sender");
 
+        console.debug("DTC.sendRequest: sending kRequest", { receiver: receiverStr, sessionId: srarq_sender_session.sessionId });
         this.sendCommand(receiver, SessionCommandID.kRequest, srarq_sender_session.sessionId);
         return { sessionId: srarq_sender_session.sessionId, session: session };
     }
@@ -293,6 +300,7 @@ export class DataTransferController implements TransferCommandInterface {
 
     onError(peer: P2PMacAddress, commandType: CommandType, sessionId: SessionID, statusCode: number): void {
         const peerStr = getAddressString(peer.address);
+        console.warn("DTC.onError", { peer: peerStr, commandType, sessionId, statusCode });
 
         // --- C++の最初のswitch文に対応 ---
         switch (commandType) {
@@ -343,14 +351,17 @@ export class DataTransferController implements TransferCommandInterface {
                 break;
             case CommandAck.kStatusInvalidPosition:
                 console.error("DataTransferController: onErrorSender: Invalid position");
+                console.debug("DTC.onError: retry sendCommand due to InvalidPosition", { peer: peerStr, commandType, sessionId });
                 this.sendCommand(peer, commandType, sessionId); // 再送
                 break;
             case CommandAck.kStatusInvalidCRC:
                 console.error("DataTransferController: onErrorSender: Invalid CRC");
+                console.debug("DTC.onError: retry sendCommand due to InvalidCRC", { peer: peerStr, commandType, sessionId });
                 this.sendCommand(peer, commandType, sessionId); // 再送
                 break;
             case CommandAck.kStatusInvalidData:
                 console.error("DataTransferController: onErrorSender: Invalid data");
+                console.debug("DTC.onError: retry sendCommand due to InvalidData", { peer: peerStr, commandType, sessionId });
                 this.sendCommand(peer, commandType, sessionId); // 再送
                 break;
             case CommandAck.kStatusTimeout:
@@ -373,10 +384,11 @@ export class DataTransferController implements TransferCommandInterface {
         const handler = this.commandDispatcher.getCommandHandler(peerAddress, false); // create = false
 
         if (!handler) {
-            console.warn(`Could not get command handler for ${peerAddress}`);
+            console.warn("DTC.sendCommand: handler unavailable", { peer: getAddressString(peerAddress.address), commandType, sessionId });
             return;
         }
 
+        console.debug("DTC.sendCommand: pushCommand", { peer: getAddressString(peerAddress.address), commandType, sessionId, commandIdType });
         handler.pushCommand({ client_id: COMMAND_CLIENT_ID_DATA_TRANSFER, type: commandIdType });
     }
 }

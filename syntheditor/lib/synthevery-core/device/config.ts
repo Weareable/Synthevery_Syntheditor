@@ -106,8 +106,23 @@ export class TrackDetailReceiverPort implements ReceiverPortInterface {
     }
 }
 
-export function sendNoteBuilderConfig(dataTransferController: DataTransferController, receiver: P2PMacAddress, config: NoteBuilderConfig[]): boolean {
-    const store = new JsonSenderDataStore(config, DataTypes.kNoteBuilderConfig, "");
+// Removed legacy full NB/GEN send APIs. Use per-track combined sender instead.
+
+// --- Per-track partial updates (combined NB+GEN) ---
+export function sendInstrumentConfigForTrack(
+    dataTransferController: DataTransferController,
+    receiver: P2PMacAddress,
+    trackIndex: number,
+    nbConfig: NoteBuilderConfig,
+    genConfig: GeneratorConfig,
+): boolean {
+    const normalizedGen: GeneratorConfig = {
+        ...genConfig,
+        note_number_converter: genConfig.note_number_converter ?? { type: "empty" }
+    };
+    const payload = { trackIndex, note_builder: nbConfig, generator: normalizedGen };
+    console.warn('sendInstrumentConfigForTrack:', { receiver, trackIndex, payload });
+    const store = new JsonSenderDataStore(payload, DataTypes.kInstrumentConfigTrack, String(trackIndex));
     const result = dataTransferController.sendRequest(receiver, store, []);
     if (result === null) {
         return false;
@@ -115,14 +130,9 @@ export function sendNoteBuilderConfig(dataTransferController: DataTransferContro
     return true;
 }
 
-export function sendGeneratorConfig(dataTransferController: DataTransferController, receiver: P2PMacAddress, config: GeneratorConfig[]): boolean {
-    const store = new JsonSenderDataStore(config, DataTypes.kGeneratorConfig, "");
-    const result = dataTransferController.sendRequest(receiver, store, []);
-    if (result === null) {
-        return false;
-    }
-    return true;
-}
+// --- Deprecated per-track partial updates (removed usage sites) ---
+// export function sendNoteBuilderConfigForTrack(...) {}
+// export function sendGeneratorConfigForTrack(...) {}
 
 export function sendTrackDetail(dataTransferController: DataTransferController, receiver: P2PMacAddress, trackDetails: TrackDetail[]): boolean {
     const store = new JsonSenderDataStore(trackDetails, DataTypes.kTrackDetail, "");

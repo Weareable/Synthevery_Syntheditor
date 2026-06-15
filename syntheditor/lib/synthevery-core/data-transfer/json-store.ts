@@ -9,8 +9,11 @@ export class JsonSenderDataStore implements SenderDataStoreInterface {
 
     constructor(value: any, dataType: number, metaData: string) {
         const jsonString = JSON.stringify(value);
-        this.data = new Uint8Array(jsonString.length);
-        this.data.set(new TextEncoder().encode(jsonString));
+        const encoded = new TextEncoder().encode(jsonString);
+        // IMPORTANT: allocate by encoded byte length (not string length)
+        // to avoid truncation of multi-byte UTF-8
+        this.data = new Uint8Array(encoded.length);
+        this.data.set(encoded);
         this.dataType = dataType;
         this.metaData = metaData;
     }
